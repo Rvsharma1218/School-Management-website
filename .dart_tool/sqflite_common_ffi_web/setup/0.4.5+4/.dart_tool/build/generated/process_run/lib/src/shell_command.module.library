@@ -1,0 +1,1 @@
+{"isEntrypoint":false,"deps":["collection|lib/collection.dart","meta|lib/meta.dart","process_run|lib/process_run.dart"],"parts":[],"conditionalDeps":[],"sdkDeps":[],"hasMain":false}

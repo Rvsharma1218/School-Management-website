@@ -1,0 +1,12 @@
+- [x] Create `components/SignInView.jsx` with email/password, show/hide, remember me, forgot links, and inline validation alerts
+- [x] Create `components/SignUpView.jsx` with registration fields, role selection, and validation
+- [x] Create `components/ForgotPasswordView.jsx` with email/mobile verification inputs and success triggers
+- [x] Create `components/SetupWizardView.jsx` with horizontal stepper timeline for initial institute configurations
+- [x] Create `components/UserManagementView.jsx` with active accounts status, role swaps, and password reset actions for administrators
+- [x] Create `components/ProfileView.jsx` with active user details and password modification form
+- [x] Create `components/AccessDeniedView.jsx` to block teachers from accessing system configuration panels
+- [x] Update `lib/store.js` to manage `currentUser`, custom client-side path routing, and authentication handlers
+- [x] Update `components/Sidebar.jsx` and `components/Header.jsx` to support navigation routes, restricted menus, and dropdown menus
+- [x] Update `components/DashboardView.jsx` to render custom KPIs for principal vs teacher accounts
+- [x] Link authentication functions (`signIn`, `signUp`, `logout`, `forgotPassword`) to Firebase Auth and set up a reactive session listener via `onAuthStateChanged`
+- [x] Verify compile correct building using Next.js build validation

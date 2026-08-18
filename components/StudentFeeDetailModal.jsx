@@ -1,0 +1,682 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useSchoolStore, getStudentMonthLedger } from '../lib/store';
+import {
+  X, ChevronLeft, ChevronRight, Save, Calendar, CreditCard,
+  Receipt, Printer, MessageSquare, CheckCircle, Clock, AlertCircle,
+  IndianRupee, Sparkles, SlidersHorizontal, Trash2, ArrowRight
+} from 'lucide-react';
+import { openWhatsAppFeeReminder, exportReceiptPDF } from '../lib/exportUtils';
+
+export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
+  const { students, settings, payments, addPayment, updateStudent, setPrintReceiptData, getNextReceiptNumber, showToast } = useSchoolStore();
+
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Recurring Fee Structure State
+  const [feeStructure, setFeeStructure] = useState({
+    tuitionFee: '',
+    transportFee: '',
+    gameFee: '',
+    lateFinePerDay: '',
+    dueDay: 10
+  });
+
+  // Monthly Fee Particulars (13 Heads)
+  const [particulars, setParticulars] = useState({
+    admissionFee: '',
+    tuitionFee: '',
+    examinationFee: '',
+    previousDues: '',
+    gameFee: '',
+    reAdmissionFee: '',
+    developmentFee: '',
+    schoolId: '',
+    tieBagBelt: '',
+    backDues: '',
+    transportFee: '',
+    otherFee: '',
+    lateFine: ''
+  });
+
+  const [dueDate, setDueDate] = useState('');
+
+  // Payment Form State
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMode, setPaymentMode] = useState('Cash');
+  const [remarks, setRemarks] = useState('');
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const monthYearLabel = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+  const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+
+  // Always use the latest student record from store to prevent stale props
+  const currentStudent = (students && student) ? (students.find(s => s.id === student.id) || student) : student;
+
+  // Get dynamic chronological month-by-month auto-rollover ledger
+  const monthLedger = currentStudent ? getStudentMonthLedger(currentStudent, payments) : {};
+  const currentMonthData = monthLedger[monthKey] || {
+    previousDue: 0,
+    tuitionFee: 0,
+    transportFee: 0,
+    gameFee: 0,
+    admissionFee: 0,
+    developmentFee: 0,
+    schoolId: 0,
+    tieBagBelt: 0,
+    totalMonthCharge: 0,
+    totalDueThisMonth: 0,
+    paidInMonth: 0,
+    closingDue: 0
+  };
+
+  useEffect(() => {
+    if (currentStudent) {
+      const fs = currentStudent.feeStructure || {};
+      const mp = currentStudent.monthlyParticulars?.[monthKey] || {};
+
+      const tuitionDefault = (fs.tuitionFee !== undefined && fs.tuitionFee !== '' && fs.tuitionFee !== null)
+        ? String(fs.tuitionFee)
+        : (currentStudent.monthlyFee ? String(currentStudent.monthlyFee) : (currentMonthData.tuitionFee ? String(currentMonthData.tuitionFee) : ''));
+      const transportDefault = (fs.transportFee !== undefined && fs.transportFee !== '' && fs.transportFee !== null)
+        ? String(fs.transportFee)
+        : (currentMonthData.transportFee ? String(currentMonthData.transportFee) : '');
+      const gameDefault = (fs.gameFee !== undefined && fs.gameFee !== '' && fs.gameFee !== null)
+        ? String(fs.gameFee)
+        : (currentMonthData.gameFee ? String(currentMonthData.gameFee) : '');
+
+      setFeeStructure({
+        tuitionFee: tuitionDefault,
+        transportFee: transportDefault,
+        gameFee: gameDefault,
+        lateFinePerDay: fs.lateFinePerDay ? String(fs.lateFinePerDay) : '',
+        dueDay: fs.dueDay || 10
+      });
+
+      // Automatically pull rolling previousDue from continuous ledger
+      const autoPrevDue = currentMonthData.previousDue;
+
+      setParticulars({
+        admissionFee: (mp.admissionFee !== undefined && mp.admissionFee !== '' && mp.admissionFee !== null)
+          ? String(mp.admissionFee)
+          : '',
+        tuitionFee: (mp.tuitionFee !== undefined && mp.tuitionFee !== '' && mp.tuitionFee !== null)
+          ? String(mp.tuitionFee)
+          : (tuitionDefault || ''),
+        examinationFee: mp.examinationFee !== undefined && mp.examinationFee !== '' ? String(mp.examinationFee) : '',
+        previousDues: String(autoPrevDue || 0),
+        gameFee: (mp.gameFee !== undefined && mp.gameFee !== '' && mp.gameFee !== null)
+          ? String(mp.gameFee)
+          : (gameDefault || ''),
+        reAdmissionFee: mp.reAdmissionFee !== undefined && mp.reAdmissionFee !== '' ? String(mp.reAdmissionFee) : '',
+        developmentFee: (mp.developmentFee !== undefined && mp.developmentFee !== '' && mp.developmentFee !== null)
+          ? String(mp.developmentFee)
+          : '',
+        schoolId: (mp.schoolId !== undefined && mp.schoolId !== '' && mp.schoolId !== null)
+          ? String(mp.schoolId)
+          : '',
+        tieBagBelt: (mp.tieBagBelt !== undefined && mp.tieBagBelt !== '' && mp.tieBagBelt !== null)
+          ? String(mp.tieBagBelt)
+          : '',
+        backDues: mp.backDues !== undefined && mp.backDues !== '' ? String(mp.backDues) : '',
+        transportFee: (mp.transportFee !== undefined && mp.transportFee !== '' && mp.transportFee !== null)
+          ? String(mp.transportFee)
+          : (transportDefault || ''),
+        otherFee: mp.otherFee !== undefined && mp.otherFee !== '' ? String(mp.otherFee) : '',
+        lateFine: (mp.lateFine !== undefined && mp.lateFine !== '' && mp.lateFine !== null)
+          ? String(mp.lateFine)
+          : (currentMonthData.lateFine ? String(currentMonthData.lateFine) : '')
+      });
+
+      const dDate = mp.dueDate || `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(fs.dueDay || 10).padStart(2, '0')}`;
+      setDueDate(dDate);
+
+      // Pre-fill payment amount with closing due for this month
+      if (currentMonthData.closingDue > 0) {
+        setPaymentAmount(String(currentMonthData.closingDue));
+      } else {
+        setPaymentAmount('');
+      }
+    }
+  }, [currentStudent, monthKey]);
+
+  if (!isOpen || !currentStudent) return null;
+
+  const particularValues = Object.values(particulars).map(v => Number(v) || 0);
+  const totalDueForMonth = particularValues.reduce((acc, v) => acc + v, 0);
+
+  const studentMonthPayments = payments.filter(
+    p => p.studentId === currentStudent.id && (p.feeMonth === monthYearLabel || p.monthKey === monthKey)
+  );
+  const paidForMonth = studentMonthPayments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+  const remainingForMonth = Math.max(0, totalDueForMonth - paidForMonth);
+
+  const handlePrevMonth = () => {
+    const d = new Date(currentDate);
+    d.setMonth(d.getMonth() - 1);
+    setCurrentDate(d);
+  };
+
+  const handleNextMonth = () => {
+    const d = new Date(currentDate);
+    d.setMonth(d.getMonth() + 1);
+    setCurrentDate(d);
+  };
+
+  // Save Recurring Fee Structure
+  const handleSaveStructure = (e) => {
+    e.preventDefault();
+    const tFee = Number(feeStructure.tuitionFee) || 0;
+    const trFee = Number(feeStructure.transportFee) || 0;
+    const gFee = Number(feeStructure.gameFee) || 0;
+    const totalMonthly = tFee + trFee + gFee;
+
+    const updatedStudent = {
+      ...currentStudent,
+      monthlyFee: totalMonthly,
+      feeStructure: {
+        tuitionFee: tFee,
+        transportFee: trFee,
+        gameFee: gFee,
+        lateFinePerDay: Number(feeStructure.lateFinePerDay) || 0,
+        dueDay: Number(feeStructure.dueDay) || 10
+      }
+    };
+    updateStudent(currentStudent.id, updatedStudent);
+    showToast("Fee Structure saved! Monthly fees & previous dues auto-apply to all months.", "success");
+  };
+
+  // Save Monthly Particulars
+  const handleSaveParticulars = (e) => {
+    e.preventDefault();
+    const numericParticulars = {};
+    for (const [k, v] of Object.entries(particulars)) {
+      if (k === 'previousDues') continue; // dynamic from rolling ledger
+      if (v !== '' && v !== null && v !== undefined) {
+        numericParticulars[k] = Number(v) || 0;
+      }
+    }
+
+    const currentMonthly = currentStudent.monthlyParticulars || {};
+    const updatedStudent = {
+      ...currentStudent,
+      monthlyParticulars: {
+        ...currentMonthly,
+        [monthKey]: {
+          ...numericParticulars,
+          dueDate,
+          totalDue: totalDueForMonth,
+          monthName: monthYearLabel
+        }
+      }
+    };
+    updateStudent(currentStudent.id, updatedStudent);
+    showToast(`Fee Particulars for ${monthYearLabel} saved! Total Demand: ₹${totalDueForMonth.toLocaleString('en-IN')}`, "success");
+  };
+
+  // Record Payment
+  const handleRecordPayment = async (e) => {
+    e.preventDefault();
+    const amt = Number(paymentAmount);
+    if (!amt || amt <= 0) {
+      showToast("Please enter a valid payment amount.", "error");
+      return;
+    }
+
+    // Collect current month's accrued data for receipt
+    const finalTuition = Number(particulars.tuitionFee) || Number(feeStructure.tuitionFee) || Number(currentStudent.monthlyFee) || amt;
+    const prevDue = Number(particulars.previousDues) || currentMonthData.previousDue || 0;
+    const totalDemand = totalDueForMonth > 0 ? totalDueForMonth : (prevDue + finalTuition);
+    const alreadyPaidThisMonth = paidForMonth || currentMonthData.paidInMonth || 0;
+    const totalPaidAfterPayment = alreadyPaidThisMonth + amt;
+    const remainingAfterPayment = Math.max(0, totalDemand - totalPaidAfterPayment);
+
+    // Save current month particulars snapshot into payment so receipt & PDF render them exactly
+    const particularsSnapshot = {
+      admissionFee: Number(particulars.admissionFee) || 0,
+      tuitionFee: finalTuition,
+      examinationFee: Number(particulars.examinationFee) || 0,
+      previousDues: prevDue,
+      gameFee: Number(particulars.gameFee) || 0,
+      reAdmissionFee: Number(particulars.reAdmissionFee) || 0,
+      developmentFee: Number(particulars.developmentFee) || 0,
+      schoolId: Number(particulars.schoolId) || 0,
+      tieBagBelt: Number(particulars.tieBagBelt) || 0,
+      backDues: Number(particulars.backDues) || 0,
+      transportFee: Number(particulars.transportFee) || 0,
+      otherFee: Number(particulars.otherFee) || 0,
+      lateFine: Number(particulars.lateFine) || 0,
+    };
+
+    const recYear = currentDate.getFullYear();
+    const receiptNo = getNextReceiptNumber ? getNextReceiptNumber(payments, recYear) : `REC-${recYear}-001`;
+    const newPayment = await addPayment({
+      studentId: currentStudent.id,
+      studentName: currentStudent.name,
+      amount: amt,
+      paymentMode,
+      feeMonth: monthYearLabel,
+      monthKey,
+      receiptNumber: receiptNo,
+      remarks: remarks || `Fee payment for ${monthYearLabel}`,
+      paymentDate: new Date().toISOString(),
+      // Extra context for receipt voucher
+      previousDue: prevDue,
+      totalMonthDemand: totalDemand,
+      alreadyPaid: alreadyPaidThisMonth,
+      totalPaidAfter: totalPaidAfterPayment,
+      balanceDue: remainingAfterPayment,
+      particularsSnapshot
+    });
+
+    const updatedMonthlyParticulars = {
+      ...(currentStudent.monthlyParticulars || {}),
+      [monthKey]: {
+        ...particularsSnapshot,
+        dueDate,
+        totalDue: totalDemand,
+        monthName: monthYearLabel
+      }
+    };
+    const tFee = Number(feeStructure.tuitionFee) > 0 ? Number(feeStructure.tuitionFee) : finalTuition;
+    updateStudent(currentStudent.id, {
+      ...currentStudent,
+      monthlyFee: tFee,
+      feeStructure: {
+        ...(currentStudent.feeStructure || {}),
+        tuitionFee: tFee,
+        dueDay: Number(feeStructure.dueDay) || 10
+      },
+      monthlyParticulars: updatedMonthlyParticulars
+    });
+
+    setPaymentAmount('');
+    setRemarks('');
+    showToast(`Payment of ₹${amt.toLocaleString('en-IN')} recorded & Receipt generated!`, "success");
+
+    // Open receipt modal — include a studentSnapshot so PDF and voucher have the latest particulars
+    const studentSnapshot = {
+      ...currentStudent,
+      paidFees: (Number(currentStudent.paidFees) || 0) + amt,
+      monthlyParticulars: updatedMonthlyParticulars
+    };
+    setPrintReceiptData({
+      payment: {
+        ...newPayment,
+        previousDue: prevDue,
+        totalMonthDemand: totalDemand,
+        totalPaidAfter: totalPaidAfterPayment,
+        balanceDue: remainingAfterPayment,
+        particularsSnapshot
+      },
+      student: studentSnapshot,
+      settings
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-xs overflow-y-auto font-sans">
+      <div className="bg-[#0f172a] text-white border border-[#1e293b] rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200">
+
+        {/* ── Top Bar ── */}
+        <div className="px-6 py-4 bg-[#1e1b4b] border-b border-[#312e81] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                <span>Fees — {currentStudent.name}</span>
+              </h2>
+              <p className="text-[11px] text-indigo-200 font-medium">
+                {currentStudent.studentType === 'school' ? `Class ${currentStudent.className || ''} (Sec ${currentStudent.section || 'A'})` : currentStudent.course || ''} · Adm No: {currentStudent.admissionNumber || currentStudent.studentId}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => openWhatsAppFeeReminder(currentStudent, settings)}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+              title="Send WhatsApp Fee Reminder"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>WhatsApp</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+
+          {/* ── Month Selector with Auto-Rollover Badge ── */}
+          <div className="flex items-center justify-between bg-[#1e293b] p-3.5 rounded-2xl border border-[#334155]">
+            <button
+              onClick={handlePrevMonth}
+              className="p-2 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-white transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="text-center">
+              <div className="text-sm font-black text-white flex items-center justify-center gap-2">
+                <Calendar className="w-4 h-4 text-indigo-400" />
+                <span>{monthYearLabel}</span>
+              </div>
+              <div className="text-[10px] text-emerald-400 font-bold mt-0.5 flex items-center justify-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                <span>Previous Dues Automatically Carried Forward</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleNextMonth}
+              className="p-2 rounded-xl bg-[#0f172a] hover:bg-[#334155] text-white transition-colors cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* ── Auto-Accrued Monthly Summary Ribbon ── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-semibold">
+            <div className="p-3 bg-[#1e293b]/70 border border-amber-500/30 rounded-xl">
+              <div className="text-[9px] font-bold text-amber-400 uppercase">Previous Due (Carried)</div>
+              <div className="text-sm font-black text-amber-400 mt-1">₹{(Number(particulars.previousDues) || currentMonthData.previousDue || 0).toLocaleString('en-IN')}</div>
+              <div className="text-[8px] text-slate-400">Auto rolled from last month</div>
+            </div>
+
+            <div className="p-3 bg-[#1e293b]/70 border border-[#334155] rounded-xl">
+              <div className="text-[9px] font-bold text-slate-400 uppercase">Total Demand (This Month)</div>
+              <div className="text-sm font-black text-indigo-300 mt-1">₹{totalDueForMonth.toLocaleString('en-IN')}</div>
+              <div className="text-[8px] text-slate-400">Sum of all 13 fee heads</div>
+            </div>
+
+            <div className="p-3 bg-[#1e293b]/70 border border-emerald-500/30 rounded-xl">
+              <div className="text-[9px] font-bold text-emerald-400 uppercase">Paid This Month</div>
+              <div className="text-sm font-black text-emerald-400 mt-1">₹{paidForMonth.toLocaleString('en-IN')}</div>
+              <div className="text-[8px] text-slate-400">{studentMonthPayments.length} receipt(s)</div>
+            </div>
+
+            <div className={`p-3 border rounded-xl ${remainingForMonth > 0 ? 'bg-rose-950/50 border-rose-500/40' : 'bg-emerald-950/40 border-emerald-500/30'}`}>
+              <div className={`text-[9px] font-bold uppercase ${remainingForMonth > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>Remaining Fee</div>
+              <div className={`text-sm font-black mt-1 ${remainingForMonth > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>₹{remainingForMonth.toLocaleString('en-IN')}</div>
+              <div className="text-[8px] text-slate-400">{remainingForMonth > 0 ? 'Auto rolls to next month' : '✓ Month Cleared'}</div>
+            </div>
+          </div>
+
+          {/* ── 1. Set Recurring Default Fee Structure ── */}
+          <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 space-y-3">
+            <div className="flex items-center justify-between border-b border-[#334155] pb-3">
+              <div>
+                <h4 className="font-bold text-sm text-white flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+                  <span>Fee Structure</span>
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  Set once — Tuition/Transport/Game auto-populate every next month with rolling previous dues.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveStructure}
+                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Fee Structure</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+              <div>
+                <label className="text-[11px] text-slate-300 font-bold block mb-1">Tuition Fee / Month *</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={feeStructure.tuitionFee}
+                  onChange={e => setFeeStructure({ ...feeStructure, tuitionFee: e.target.value })}
+                  placeholder="0"
+                  className="w-full px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-slate-300 font-bold block mb-1">Transport Fee / Month</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={feeStructure.transportFee}
+                  onChange={e => setFeeStructure({ ...feeStructure, transportFee: e.target.value })}
+                  placeholder="0"
+                  className="w-full px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-slate-300 font-bold block mb-1">Game Fee / Month</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={feeStructure.gameFee}
+                  onChange={e => setFeeStructure({ ...feeStructure, gameFee: e.target.value })}
+                  placeholder="0"
+                  className="w-full px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-slate-300 font-bold block mb-1">Late Fine / Day (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={feeStructure.lateFinePerDay}
+                  onChange={e => setFeeStructure({ ...feeStructure, lateFinePerDay: e.target.value })}
+                  placeholder="0"
+                  className="w-full px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-slate-300 font-bold block mb-1">Due Day of Month</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={feeStructure.dueDay}
+                  onChange={e => setFeeStructure({ ...feeStructure, dueDay: e.target.value })}
+                  placeholder="10"
+                  className="w-full px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── 2. Monthly Fee Particulars (13 Fee Heads) ── */}
+          <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-[#334155] pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-indigo-400" />
+                  <span>Fee Particulars</span>
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Previous Dues is automatically pulled from the preceding month's balance. Customize for {monthYearLabel}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveParticulars}
+                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save Fee Particulars</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+              {[
+                { label: 'Admission Fee', key: 'admissionFee' },
+                { label: 'Tuition Fee', key: 'tuitionFee' },
+                { label: 'Examination Fee', key: 'examinationFee' },
+                { label: 'Previous Dues (Auto-Rolled)', key: 'previousDues', readOnly: true, highlight: true },
+                { label: 'Game Fee', key: 'gameFee' },
+                { label: 'Re-Admission Fee', key: 'reAdmissionFee' },
+                { label: 'Development Fee', key: 'developmentFee' },
+                { label: 'School ID', key: 'schoolId' },
+                { label: 'Tie, Bag, Belt', key: 'tieBagBelt' },
+                { label: 'Back Dues', key: 'backDues' },
+                { label: 'Transport Fee', key: 'transportFee' },
+                { label: 'Other Fee', key: 'otherFee' },
+                { label: 'Late Fine', key: 'lateFine' },
+              ].map(head => (
+                <div key={head.key} className="space-y-1">
+                  <label className={`block text-[11px] font-bold ${head.highlight ? 'text-amber-400' : 'text-slate-300'}`}>
+                    {head.label}
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      readOnly={head.readOnly}
+                      value={particulars[head.key]}
+                      onChange={(e) => {
+                        if (!head.readOnly) {
+                          setParticulars({ ...particulars, [head.key]: e.target.value });
+                        }
+                      }}
+                      placeholder="0"
+                      className={`w-full pl-6 pr-2.5 py-1.5 rounded-xl bg-[#0f172a] border text-xs font-mono font-bold focus:outline-none focus:border-indigo-500 ${head.readOnly ? 'opacity-85 cursor-not-allowed bg-slate-900/60' : ''
+                        } ${head.highlight ? 'border-amber-500/60 text-amber-300' : 'border-[#334155] text-white'
+                        }`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-[#334155] pt-3">
+              <span className="font-black text-sm text-slate-300">TOTAL PARTICULAR DEMAND</span>
+              <span className="font-black text-lg text-white">₹{totalDueForMonth.toLocaleString('en-IN')}</span>
+            </div>
+          </div>
+
+          {/* ── 3. Due Date ── */}
+          <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-sm text-amber-400 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>Due Date</span>
+                </h4>
+                <p className="text-[11px] text-slate-400">Payment due date for {monthYearLabel}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white text-xs font-mono focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── 4. Add Payment / Record Payment ── */}
+          <div className="bg-[#1e293b] border border-emerald-500/30 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-[#334155] pb-3">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                <Receipt className="w-4 h-4" />
+                <span>Add Payment</span>
+              </div>
+              <div className="text-right">
+                {remainingForMonth > 0 ? (
+                  <>
+                    <span className="text-[11px] text-slate-400 mr-2">Remaining Due:</span>
+                    <span className="font-black text-base text-rose-400">₹{remainingForMonth.toLocaleString('en-IN')}</span>
+                  </>
+                ) : (
+                  <span className="text-[11px] font-bold text-emerald-400">✓ Month Fully Cleared</span>
+                )}
+              </div>
+            </div>
+
+            <form onSubmit={handleRecordPayment} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">
+                    Payment Amount (₹) <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    placeholder="Enter amount to pay"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono font-bold focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Payment Mode</label>
+                  <select
+                    value={paymentMode}
+                    onChange={(e) => setPaymentMode(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#0f172a] border border-[#334155] text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI / QR Code</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Card">Debit/Credit Card</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="NEFT">NEFT / RTGS</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Remarks (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Fee cleared via GPay"
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#0f172a] border border-[#334155] text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <div className="text-[11px] text-slate-400">
+                  Payment will be logged in ledger & receipt voucher generated.
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={currentMonthData.closingDue <= 0 && (!paymentAmount || Number(paymentAmount) <= 0)}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-md flex items-center gap-2 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Cut Receipt / Record Payment</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}

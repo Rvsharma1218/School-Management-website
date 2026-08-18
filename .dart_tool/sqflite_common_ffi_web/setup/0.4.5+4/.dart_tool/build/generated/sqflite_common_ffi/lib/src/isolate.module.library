@@ -1,0 +1,1 @@
+{"isEntrypoint":false,"deps":[],"parts":[],"conditionalDeps":[{"$default":"sqflite_common_ffi|lib/src/isolate_io.dart","dart.library.js_interop":"sqflite_common_ffi|lib/src/isolate_web.dart"}],"sdkDeps":[],"hasMain":false}

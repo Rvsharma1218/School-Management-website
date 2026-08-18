@@ -1,0 +1,1 @@
+{"isEntrypoint":false,"deps":["meta|lib/meta.dart","sqlite3|lib/src/wasm/injected_values.dart","web|lib/web.dart"],"parts":[],"conditionalDeps":[],"sdkDeps":["js_interop","js_interop_unsafe"],"hasMain":false}

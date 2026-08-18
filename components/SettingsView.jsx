@@ -1,0 +1,570 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useSchoolStore } from '../lib/store';
+import {
+  Settings, Building2, Save, Download, Upload, RefreshCw,
+  Plus, Trash2, CheckCircle, AlertTriangle, School, ArrowRight,
+  Info, Sparkles, Check, UploadCloud
+} from 'lucide-react';
+
+export default function SettingsView() {
+  const {
+    settings,
+    updateSettings,
+    exportAllDataJson,
+    importAllDataJson,
+    resetToSampleData,
+    showToast
+  } = useSchoolStore();
+
+  const [activeSubTab, setActiveSubTab] = useState('config'); // 'config' | 'wizard'
+  const [wizardStep, setWizardStep] = useState(1); // 1 | 2 | 3
+  const [formData, setFormData] = useState({ ...settings });
+  const [newClassName, setNewClassName] = useState('');
+  const [newCourseName, setNewCourseName] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    updateSettings(formData);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 3000);
+  };
+
+  const handleAddClass = () => {
+    if (!newClassName.trim()) return;
+    const current = formData.schoolClasses || [];
+    if (!current.includes(newClassName.trim())) {
+      const updated = [...current, newClassName.trim()];
+      setFormData(prev => ({ ...prev, schoolClasses: updated }));
+      updateSettings({ schoolClasses: updated });
+    }
+    setNewClassName('');
+  };
+
+  const handleRemoveClass = (cls) => {
+    const updated = (formData.schoolClasses || []).filter(c => c !== cls);
+    setFormData(prev => ({ ...prev, schoolClasses: updated }));
+    updateSettings({ schoolClasses: updated });
+  };
+
+  const handleAddCourse = () => {
+    if (!newCourseName.trim()) return;
+    const current = formData.computerCourses || [];
+    if (!current.includes(newCourseName.trim())) {
+      const updated = [...current, newCourseName.trim()];
+      setFormData(prev => ({ ...prev, computerCourses: updated }));
+      updateSettings({ computerCourses: updated });
+    }
+    setNewCourseName('');
+  };
+
+  const handleRemoveCourse = (course) => {
+    const updated = (formData.computerCourses || []).filter(c => c !== course);
+    setFormData(prev => ({ ...prev, computerCourses: updated }));
+    updateSettings({ computerCourses: updated });
+  };
+
+  const handleFileImport = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const json = JSON.parse(event.target.result);
+          importAllDataJson(json);
+        } catch (err) {
+          showToast("Invalid JSON backup file!", "error");
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleWizardSubmit = (e) => {
+    e.preventDefault();
+    if (wizardStep === 1) {
+      setWizardStep(2);
+    } else if (wizardStep === 2) {
+      updateSettings(formData);
+      setWizardStep(3);
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-12 max-w-4xl">
+      {/* Sub tabs navigation */}
+      <div className="flex items-center gap-2 border-b border-border pb-1 overflow-x-auto custom-scrollbar">
+        <button
+          onClick={() => setActiveSubTab('config')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            activeSubTab === 'config'
+              ? 'bg-primary text-white shadow-xs'
+              : 'text-text-secondary hover:text-text hover:bg-surface2'
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>General Config</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveSubTab('wizard'); setWizardStep(1); }}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+            activeSubTab === 'wizard'
+              ? 'bg-primary text-white shadow-xs'
+              : 'text-text-secondary hover:text-text hover:bg-surface2'
+          }`}
+        >
+          <School className="w-3.5 h-3.5" />
+          <span>Setup Wizard</span>
+        </button>
+      </div>
+
+      {activeSubTab === 'config' ? (
+        /* ─── GENERAL CONFIGURATION MANAGER ─── */
+        <>
+          <div>
+            <h2 className="text-xl lg:text-2xl font-bold text-text tracking-tight">
+              Institute Profile & Settings
+            </h2>
+            <p className="text-xs text-text-secondary mt-0.5">
+              Configure branding, official particulars, academic sessions, and data backups
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Core Institute Details */}
+            <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2 border-b border-border pb-2">
+                <Building2 className="w-4 h-4 text-primary" />
+                <span>Institute Branding</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-text-secondary">
+                <div>
+                  <label className="block mb-1 text-text">Institute Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.instituteName || ''}
+                    onChange={(e) => setFormData({ ...formData, instituteName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-text">Tagline / Motto</label>
+                  <input
+                    type="text"
+                    value={formData.tagline || ''}
+                    onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-text">Principal / Director Name</label>
+                  <input
+                    type="text"
+                    value={formData.principalName || ''}
+                    onChange={(e) => setFormData({ ...formData, principalName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-text">Affiliation / Reg Number</label>
+                  <input
+                    type="text"
+                    value={formData.affiliationNumber || ''}
+                    onChange={(e) => setFormData({ ...formData, affiliationNumber: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-text">Contact Mobile</label>
+                  <input
+                    type="tel"
+                    value={formData.mobile || ''}
+                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-text">Official Email</label>
+                  <input
+                    type="email"
+                    value={formData.email || ''}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block mb-1 text-text">Campus Address</label>
+                  <input
+                    type="text"
+                    value={formData.address || ''}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-text">Current Academic Session</label>
+                  <input
+                    type="text"
+                    value={formData.currentSession || '2026-27'}
+                    onChange={(e) => setFormData({ ...formData, currentSession: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-bold focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                {isSaved && (
+                  <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" /> Settings Saved!
+                  </span>
+                )}
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save Institute Profile</span>
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {/* Class & Course Catalogs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-3">
+              <h3 className="text-sm font-bold text-text uppercase tracking-wider">School Classes</h3>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. 11th-Bio"
+                  value={newClassName}
+                  onChange={(e) => setNewClassName(e.target.value)}
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddClass}
+                  className="px-3.5 py-1.5 rounded-xl bg-primary text-white font-bold text-xs cursor-pointer hover:bg-primary-dark transition-all"
+                >
+                  Add
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto pt-2">
+                {formData.schoolClasses?.map(c => (
+                  <span key={c} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface2 border border-border text-xs text-text">
+                    <span>Class {c}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveClass(c)}
+                      className="text-rose-500 hover:text-rose-700 font-bold ml-1.5"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-3">
+              <h3 className="text-sm font-bold text-text uppercase tracking-wider">Computer Institute Courses</h3>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. DCA (6 Months)"
+                  value={newCourseName}
+                  onChange={(e) => setNewCourseName(e.target.value)}
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCourse}
+                  className="px-3.5 py-1.5 rounded-xl bg-teal-600 text-white font-bold text-xs cursor-pointer hover:bg-teal-700 transition-all"
+                >
+                  Add
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto pt-2">
+                {formData.computerCourses?.map(c => (
+                  <span key={c} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface2 border border-border text-xs text-text">
+                    <span>{c}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCourse(c)}
+                      className="text-rose-500 hover:text-rose-700 font-bold ml-1.5"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Backup & System Maintenance */}
+          <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-emerald-600" />
+              <span>Data Backup, Restore & Reset</span>
+            </h3>
+
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Export your complete institute database to an offline JSON file for safe-keeping, or restore an existing backup.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={exportAllDataJson}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export Backup (JSON)</span>
+              </button>
+
+              <label className="px-4 py-2.5 rounded-xl bg-surface2 hover:bg-surface2/80 text-text font-bold text-xs border border-border flex items-center gap-2 cursor-pointer transition-all">
+                <Upload className="w-4 h-4 text-primary" />
+                <span>Restore Backup (JSON)</span>
+                <input type="file" accept=".json" onChange={handleFileImport} className="hidden" />
+              </label>
+
+              <button
+                type="button"
+                onClick={resetToSampleData}
+                className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 font-bold text-xs flex items-center gap-2 cursor-pointer ml-auto transition-all"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span>Reset Demo Data</span>
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* ─── STEP BY STEP SETUP WIZARD ─── */
+        <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col p-6 animate-in fade-in duration-200">
+          
+          {/* Wizard Header Info */}
+          <div className="text-center pb-6 border-b border-border">
+            <h3 className="text-xl font-bold text-text">Welcome to EduCore SMS</h3>
+            <p className="text-xs text-text-secondary mt-1">Let's set up your institute to get started.</p>
+          </div>
+
+          {/* Stepper horizontal timeline */}
+          <div className="py-6 flex items-center justify-between max-w-xl mx-auto w-full relative">
+            {/* Line background */}
+            <div className="absolute left-6 right-6 top-[37px] h-0.5 bg-neutral-200 -z-10" />
+            <div
+              className="absolute left-6 top-[37px] h-0.5 bg-primary -z-10 transition-all duration-300"
+              style={{ width: wizardStep === 1 ? '0%' : wizardStep === 2 ? '50%' : '100%' }}
+            />
+
+            {/* Step 1 indicator */}
+            <div className="flex flex-col items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                wizardStep >= 1 ? 'bg-primary text-white' : 'bg-neutral-200 text-text-secondary'
+              }`}>
+                1
+              </div>
+              <span className="text-[10px] font-bold text-text">Institute Info</span>
+            </div>
+
+            {/* Step 2 indicator */}
+            <div className="flex flex-col items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                wizardStep >= 2 ? 'bg-primary text-white' : 'bg-neutral-200 text-text-secondary'
+              }`}>
+                2
+              </div>
+              <span className="text-[10px] font-bold text-text">Academic Session</span>
+            </div>
+
+            {/* Step 3 indicator */}
+            <div className="flex flex-col items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                wizardStep >= 3 ? 'bg-primary text-white' : 'bg-neutral-200 text-text-secondary'
+              }`}>
+                3
+              </div>
+              <span className="text-[10px] font-bold text-text">Complete</span>
+            </div>
+          </div>
+
+          {/* Wizard step form rendering */}
+          <form onSubmit={handleWizardSubmit} className="max-w-2xl mx-auto w-full py-4">
+            {wizardStep === 1 && (
+              <div className="space-y-4">
+                <h4 className="font-bold text-base text-text flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-primary" />
+                  <span>Institute Information</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-text-secondary">
+                  <div className="sm:col-span-2">
+                    <label className="block mb-1 text-text">Institute Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g., Lincoln High School"
+                      value={formData.instituteName || ''}
+                      onChange={(e) => setFormData({ ...formData, instituteName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 text-text">Institute Type *</label>
+                    <select
+                      value={formData.instituteType || 'School'}
+                      onChange={(e) => setFormData({ ...formData, instituteType: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none cursor-pointer"
+                    >
+                      <option value="School">School</option>
+                      <option value="College">College</option>
+                      <option value="Coaching Institute">Coaching Institute</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 text-text">Primary Mobile Number *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="+1 (555) 000-0000"
+                      value={formData.mobile || ''}
+                      onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block mb-1 text-text">Official Email Address *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="admin@institute.edu"
+                      value={formData.email || ''}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block mb-1 text-text">Full Address</label>
+                    <textarea
+                      rows={2}
+                      placeholder="123 Education Ave, City, State, Zip"
+                      value={formData.address || ''}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none resize-none"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-2">
+                    <label className="block text-text">Institute Logo</label>
+                    <div className="border-2 border-dashed border-border hover:border-primary hover:bg-surface2/35 rounded-xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2">
+                      <UploadCloud className="w-6 h-6 text-text-muted" />
+                      <span className="font-semibold text-text">Click or drag image to upload (Max 2MB)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                  >
+                    Continue Setup
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {wizardStep === 2 && (
+              <div className="space-y-4">
+                <h4 className="font-bold text-base text-text flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-accent-gold" />
+                  <span>Academic Session & Batches</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-text-secondary">
+                  <div>
+                    <label className="block mb-1 text-text">Academic Session *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 2026-27"
+                      value={formData.currentSession || ''}
+                      onChange={(e) => setFormData({ ...formData, currentSession: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 text-text">Motto / Tagline</label>
+                    <input
+                      type="text"
+                      placeholder="Empowering Minds"
+                      value={formData.tagline || ''}
+                      onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setWizardStep(1)}
+                    className="px-6 py-2.5 border border-border bg-surface2 hover:bg-border text-text font-bold text-xs rounded-xl transition-all cursor-pointer"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                  >
+                    Complete Setup
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {wizardStep === 3 && (
+              <div className="text-center py-8 space-y-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-300 shadow-sm animate-bounce">
+                  <Check className="w-8 h-8" />
+                </div>
+                <h4 className="font-bold text-lg text-text">Congratulations!</h4>
+                <p className="text-xs text-text-secondary max-w-sm mx-auto leading-relaxed">
+                  Institute configurations have been saved. You are ready to start managing students, attendance, fees, and results!
+                </p>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('config')}
+                    className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+                  >
+                    Return to Settings
+                  </button>
+                </div>
+              </div>
+            )}
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,1 @@
+{"isEntrypoint":false,"deps":["_fe_analyzer_shared|lib/src/scanner/characters.dart","analyzer|lib/dart/ast/ast.dart","analyzer|lib/src/util/comment.dart"],"parts":[],"conditionalDeps":[],"sdkDeps":[],"hasMain":false}

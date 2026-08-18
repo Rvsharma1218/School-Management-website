@@ -1,0 +1,353 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useSchoolStore } from '../lib/store';
+import {
+  GraduationCap, Mail, Lock, Eye, EyeOff, ShieldCheck,
+  School, UserCheck, ArrowRight, Sparkles, AlertCircle, CheckCircle2, User, ChevronDown
+} from 'lucide-react';
+
+export default function SignInView() {
+  const { signIn, teacherSignIn, fetchSchoolTeachersByEmail, teachers, settings, currentUser, navigate } = useSchoolStore();
+  const [email, setEmail] = useState('admin@example.com');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('principal'); // 'principal' | 'teacher'
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (role === 'teacher' && email) {
+      fetchSchoolTeachersByEmail(email).then(list => {
+        if (list && list.length > 0) {
+          setSelectedTeacherId(prev => {
+            const match = list.find(t => (t.authUid || t.id) === prev);
+            return match ? prev : (list[0].authUid || list[0].id || '');
+          });
+        }
+      });
+    }
+  }, [role, email]);
+
+  useEffect(() => {
+    // If teachers are available and in teacher mode, pre-select first teacher
+    if (teachers && teachers.length > 0 && !selectedTeacherId) {
+      setSelectedTeacherId(teachers[0].authUid || teachers[0].id || '');
+    }
+  }, [teachers, role]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (role === 'teacher') {
+        if (!selectedTeacherId) {
+          throw new Error("Please select your teacher name from the dropdown.");
+        }
+        await teacherSignIn(email.trim(), selectedTeacherId, password);
+      } else {
+        await signIn(email.trim(), password);
+      }
+    } catch (err) {
+      console.warn('Sign In attempt error:', err.message);
+      // Friendly readable error messages
+      if (err.message?.includes('user-not-found') || err.message?.includes('invalid-credential')) {
+        setError('Invalid email or password. Please verify your credentials.');
+      } else if (err.message?.includes('wrong-password')) {
+        setError('Incorrect password. Please try again or use Forgot Password.');
+      } else if (err.message?.includes('invalid-email')) {
+        setError('Please enter a valid email address.');
+      } else {
+        setError(err.message || 'Failed to sign in. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Quick Demo Account Auto-Fill
+  const handleFillDemo = (fillRole) => {
+    setRole(fillRole);
+    if (fillRole === 'principal') {
+      setEmail('admin@example.com');
+      setPassword('admin123');
+    } else {
+      setEmail('admin@example.com');
+      if (teachers.length > 0) {
+        setSelectedTeacherId(teachers[0].authUid || teachers[0].id);
+        setPassword(teachers[0].password || '123456');
+      } else {
+        setPassword('teacher123');
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen w-full flex items-center justify-center p-4 md:p-8 bg-gradient-to-br from-[#1f108e] via-[#150b69] to-[#0b043b] text-[#0b1c30] font-sans antialiased">
+      
+      {/* ── Main Split-Screen Container ── */}
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden shadow-2xl bg-white border border-white/20">
+        
+        {/* ── Left Side: Academic Branding Hero ── */}
+        <div className="lg:col-span-5 bg-gradient-to-br from-[#1f108e] to-[#0f0069] p-8 lg:p-12 text-white flex flex-col justify-between relative overflow-hidden">
+          
+          {/* Subtle decorative background circles */}
+          <div className="absolute -right-16 -top-16 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-[#316bf3]/20 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Top Brand Logo */}
+          <div className="relative z-10 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 flex items-center justify-center shadow-lg">
+              <School className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-white">{settings.instituteName || 'Smart School'}</h2>
+              <p className="text-xs text-white/75 font-medium">SaaS Management Platform</p>
+            </div>
+          </div>
+
+          {/* Middle Content Banner */}
+          <div className="relative z-10 my-8 space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-xs font-semibold text-white/90">
+              <Sparkles className="w-3.5 h-3.5 text-[#ffb694]" />
+              <span>Next-Gen Institution OS</span>
+            </div>
+            <h1 className="text-2xl lg:text-3xl font-extrabold leading-tight tracking-tight text-white">
+              Empowering Educational Excellence
+            </h1>
+            <p className="text-xs lg:text-sm text-white/80 leading-relaxed">
+              Complete student administration, automated recurring fees, real-time attendance, exam marksheets, and faculty portals.
+            </p>
+
+            {/* Quick Feature Checklist */}
+            <div className="pt-2 space-y-2 text-xs text-white/90 font-medium">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span>Single School Email Login with Faculty Dropdown</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span>Auto-Rolled Monthly Dues & Instant Print Receipts</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span>Dedicated Class Teacher Attendance & Results Desk</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Footer Notice */}
+          <div className="relative z-10 pt-4 border-t border-white/15 flex items-center justify-between text-[11px] text-white/70">
+            <span>© 2026 {settings.instituteName || 'Smart School SaaS'}</span>
+            <span className="font-mono">v2.5.0</span>
+          </div>
+        </div>
+
+        {/* ── Right Side: Modern Glass Form Panel ── */}
+        <div className="lg:col-span-7 bg-[#f8f9ff] p-8 lg:p-12 flex flex-col justify-center">
+          
+          <div className="max-w-md w-full mx-auto space-y-6">
+            
+            {/* Header Title */}
+            <div>
+              <h2 className="text-2xl font-black text-[#0b1c30] tracking-tight">Sign In to Your Portal</h2>
+              <p className="text-xs text-[#464553] mt-1">
+                {role === 'principal'
+                  ? 'Enter principal credentials to access full administrative controls.'
+                  : 'Enter School Email and select your Teacher name to login.'}
+              </p>
+            </div>
+
+            {/* Role Toggle Selector */}
+            <div className="grid grid-cols-2 p-1 bg-[#dce9ff] rounded-2xl gap-1">
+              <button
+                type="button"
+                onClick={() => { setRole('principal'); setError(''); }}
+                className={`py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  role === 'principal'
+                    ? 'bg-white text-[#1f108e] shadow-sm'
+                    : 'text-[#464553] hover:text-[#0b1c30]'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>Principal / Admin</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setRole('teacher'); setError(''); }}
+                className={`py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  role === 'teacher'
+                    ? 'bg-white text-[#1f108e] shadow-sm'
+                    : 'text-[#464553] hover:text-[#0b1c30]'
+                }`}
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Teacher / Faculty</span>
+              </button>
+            </div>
+
+            {/* Error Message Box */}
+            {error && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-3 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+                <span className="font-medium">{error}</span>
+              </div>
+            )}
+
+            {/* Sign In Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              
+              {/* 1. Main School Email Input */}
+              <div>
+                <label className="block text-xs font-bold text-[#0b1c30] mb-1.5">
+                  {role === 'teacher' ? "School's Main Email Address" : "Principal / Admin Email"}
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@example.com"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-medium text-[#0b1c30] placeholder-[#777584] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all"
+                  />
+                </div>
+                {role === 'teacher' && (
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Enter the school email registered by your Principal.
+                  </p>
+                )}
+              </div>
+
+              {/* 2. Teacher Dropdown (Only visible in Teacher mode) */}
+              {role === 'teacher' && (
+                <div className="animate-in fade-in duration-200">
+                  <label className="block text-xs font-bold text-[#0b1c30] mb-1.5">
+                    Select Your Teacher Name *
+                  </label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <select
+                      required
+                      value={selectedTeacherId}
+                      onChange={(e) => setSelectedTeacherId(e.target.value)}
+                      className="w-full pl-10 pr-10 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-semibold text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all appearance-none cursor-pointer"
+                    >
+                      <option value="">-- Choose Your Teacher Profile --</option>
+                      {teachers.map(t => (
+                        <option key={t.authUid || t.id} value={t.authUid || t.id}>
+                          {t.name} (Class {t.assignedClass} - Sec {t.assignedSection || 'A'})
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-[#777584] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                  {teachers.length === 0 && (
+                    <p className="text-[10px] text-amber-600 font-medium mt-1">
+                      No teachers found. Please ask Principal to add faculty profiles in Faculty Management.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 3. Password Input with Show/Hide */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-[#0b1c30]">
+                    {role === 'teacher' ? "Teacher Password" : "Password"}
+                  </label>
+                  {role === 'principal' && (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/forgot-password')}
+                      className="text-[11px] font-bold text-[#0051d5] hover:underline cursor-pointer"
+                    >
+                      Forgot Password?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={role === 'teacher' ? "Enter your teacher password (default: 123456)" : "Enter your secret password"}
+                    className="w-full pl-10 pr-10 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-medium text-[#0b1c30] placeholder-[#777584] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(p => !p)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#777584] hover:text-[#0b1c30] cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-primary" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2 text-xs font-semibold text-[#464553] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 rounded text-[#1f108e] focus:ring-[#1f108e] border-[#c8c4d5] cursor-pointer"
+                  />
+                  <span>Remember my session</span>
+                </label>
+
+                {/* Quick Auto-Fill Demo Trigger */}
+                <button
+                  type="button"
+                  onClick={() => handleFillDemo(role)}
+                  className="text-[11px] font-bold text-[#1f108e] bg-[#eff4ff] hover:bg-[#dce9ff] px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                >
+                  ⚡ Fill Demo {role === 'principal' ? 'Admin' : 'Teacher'}
+                </button>
+              </div>
+
+              {/* Submit CTA Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 px-6 rounded-xl bg-[#1f108e] hover:bg-[#0f0069] text-white font-bold text-xs shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group mt-2"
+              >
+                {loading ? (
+                  <span>Authenticating...</span>
+                ) : (
+                  <>
+                    <span>Sign In to {role === 'principal' ? 'Admin Dashboard' : 'Teacher Portal'}</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Bottom Create Account Link */}
+            <div className="text-center pt-4 border-t border-[#c8c4d5]/50">
+              <p className="text-xs text-[#464553]">
+                Don't have an institution account?{' '}
+                <button
+                  type="button"
+                  onClick={() => navigate('/signup')}
+                  className="font-bold text-[#0051d5] hover:underline cursor-pointer ml-1"
+                >
+                  Create Account / Register
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

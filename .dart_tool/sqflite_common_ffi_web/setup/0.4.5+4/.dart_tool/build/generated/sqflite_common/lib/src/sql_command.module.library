@@ -1,0 +1,1 @@
+{"isEntrypoint":false,"deps":["sqflite_common|lib/src/sql_builder.dart"],"parts":[],"conditionalDeps":[],"sdkDeps":[],"hasMain":false}

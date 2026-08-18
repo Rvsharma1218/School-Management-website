@@ -1,0 +1,675 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useSchoolStore, calculateStudentFeeMetrics } from '../lib/store';
+import {
+  Users, Search, Plus, X, GraduationCap, Monitor, Phone,
+  MessageSquare, User, Calendar, Mail, MapPin, CheckCircle, Info, Trash2,
+  AlertCircle, ShieldAlert, Award, FileText, Check, Layout, ClipboardList, CreditCard
+} from 'lucide-react';
+import { openWhatsAppFeeReminder } from '../lib/exportUtils';
+
+export default function StudentsView() {
+  const {
+    students,
+    payments,
+    settings,
+    currentUser,
+    addStudent,
+    updateStudent,
+    deleteStudent,
+    selectedStudentId,
+    setSelectedStudentId,
+    setFeeDetailStudent,
+    showToast
+  } = useSchoolStore();
+
+  const isPrincipal = currentUser?.role === 'principal';
+  const assignedClass = currentUser?.assignedClass || '10th';
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClass, setSelectedClass] = useState(isPrincipal ? 'all' : assignedClass);
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  
+  // Reset to assigned class whenever teacher opens StudentsView
+  useEffect(() => {
+    if (!isPrincipal && assignedClass) {
+      setSelectedClass(assignedClass);
+    }
+  }, [assignedClass, isPrincipal]);
+
+  // Right side panel states: 'quickview' | 'edit' | 'add'
+  const [panelMode, setPanelMode] = useState('quickview'); 
+
+  // Form State for Profile Edit / Admission
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    dob: '',
+    gender: 'Male',
+    mobile: '',
+    email: '',
+    admissionNumber: '',
+    studentId: '',
+    admissionDate: '',
+    className: '',
+    section: 'A',
+    rollNumber: '',
+    course: '',
+    session: '2026-27',
+    fatherName: '',
+    motherName: '',
+    address: '',
+    studentType: 'school',
+    totalFees: 0,
+    paidFees: 0,
+    status: 'active'
+  });
+
+  // Pick active student
+  const activeStudent = students.find(s => s.id === selectedStudentId);
+
+  // Sync profile form state with selected student
+  useEffect(() => {
+    if (activeStudent && panelMode !== 'add') {
+      setProfileForm({
+        name: activeStudent.name || '',
+        dob: activeStudent.dob || '',
+        gender: activeStudent.gender || 'Male',
+        mobile: activeStudent.mobile || '',
+        email: activeStudent.email || '',
+        admissionNumber: activeStudent.admissionNumber || '',
+        studentId: activeStudent.studentId || '',
+        admissionDate: activeStudent.admissionDate || '',
+        className: activeStudent.className || '',
+        section: activeStudent.section || 'A',
+        rollNumber: activeStudent.rollNumber || '',
+        course: activeStudent.course || '',
+        session: activeStudent.session || '2026-27',
+        fatherName: activeStudent.fatherName || '',
+        motherName: activeStudent.motherName || '',
+        address: activeStudent.address || '',
+        studentType: activeStudent.studentType || 'school',
+        totalFees: activeStudent.totalFees || 0,
+        paidFees: activeStudent.paidFees || 0,
+        status: activeStudent.status || 'active'
+      });
+    } else if (!activeStudent && students.length > 0 && panelMode !== 'add') {
+      setSelectedStudentId(students[0].id);
+      setPanelMode('quickview');
+    }
+  }, [selectedStudentId, activeStudent, panelMode, students]);
+
+  // Filter students list
+  const filteredStudents = students.filter(s => {
+    const matchesSearch = !searchQuery.trim() ||
+      s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.studentId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.fatherName?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesClass = selectedClass === 'all' || s.className === selectedClass || s.course === selectedClass;
+    const matchesStatus = selectedStatus === 'all' || s.status === selectedStatus;
+
+    return matchesSearch && matchesClass && matchesStatus;
+  });
+
+  const handleInputChange = (field, val) => {
+    setProfileForm(prev => ({ ...prev, [field]: val }));
+  };
+
+  const handleAddNewClick = () => {
+    setPanelMode('add');
+    setProfileForm({
+      name: 'New Student',
+      dob: '2012-05-10',
+      gender: 'Male',
+      mobile: '',
+      email: '',
+      admissionNumber: '',
+      studentId: '',
+      admissionDate: new Date().toISOString().split('T')[0],
+      className: settings.schoolClasses?.[0] || '1st',
+      section: 'A',
+      rollNumber: '',
+      course: settings.computerCourses?.[0] || '',
+      session: settings.currentSession || '2026-27',
+      fatherName: '',
+      motherName: '',
+      address: '',
+      studentType: 'school',
+      totalFees: 12000,
+      paidFees: 0,
+      status: 'active'
+    });
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (panelMode === 'add') {
+      const added = await addStudent(profileForm);
+      setPanelMode('quickview');
+      if (added) setSelectedStudentId(added.id);
+      showToast(`New admission for "${profileForm.name}" added successfully!`, 'success');
+    } else if (activeStudent) {
+      await updateStudent(activeStudent.id, profileForm);
+      setPanelMode('quickview');
+      showToast(`Profile for "${profileForm.name}" updated successfully!`, 'success');
+    }
+  };
+
+  const handleDeleteClick = () => {
+    if (activeStudent) {
+      deleteStudent(activeStudent.id);
+      setPanelMode('quickview');
+    }
+  };
+
+  return (
+    <div className="space-y-6 pb-12">
+      {/* Top action header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl lg:text-2xl font-bold text-text tracking-tight">Student Directory</h2>
+          <p className="text-xs text-text-secondary mt-0.5 font-medium">Manage enrollments, track performance, and monitor administrative status.</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => showToast("Opening Reports view for Excel import/export...", "info")}
+            className="px-3.5 py-2 rounded-xl bg-white border border-border hover:bg-surface2 text-text font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+          >
+            Import
+          </button>
+          <button
+            onClick={() => showToast("Exporting students directory PDF...", "info")}
+            className="px-3.5 py-2 rounded-xl bg-white border border-border hover:bg-surface2 text-text font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+          >
+            Export PDF
+          </button>
+          <button
+            onClick={handleAddNewClick}
+            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New Student</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Split Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Side: Student Directory scroll list in a table format */}
+        <div className="lg:col-span-8 bg-white border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+          {/* Filters Bar */}
+          <div className="p-4 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 bg-surface2/30">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search by Name, Admission ID..."
+                className="w-full pl-9 pr-4 py-2 rounded-xl bg-white border border-border text-xs text-text focus:outline-none focus:border-primary"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedClass}
+                onChange={e => setSelectedClass(e.target.value)}
+                className="px-3 py-2 rounded-xl bg-white border border-border text-xs text-text font-bold focus:outline-none cursor-pointer"
+              >
+                <option value="all">Course / Grade</option>
+                {settings.schoolClasses?.map(c => <option key={c} value={c}>Class {c}</option>)}
+                {settings.computerCourses?.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+
+              <select
+                value={selectedStatus}
+                onChange={e => setSelectedStatus(e.target.value)}
+                className="px-3 py-2 rounded-xl bg-white border border-border text-xs text-text font-bold focus:outline-none cursor-pointer"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="left">Left</option>
+              </select>
+
+              {!isPrincipal && selectedClass !== assignedClass && (
+                <button
+                  onClick={() => setSelectedClass(assignedClass)}
+                  className="px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                  title="Return to your assigned class"
+                >
+                  <span>↩ Back to Class {assignedClass}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Directory Scroll List Table */}
+          <div className="overflow-x-auto max-h-[560px] overflow-y-auto custom-scrollbar">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-surface2/60 border-b border-border text-text-secondary font-bold text-[10px] uppercase">
+                  <th className="py-3 px-4 w-10 text-center">
+                    <input type="checkbox" className="w-4 h-4 rounded text-primary focus:ring-primary/20 cursor-pointer" />
+                  </th>
+                  <th className="py-3 px-4">Student Name</th>
+                  <th className="py-3 px-4">Admission ID</th>
+                  <th className="py-3 px-4">Class</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border text-text">
+                {filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-text-muted">No students matching criteria.</td>
+                  </tr>
+                ) : filteredStudents.map(s => {
+                  const isSelected = s.id === selectedStudentId && panelMode !== 'add';
+                  return (
+                    <tr
+                      key={s.id}
+                      onClick={() => {
+                        setPanelMode('quickview');
+                        setSelectedStudentId(s.id);
+                      }}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? 'bg-primary/5 font-semibold' : 'hover:bg-surface2/30'
+                      }`}
+                    >
+                      <td className="py-3.5 px-4 text-center" onClick={e => e.stopPropagation()}>
+                        <input type="checkbox" className="w-4 h-4 rounded text-primary focus:ring-primary/20 cursor-pointer" />
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-text">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0 overflow-hidden shadow-2xs">
+                            {s.photoPath ? <img src={s.photoPath} alt={s.name} className="w-full h-full object-cover" /> : s.name?.charAt(0)}
+                          </div>
+                          <div>
+                            <div>{s.name}</div>
+                            <div className="text-[9px] text-text-muted font-normal">{s.mobile}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-medium text-text-secondary">{s.admissionNumber || 'ADM-24-001'}</td>
+                      <td className="py-3.5 px-4 text-text-secondary">
+                        {s.studentType === 'school' ? `Class ${s.className || ''} - ${s.section || 'A'}` : s.course}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                          s.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                        }`}>
+                          {s.status || 'Active'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {currentUser?.role === 'principal' && (
+                            <button
+                              onClick={() => setFeeDetailStudent(s)}
+                              className="p-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors cursor-pointer"
+                              title="Manage Fee Structure & Payments"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setSelectedStudentId(s.id);
+                              setPanelMode('edit');
+                            }}
+                            className="p-1.5 rounded-lg bg-surface2 hover:bg-border text-text-secondary transition-colors cursor-pointer"
+                            title="Edit Profile"
+                          >
+                            <User className="w-3.5 h-3.5" />
+                          </button>
+                          {currentUser?.role === 'principal' && (
+                            <button
+                              onClick={() => deleteStudent(s.id)}
+                              className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors cursor-pointer"
+                              title="Delete Student"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {/* Footer entries count */}
+          <div className="px-5 py-4 border-t border-border bg-surface2/25 flex items-center justify-between text-xs text-text-secondary">
+            <span>Showing 1-{filteredStudents.length} of {students.length} entries</span>
+            <div className="flex items-center gap-2">
+              <button className="px-2.5 py-1 bg-white border border-border rounded cursor-pointer">&lt;</button>
+              <span className="font-bold text-primary px-2">1</span>
+              <button className="px-2.5 py-1 bg-white border border-border rounded cursor-pointer">&gt;</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side: Dual-mode panel (Quick View / Profile Edit) */}
+        <div className="lg:col-span-4 bg-white border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+          {panelMode === 'quickview' && activeStudent ? (
+            /* ─── STATE 1: STUDENT QUICK VIEW PANEL ─── */
+            <div className="p-6 space-y-6 animate-in fade-in duration-200">
+              {/* Header */}
+              <div className="flex justify-between items-start">
+                <h3 className="font-bold text-base text-text">Quick View</h3>
+                <button
+                  onClick={() => setSelectedStudentId(null)}
+                  className="p-1 rounded-lg text-text-muted hover:text-text hover:bg-surface2 transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Avatar and name details */}
+              <div className="flex flex-col items-center text-center space-y-2 py-2">
+                <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-lg overflow-hidden shadow-sm">
+                  {activeStudent.photoPath ? (
+                    <img src={activeStudent.photoPath} alt={activeStudent.name} className="w-full h-full object-cover" />
+                  ) : (
+                    activeStudent.name?.charAt(0) || 'S'
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-black text-lg text-text leading-tight">{activeStudent.name}</h4>
+                  <p className="text-xs text-text-secondary font-mono mt-0.5">ID: {activeStudent.studentId} · Roll: {activeStudent.rollNumber || '—'}</p>
+                </div>
+                <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold">
+                  {activeStudent.studentType === 'school' ? `Class ${activeStudent.className || ''} - Sec ${activeStudent.section || 'A'}` : activeStudent.course}
+                </span>
+              </div>
+
+              {/* Attendance widget */}
+              <div className="space-y-2 border-t border-border pt-4 text-xs font-semibold">
+                <div className="flex justify-between text-text-secondary">
+                  <span>Attendance (Current Term)</span>
+                  <span className="text-primary font-bold">92%</span>
+                </div>
+                <div className="w-full h-2 bg-surface2 rounded-full overflow-hidden border border-border">
+                  <div className="h-full bg-primary rounded-full" style={{ width: '92%' }}></div>
+                </div>
+                <div className="flex justify-between text-[10px] text-text-muted font-bold font-mono">
+                  <span>Present: 46 Days</span>
+                  <span>Absent: 4 Days</span>
+                </div>
+              </div>
+
+              {/* Fee Status widgets (Principal Only) */}
+              {currentUser?.role === 'principal' && (
+                <div className="space-y-3 border-t border-border pt-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Fee Status</span>
+                  <div className="space-y-2.5 text-xs font-semibold">
+                    {(() => {
+                      const m = calculateStudentFeeMetrics(activeStudent, payments);
+                      return (
+                        <>
+                          <div className="p-3 bg-surface2/30 border border-border rounded-xl flex items-center justify-between">
+                            <div>
+                              <p className="text-text-secondary text-[10px]">Total Paid So Far</p>
+                              <p className="text-sm font-bold text-emerald-600 mt-0.5">₹{(m.totalPaid || 0).toLocaleString('en-IN')}</p>
+                            </div>
+                            <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[9px] font-bold">PAID</span>
+                          </div>
+
+                          <div className={`p-3 border rounded-xl flex items-center justify-between ${m.currentDue > 0 ? 'bg-rose-50/40 border-rose-100' : 'bg-emerald-50/40 border-emerald-100'}`}>
+                            <div>
+                              <p className={`text-[10px] ${m.currentDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                                {m.currentDue > 0 ? 'Outstanding Dues (Current Month)' : 'Fee Status'}
+                              </p>
+                              <p className={`text-sm font-bold mt-0.5 ${m.currentDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                                ₹{(m.currentDue || 0).toLocaleString('en-IN')}
+                              </p>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${m.currentDue > 0 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                              {m.currentDue > 0 ? 'OVERDUE' : 'CLEARED'}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Guardian Info */}
+              <div className="space-y-2 border-t border-border pt-4 text-xs font-semibold">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Primary Guardian</span>
+                <div className="p-3 bg-surface2/30 border border-border rounded-xl space-y-1.5 leading-tight">
+                  <p className="text-text font-bold">{activeStudent.fatherName || 'Guardian'} (Father)</p>
+                  <p className="text-[10px] text-text-secondary flex items-center gap-1"><Phone className="w-3 h-3 text-text-muted" /> {activeStudent.mobile}</p>
+                  <p className="text-[10px] text-text-secondary flex items-center gap-1"><Mail className="w-3 h-3 text-text-muted" /> {activeStudent.email || 'guardian@example.com'}</p>
+                </div>
+              </div>
+
+              {/* Actions row */}
+              <div className="grid grid-cols-2 gap-3 pt-4 text-xs font-bold">
+                <button
+                  onClick={() => openWhatsAppFeeReminder(activeStudent, settings)}
+                  className="py-2.5 rounded-xl border border-border bg-surface2 hover:bg-border text-text text-center transition-colors cursor-pointer flex items-center justify-center gap-1"
+                >
+                  <MessageSquare className="w-4 h-4 text-primary" />
+                  <span>Message</span>
+                </button>
+                <button
+                  onClick={() => setPanelMode('edit')}
+                  className="py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white text-center transition-all cursor-pointer shadow-sm"
+                >
+                  Full Profile
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ─── STATE 2 & 3: ADMISSION FORM & PROFILE EDITOR ─── */
+            <form onSubmit={handleSaveProfile} className="animate-in fade-in duration-200">
+              <div className="px-5 py-4 border-b border-border bg-surface2/25 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-xs uppercase text-text tracking-wider">
+                    {panelMode === 'add' ? 'New Admission' : 'Edit Profile'}
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPanelMode('quickview')}
+                    className="px-3 py-1 rounded bg-surface2 hover:bg-border text-text font-bold text-[10px] border border-border"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-3.5 py-1 rounded bg-primary hover:bg-primary-dark text-white font-bold text-[10px] shadow-xs"
+                  >
+                    {panelMode === 'add' ? 'Create' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-5 space-y-4 max-h-[580px] overflow-y-auto custom-scrollbar text-xs font-semibold text-text-secondary">
+                {/* Inputs Fields */}
+                <div>
+                  <label className="block mb-1 text-text">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={profileForm.name}
+                    onChange={e => handleInputChange('name', e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1 text-text">Date of Birth</label>
+                    <input
+                      type="date"
+                      value={profileForm.dob}
+                      onChange={e => handleInputChange('dob', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-text">Gender</label>
+                    <select
+                      value={profileForm.gender}
+                      onChange={e => handleInputChange('gender', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none cursor-pointer"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-text">Mobile Number *</label>
+                  <input
+                    type="text"
+                    required
+                    value={profileForm.mobile}
+                    onChange={e => handleInputChange('mobile', e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-text">Email Address</label>
+                  <input
+                    type="email"
+                    value={profileForm.email}
+                    onChange={e => handleInputChange('email', e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
+                  />
+                </div>
+
+                <div className="border-t border-border pt-3 space-y-3">
+                  <h4 className="font-bold text-[10px] text-primary uppercase">Academic Information</h4>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block mb-1 text-text">Student ID</label>
+                      <input
+                        type="text"
+                        value={profileForm.studentId}
+                        onChange={e => handleInputChange('studentId', e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-text">Roll Number</label>
+                      <input
+                        type="text"
+                        value={profileForm.rollNumber}
+                        onChange={e => handleInputChange('rollNumber', e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 text-text">Enrollment Sector</label>
+                    <select
+                      value={profileForm.studentType}
+                      onChange={e => handleInputChange('studentType', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none cursor-pointer"
+                    >
+                      <option value="school">School</option>
+                      <option value="computer">Computer Institute</option>
+                    </select>
+                  </div>
+
+                  {profileForm.studentType === 'school' ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block mb-1 text-text">Class Grade</label>
+                        <select
+                          value={profileForm.className}
+                          onChange={e => handleInputChange('className', e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none cursor-pointer"
+                        >
+                          {settings.schoolClasses?.map(c => <option key={c} value={c}>Class {c}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block mb-1 text-text">Section</label>
+                        <select
+                          value={profileForm.section}
+                          onChange={e => handleInputChange('section', e.target.value)}
+                          className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none cursor-pointer"
+                        >
+                          <option value="A">A</option>
+                          <option value="B">B</option>
+                          <option value="C">C</option>
+                        </select>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block mb-1 text-text">Course Details</label>
+                      <select
+                        value={profileForm.course}
+                        onChange={e => handleInputChange('course', e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none cursor-pointer"
+                      >
+                        {settings.computerCourses?.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-border pt-3 space-y-3">
+                  <h4 className="font-bold text-[10px] text-primary uppercase">Guardians Details</h4>
+                  <div>
+                    <label className="block mb-1 text-text">Father's Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.fatherName}
+                      onChange={e => handleInputChange('fatherName', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-text">Mother's Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.motherName}
+                      onChange={e => handleInputChange('motherName', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-text">Campus Address</label>
+                    <textarea
+                      rows={2}
+                      value={profileForm.address}
+                      onChange={e => handleInputChange('address', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text focus:outline-none resize-none"
+                    />
+                  </div>
+                </div>
+
+                {panelMode !== 'add' && (
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleDeleteClick}
+                      className="px-3 py-1.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold border border-rose-200 cursor-pointer"
+                    >
+                      Delete Student
+                    </button>
+                  </div>
+                )}
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
