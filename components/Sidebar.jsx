@@ -7,7 +7,7 @@ import {
   CreditCard, AlertCircle, FileSpreadsheet, QrCode,
   Settings, GraduationCap, Award, Contact,
   ShieldCheck, UserCheck, School, Sun, Moon, Zap,
-  ChevronRight, ChevronLeft, MessageSquare, Plus, FileText
+  ChevronRight, ChevronLeft, Plus, FileText, Megaphone
 } from 'lucide-react';
 
 function NavBtn({ icon: Icon, label, badge, active, onClick, iconColor, collapsed }) {
@@ -55,7 +55,8 @@ function SectionLabel({ children, collapsed }) {
 export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }) {
   const {
     settings, stats, currentUser, themeMode, toggleTheme,
-    setIsAddStudentOpen, currentTeacher, currentPath, navigate
+    setIsAddStudentOpen, currentTeacher, currentPath, navigate,
+    unreadNoticeCount
   } = useSchoolStore();
 
   if (!currentUser) return null;
@@ -74,13 +75,17 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
         'bg-[#eff4ff] text-[#0b1c30]',
         'transition-all duration-300 ease-in-out overflow-hidden font-sans',
         collapsed ? 'w-[72px]' : 'w-72',
-        isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        isOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full pointer-events-none lg:translate-x-0 lg:pointer-events-auto'
       ].join(' ')}>
 
         {/* ── Brand Header ── */}
         <div className={`flex items-center border-b border-[#c8c4d5]/40 flex-shrink-0 ${collapsed ? 'p-3 justify-center flex-col gap-2' : 'p-4 gap-3'}`}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1f108e] to-[#0f0069] flex items-center justify-center flex-shrink-0 shadow-md">
-            <School className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1f108e] to-[#0f0069] flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden bg-white/90">
+            {settings.logoUrl || settings.logoPath || settings.logo ? (
+              <img src={settings.logoUrl || settings.logoPath || settings.logo} alt="Logo" className="w-full h-full object-contain p-1 rounded-xl" />
+            ) : (
+              <School className="w-5 h-5 text-white" />
+            )}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
@@ -105,10 +110,10 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
           {/* Core Operations */}
           <SectionLabel collapsed={collapsed}>Main Menu</SectionLabel>
           <NavBtn icon={LayoutDashboard} label="Dashboard" active={currentPath === '/dashboard'} onClick={() => nav('dashboard')} collapsed={collapsed} />
-          <NavBtn icon={MessageSquare} label="WhatsApp Center" active={currentPath === '/communication'} onClick={() => nav('communication')} collapsed={collapsed} />
 
           {/* Academic Management */}
           <SectionLabel collapsed={collapsed}>Academic</SectionLabel>
+          <NavBtn icon={Megaphone} label="Notice Board" badge={unreadNoticeCount > 0 ? `${unreadNoticeCount} new` : undefined} active={currentPath === '/notices'} onClick={() => nav('notices')} collapsed={collapsed} />
           <NavBtn icon={Users} label="Students Directory" badge={stats.totalStudents} active={currentPath === '/students'} onClick={() => nav('students')} collapsed={collapsed} />
           <NavBtn icon={CalendarCheck} label="Daily Attendance" active={currentPath === '/attendance'} onClick={() => nav('attendance')} collapsed={collapsed} />
           <NavBtn icon={Award} label="Exam Results" active={currentPath === '/results'} onClick={() => nav('results')} collapsed={collapsed} />
@@ -143,31 +148,61 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
 
         {/* ── User & Theme Footer ── */}
         <div className="p-3 border-t border-[#c8c4d5]/40 flex-shrink-0 bg-white/40">
-          <div className={`flex items-center ${collapsed ? 'justify-center flex-col gap-2' : 'justify-between'}`}>
-            <button
-              onClick={() => nav('profile')}
-              className={`flex items-center gap-2.5 text-left rounded-xl p-1.5 hover:bg-white/80 transition-colors cursor-pointer ${collapsed ? 'justify-center' : 'min-w-0'}`}
-              title={collapsed ? currentUser.name : undefined}
-            >
-              <div className="w-8 h-8 rounded-full bg-[#1f108e]/10 text-[#1f108e] flex items-center justify-center font-bold text-xs flex-shrink-0 border border-[#c8c4d5]/50">
-                {currentUser.name?.substring(0, 2).toUpperCase() || 'AD'}
-              </div>
-              {!collapsed && (
-                <div className="min-w-0">
-                  <div className="text-xs font-bold text-[#0b1c30] truncate">{currentUser.name}</div>
-                  <div className="text-[10px] text-[#464553] truncate capitalize">{isPrincipal ? 'Principal / Admin' : 'Teacher'}</div>
-                </div>
-              )}
-            </button>
+          {(() => {
+            const principalDisplayName = (() => {
+              if (!currentUser) return 'Principal';
+              if (currentUser.role === 'principal' && settings.principalName && settings.principalName.trim() !== '') {
+                return settings.principalName.trim();
+              }
+              if (currentUser.displayName && currentUser.displayName.trim() !== '') {
+                return currentUser.displayName.trim();
+              }
+              const raw = currentUser.name || '';
+              if (!raw) return currentUser.role === 'principal' ? 'Principal' : 'Teacher';
+              const clean = raw.includes('@') ? raw.split('@')[0] : raw;
+              const alphaOnly = clean.replace(/[0-9_.-]/g, ' ').trim();
+              if (alphaOnly && alphaOnly.length >= 3) {
+                return alphaOnly.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+              }
+              return clean.charAt(0).toUpperCase() + clean.slice(1);
+            })();
 
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl bg-white hover:bg-[#dce9ff] text-[#464553] hover:text-[#0b1c30] transition-colors cursor-pointer border border-[#c8c4d5]/40 flex-shrink-0 shadow-2xs"
-              title={themeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
-              {themeMode === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Moon className="w-3.5 h-3.5 text-[#1f108e]" />}
-            </button>
-          </div>
+            const avatarInitials = principalDisplayName
+              .split(' ')
+              .filter(Boolean)
+              .map(w => w[0])
+              .slice(0, 2)
+              .join('')
+              .toUpperCase() || 'PR';
+
+            return (
+              <div className={`flex items-center ${collapsed ? 'justify-center flex-col gap-2' : 'justify-between'}`}>
+                <button
+                  onClick={() => nav('profile')}
+                  className={`flex items-center gap-2.5 text-left rounded-xl p-1.5 hover:bg-white/80 transition-colors cursor-pointer ${collapsed ? 'justify-center' : 'min-w-0'}`}
+                  title={collapsed ? principalDisplayName : undefined}
+                >
+                  <div className="w-8 h-8 rounded-full bg-[#1f108e]/10 text-[#1f108e] flex items-center justify-center font-bold text-xs flex-shrink-0 border border-[#c8c4d5]/50">
+                    {avatarInitials}
+                  </div>
+                  {!collapsed && (
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-[#0b1c30] truncate">{principalDisplayName}</div>
+                      <div className="text-[10px] text-[#464553] truncate capitalize">{isPrincipal ? 'Principal / Admin' : 'Teacher'}</div>
+                    </div>
+                  )}
+                </button>
+
+                <button
+                  onClick={toggleTheme}
+                  className="p-2 rounded-xl bg-white hover:bg-[#dce9ff] text-[#464553] hover:text-[#0b1c30] transition-colors cursor-pointer border border-[#c8c4d5]/40 flex-shrink-0 shadow-2xs"
+                  title={themeMode === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                >
+                  {themeMode === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Moon className="w-3.5 h-3.5 text-[#1f108e]" />}
+                </button>
+              </div>
+            );
+          })()}
         </div>
 
       </aside>

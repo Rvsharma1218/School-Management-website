@@ -1,12 +1,12 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSchoolStore } from '../lib/store';
 import {
   Settings, Building2, Save, Download, Upload, RefreshCw,
-  Plus, Trash2, CheckCircle, AlertTriangle, School, ArrowRight,
-  Info, Sparkles, Check, UploadCloud
+  Plus, Trash2, CheckCircle, School, ArrowRight,
+  Info, Sparkles, Check, UploadCloud, Image as ImageIcon, Camera, X, FileSignature, Crop
 } from 'lucide-react';
+import { removeSignatureBackground } from '../lib/exportUtils';
+import ImageCropperModal from './ImageCropperModal';
 
 export default function SettingsView() {
   const {
@@ -14,20 +14,125 @@ export default function SettingsView() {
     updateSettings,
     exportAllDataJson,
     importAllDataJson,
-    resetToSampleData,
     showToast
   } = useSchoolStore();
 
   const [activeSubTab, setActiveSubTab] = useState('config'); // 'config' | 'wizard'
   const [wizardStep, setWizardStep] = useState(1); // 1 | 2 | 3
-  const [formData, setFormData] = useState({ ...settings });
+  const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+  const [isLogoCropperOpen, setIsLogoCropperOpen] = useState(false);
+  const [logoToCrop, setLogoToCrop] = useState(null);
+  const logoInputRef = useRef(null);
+
+  const [formData, setFormData] = useState({
+    instituteName: settings.instituteName || settings.schoolName || '',
+    tagline: settings.tagline || '',
+    principalName: settings.principalName || '',
+    affiliationNumber: settings.affiliationNumber || '',
+    mobile: settings.mobile || settings.phone || '',
+    email: settings.email || '',
+    address: settings.address || '',
+    logoUrl: settings.logoUrl || settings.logoPath || settings.logo || '',
+    principalSignature: settings.principalSignature || settings.signatureUrl || '',
+    signatureUrl: settings.signatureUrl || settings.principalSignature || '',
+    currentSession: settings.currentSession || settings.academicYear || '2026-27',
+    ...settings
+  });
   const [newClassName, setNewClassName] = useState('');
   const [newCourseName, setNewCourseName] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const hasInitializedRef = React.useRef(false);
 
-  const handleSubmit = (e) => {
+  // Initialize form once when settings first arrive from Firestore
+  React.useEffect(() => {
+    if (settings && !hasInitializedRef.current && (settings.instituteName || settings.schoolName || settings.address || settings.logoUrl)) {
+      hasInitializedRef.current = true;
+      setFormData(prev => ({
+        ...settings,
+        instituteName: settings.instituteName || settings.schoolName || prev.instituteName || '',
+        schoolName: settings.schoolName || settings.instituteName || prev.schoolName || '',
+        tagline: settings.tagline !== undefined ? settings.tagline : (prev.tagline || ''),
+        principalName: settings.principalName !== undefined ? settings.principalName : (prev.principalName || ''),
+        affiliationNumber: settings.affiliationNumber !== undefined ? settings.affiliationNumber : (prev.affiliationNumber || ''),
+        mobile: settings.mobile || settings.phone || prev.mobile || '',
+        phone: settings.phone || settings.mobile || prev.phone || '',
+        email: settings.email || prev.email || '',
+        address: settings.address !== undefined ? settings.address : (prev.address || ''),
+        logoUrl: settings.logoUrl || settings.logoPath || settings.logo || prev.logoUrl || '',
+        principalSignature: settings.principalSignature || settings.signatureUrl || prev.principalSignature || '',
+        signatureUrl: settings.signatureUrl || settings.principalSignature || prev.signatureUrl || '',
+        currentSession: settings.currentSession || settings.academicYear || prev.currentSession || '2026-27',
+      }));
+    }
+  }, [settings]);
+
+  const handleLogoFile = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file (PNG, JPG, SVG, WebP).', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image size exceeds 5MB limit.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      setLogoToCrop(dataUrl);
+      setIsLogoCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogoCropComplete = (croppedDataUrl) => {
+    setFormData(prev => ({
+      ...prev,
+      logoUrl: croppedDataUrl,
+      logo: croppedDataUrl,
+      logoPath: croppedDataUrl
+    }));
+    showToast('Logo cropped! Click "Save Institute Profile" below to apply.', 'success');
+  };
+
+  const handleLogoDragOver = (e) => {
     e.preventDefault();
-    updateSettings(formData);
+    e.stopPropagation();
+    setIsDraggingLogo(true);
+  };
+
+  const handleLogoDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingLogo(false);
+  };
+
+  const handleLogoDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingLogo(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleLogoFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleRemoveLogo = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFormData(prev => ({
+      ...prev,
+      logoUrl: '',
+      logo: '',
+      logoPath: ''
+    }));
+    if (logoInputRef.current) logoInputRef.current.value = '';
+    showToast('Logo removed. Click Save to apply.', 'info');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await updateSettings(formData);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -138,8 +243,190 @@ export default function SettingsView() {
             <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2 border-b border-border pb-2">
                 <Building2 className="w-4 h-4 text-primary" />
-                <span>Institute Branding</span>
+                <span>Institute Branding & Logo</span>
               </h3>
+
+              {/* Institute Logo Upload Box (Drag & Drop + File Open) */}
+              <div className="p-4 rounded-2xl bg-surface2/60 border border-border/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-text flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-primary" />
+                    <span>Official Institute Logo</span>
+                  </label>
+                  {formData.logoUrl && (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      Logo Uploaded
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                  {/* Current Logo Preview */}
+                  <div className="sm:col-span-4 flex items-center gap-3 bg-white p-3 rounded-xl border border-border">
+                    <div className="w-16 h-16 rounded-xl border-2 border-dashed border-primary/30 flex items-center justify-center bg-surface2 overflow-hidden flex-shrink-0 relative group">
+                      {formData.logoUrl ? (
+                        <img
+                          src={formData.logoUrl}
+                          alt="Institute Logo"
+                          className="w-full h-full object-contain p-1 rounded-lg"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <School className="w-8 h-8 text-primary/40" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-text truncate">
+                        {formData.logoUrl ? 'Active Logo' : 'No Logo Set'}
+                      </p>
+                      <p className="text-[10px] text-text-secondary">
+                        {formData.logoUrl ? 'Ready for receipts & header' : 'Default icon in use'}
+                      </p>
+                      {formData.logoUrl && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (formData.logoUrl) {
+                                setLogoToCrop(formData.logoUrl);
+                                setIsLogoCropperOpen(true);
+                              }
+                            }}
+                            className="text-[10px] font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Crop className="w-3 h-3" /> Crop
+                          </button>
+                          <span className="text-slate-300 text-[10px]">&bull;</span>
+                          <button
+                            type="button"
+                            onClick={handleRemoveLogo}
+                            className="text-[10px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
+                          >
+                            <X className="w-3 h-3" /> Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Drag & Drop Upload Zone */}
+                  <div
+                    onDragOver={handleLogoDragOver}
+                    onDragLeave={handleLogoDragLeave}
+                    onDrop={handleLogoDrop}
+                    onClick={() => logoInputRef.current?.click()}
+                    className={`sm:col-span-8 border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                      isDraggingLogo
+                        ? 'border-primary bg-primary/10 scale-[1.01]'
+                        : 'border-border hover:border-primary/60 hover:bg-surface2/80 bg-white'
+                    }`}
+                  >
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleLogoFile(e.target.files[0]);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                    <UploadCloud className={`w-6 h-6 mb-1 transition-transform ${isDraggingLogo ? 'scale-125 text-primary' : 'text-primary/70'}`} />
+                    <p className="text-xs font-bold text-text">
+                      Drag & drop your school logo here, or <span className="text-primary underline">Browse File</span>
+                    </p>
+                    <p className="text-[10px] text-text-secondary mt-0.5">
+                      Supports PNG, JPG, SVG or WebP (Max 5MB)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Authorized Principal Signature Upload Box (Auto Background Removal) */}
+              <div className="p-4 rounded-2xl bg-surface2/60 border border-border/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-text flex items-center gap-2">
+                    <FileSignature className="w-4 h-4 text-emerald-600" />
+                    <span>Official Authorized Signature (Auto-Clean Background)</span>
+                  </label>
+                  {formData.principalSignature && (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      Signature Active
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                  {/* Current Signature Preview */}
+                  <div className="sm:col-span-4 flex items-center gap-3 bg-white p-3 rounded-xl border border-border">
+                    <div className="w-20 h-14 rounded-xl border-2 border-dashed border-amber-400/40 bg-[#0A1128] flex items-center justify-center overflow-hidden flex-shrink-0 p-1">
+                      {formData.principalSignature ? (
+                        <img
+                          src={formData.principalSignature}
+                          alt="Principal Signature"
+                          className="w-full h-full object-contain"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <span className="text-[10px] text-white/50 font-bold text-center">No Sign</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-text truncate">
+                        {formData.principalSignature ? 'Active Sign (White)' : 'No Sign Set'}
+                      </p>
+                      <p className="text-[10px] text-text-secondary">
+                        {formData.principalSignature ? 'Visible on Dark Cards' : 'Upload photo'}
+                      </p>
+                      {formData.principalSignature && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, principalSignature: '', signatureUrl: '' }))}
+                          className="mt-1 text-[10px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
+                        >
+                          <X className="w-3 h-3" /> Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Drag & Drop / File Input for Signature */}
+                  <label className="sm:col-span-8 border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all border-border hover:border-emerald-500/60 hover:bg-emerald-50/20 bg-white">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = async (ev) => {
+                          const dataUrl = ev.target?.result;
+                          if (dataUrl) {
+                            showToast('Removing paper background & converting ink to White contrast...', 'info');
+                            const transparent = await removeSignatureBackground(dataUrl, 210, 'white');
+                            setFormData(prev => ({
+                              ...prev,
+                              principalSignature: transparent,
+                              signatureUrl: transparent
+                            }));
+                            showToast('Signature converted to White ink! Click "Save Institute Profile" below to apply.', 'success');
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                      className="hidden"
+                    />
+                    <FileSignature className="w-6 h-6 mb-1 text-emerald-600" />
+                    <p className="text-xs font-bold text-text">
+                      Upload sign photo on paper, <span className="text-emerald-600 underline">Browse Image</span>
+                    </p>
+                    <p className="text-[10px] text-text-secondary mt-0.5">
+                      ✨ Ink is automatically converted to bright <b>White contrast</b> with 100% transparent background for dark ID cards.
+                    </p>
+                  </label>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-text-secondary">
                 <div>
@@ -318,7 +605,7 @@ export default function SettingsView() {
           <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2">
               <RefreshCw className="w-4 h-4 text-emerald-600" />
-              <span>Data Backup, Restore & Reset</span>
+              <span>Data Backup & Restore</span>
             </h3>
 
             <p className="text-xs text-text-secondary leading-relaxed">
@@ -340,15 +627,6 @@ export default function SettingsView() {
                 <span>Restore Backup (JSON)</span>
                 <input type="file" accept=".json" onChange={handleFileImport} className="hidden" />
               </label>
-
-              <button
-                type="button"
-                onClick={resetToSampleData}
-                className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 font-bold text-xs flex items-center gap-2 cursor-pointer ml-auto transition-all"
-              >
-                <AlertTriangle className="w-4 h-4" />
-                <span>Reset Demo Data</span>
-              </button>
             </div>
           </div>
         </>
@@ -565,6 +843,19 @@ export default function SettingsView() {
           </form>
         </div>
       )}
+
+      {/* Interactive Logo Cropper Modal */}
+      <ImageCropperModal
+        isOpen={isLogoCropperOpen}
+        imageSrc={logoToCrop}
+        title="Crop Institute Logo"
+        initialAspect="1:1"
+        onCropComplete={handleLogoCropComplete}
+        onClose={() => {
+          setIsLogoCropperOpen(false);
+          setLogoToCrop(null);
+        }}
+      />
     </div>
   );
 }

@@ -1,1 +1,0 @@
-{"isEntrypoint":false,"deps":["meta|lib/meta.dart","record_use|lib/src/constant.dart","record_use|lib/src/definition.dart","record_use|lib/src/loading_unit.dart","record_use|lib/src/recordings.dart","record_use|lib/src/syntax.g.dart"],"parts":[],"conditionalDeps":[],"sdkDeps":[],"hasMain":false}

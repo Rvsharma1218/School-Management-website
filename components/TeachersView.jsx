@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useSchoolStore } from '../lib/store';
+import { useSchoolStore, getNextTeacherId, getActiveSchoolId } from '../lib/store';
+import { exportFacultyToExcel, exportFacultyPDF } from '../lib/exportUtils';
 import {
   GraduationCap,
   Plus,
@@ -14,7 +15,11 @@ import {
   CheckCircle,
   X,
   Search,
-  Key
+  Key,
+  Copy,
+  Download,
+  FileSpreadsheet,
+  FileText
 } from 'lucide-react';
 
 export default function TeachersView() {
@@ -33,6 +38,7 @@ export default function TeachersView() {
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     mobile: '',
@@ -40,6 +46,8 @@ export default function TeachersView() {
     assignedClass: '10th',
     assignedSection: 'A'
   });
+
+  const activeSchoolId = getActiveSchoolId();
 
   const handleOpenAdd = () => {
     setEditingTeacher(null);
@@ -65,6 +73,14 @@ export default function TeachersView() {
     setIsAddOpen(true);
   };
 
+  const handleCopyEmail = (email, id) => {
+    if (!email) return;
+    navigator.clipboard.writeText(email);
+    setCopiedId(id);
+    showToast(`Copied "${email}" to clipboard!`, 'info');
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name?.trim()) {
@@ -79,13 +95,23 @@ export default function TeachersView() {
         showToast(`Teacher "${formData.name}" updated successfully!`, "success");
       } else {
         await addTeacher(formData);
-        showToast(`Teacher "${formData.name}" added successfully!`, "success");
+        showToast(`Teacher "${formData.name}" added successfully with name-based Auth email!`, "success");
       }
       setIsAddOpen(false);
     } catch (err) {
       showToast(`Error saving teacher: ${err.message || err}`, "error");
     }
   };
+
+  // Preview generated email in the modal
+  const nextTeacherId = getNextTeacherId(teachers);
+  const namePart = (formData.name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 12);
+  const schoolPart = (activeSchoolId || 'school001').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const previewEmail = `${namePart || 'name'}.${(editingTeacher?.teacherId || nextTeacherId).toLowerCase()}@${schoolPart}.teachers`;
 
   return (
     <div className="space-y-6 pb-12 font-sans">
@@ -96,17 +122,40 @@ export default function TeachersView() {
             Faculty & Teacher Management
           </h2>
           <p className="text-xs lg:text-sm text-text-secondary">
-            Manage faculty profiles, assigned classes, and teacher portal credentials
+            Manage faculty profiles, name-based auth emails, and teacher portal credentials
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4 stroke-[3]" />
-          <span>Add New Teacher</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {teachers.length > 0 && (
+            <>
+              <button
+                onClick={() => exportFacultyToExcel(teachers, settings.instituteName || 'School')}
+                className="px-3 py-2 rounded-xl bg-surface2 hover:bg-border text-text font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Export Faculty List to Excel"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span className="hidden sm:inline">Export Excel</span>
+              </button>
+              <button
+                onClick={() => exportFacultyPDF(teachers, settings)}
+                className="px-3 py-2 rounded-xl bg-surface2 hover:bg-border text-text font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Export Faculty List to PDF"
+              >
+                <FileText className="w-4 h-4 text-primary" />
+                <span className="hidden sm:inline">Export PDF</span>
+              </button>
+            </>
+          )}
+
+          <button
+            onClick={handleOpenAdd}
+            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+            <span>Add New Teacher</span>
+          </button>
+        </div>
       </div>
 
       {/* Teachers Grid */}
@@ -118,6 +167,8 @@ export default function TeachersView() {
         ) : (
           teachers.map((teacher, idx) => {
             const teacherKey = teacher.authUid || teacher.id || `tch_${idx}`;
+            const displayEmail = teacher.authEmail || teacher.email || `${(teacher.name || 'teacher').toLowerCase().replace(/[^a-z0-9]/g, '')}.${(teacher.teacherId || `T${idx+1}`).toLowerCase()}@${schoolPart}.teachers`;
+
             return (
               <div
                 key={teacherKey}
@@ -131,7 +182,9 @@ export default function TeachersView() {
                       </div>
                       <div>
                         <h4 className="font-bold text-sm text-text">{teacher.name}</h4>
-                        <div className="text-[10px] text-text-secondary font-mono">{teacher.teacherId}</div>
+                        <div className="text-[10px] text-text-secondary font-mono font-bold text-primary">
+                          {teacher.teacherId || `T${String(idx + 1).padStart(3, '0')}`}
+                        </div>
                       </div>
                     </div>
 
@@ -153,12 +206,29 @@ export default function TeachersView() {
                     </div>
                   </div>
 
-                  <div className="space-y-2 py-2 border-y border-border/60 text-xs">
+                  <div className="space-y-2 py-2.5 border-y border-border/60 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-text-secondary font-medium">Assigned Class:</span>
                       <span className="font-bold text-primary px-2 py-0.5 rounded-md bg-primary/10 text-[11px]">
                         Class {teacher.assignedClass} — Sec {teacher.assignedSection || 'A'}
                       </span>
+                    </div>
+
+                    {/* Auth Login Email */}
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-text-secondary font-medium shrink-0">Auth Email:</span>
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="font-mono text-[11px] text-indigo-950 font-bold truncate max-w-[170px]" title={displayEmail}>
+                          {displayEmail}
+                        </span>
+                        <button
+                          onClick={() => handleCopyEmail(displayEmail, teacherKey)}
+                          className="p-1 text-slate-400 hover:text-primary rounded cursor-pointer"
+                          title="Copy Email"
+                        >
+                          <Copy className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
 
                     {teacher.mobile && (
@@ -171,7 +241,7 @@ export default function TeachersView() {
                     {teacher.password && (
                       <div className="flex items-center justify-between">
                         <span className="text-text-secondary font-medium">Login Password:</span>
-                        <span className="font-mono text-text font-semibold">••••••</span>
+                        <span className="font-mono text-text font-semibold">{teacher.password}</span>
                       </div>
                     )}
                   </div>
@@ -195,9 +265,14 @@ export default function TeachersView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-border bg-surface2 flex items-center justify-between">
-              <h3 className="font-bold text-sm text-text">
-                {editingTeacher ? 'Edit Teacher Details' : 'Add New Teacher'}
-              </h3>
+              <div>
+                <h3 className="font-bold text-sm text-text">
+                  {editingTeacher ? 'Edit Teacher Details' : 'Add New Teacher'}
+                </h3>
+                <p className="text-[11px] text-text-secondary">
+                  Creates dedicated Auth credentials & database mapping
+                </p>
+              </div>
               <button onClick={() => setIsAddOpen(false)} className="p-1 text-text-muted hover:text-text cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
@@ -212,11 +287,30 @@ export default function TeachersView() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Vikram Malhotra"
+                  placeholder="e.g. Suraj Sharma"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-surface2 border border-border text-xs text-text font-bold focus:outline-none focus:border-primary"
                 />
+              </div>
+
+              {/* Dynamic Generated Email Preview */}
+              <div className="p-2.5 rounded-xl bg-indigo-50/60 border border-indigo-100 space-y-1">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-indigo-950 flex items-center gap-1">
+                    <Mail className="w-3 h-3 text-indigo-600" />
+                    <span>Auto Generated Auth Email:</span>
+                  </span>
+                  <span className="text-[10px] text-indigo-600 font-mono font-bold">
+                    {editingTeacher?.teacherId || nextTeacherId}
+                  </span>
+                </div>
+                <div className="font-mono text-[11px] text-indigo-900 font-bold break-all bg-white px-2 py-1 rounded-lg border border-indigo-200/60">
+                  {previewEmail}
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  This name-based email will be saved in Firebase Auth & Users table so you can identify the teacher easily.
+                </p>
               </div>
 
               {/* Phone Number (Optional) */}
@@ -237,13 +331,13 @@ export default function TeachersView() {
               {/* Password */}
               <div>
                 <label className="block font-bold text-text mb-1 flex items-center justify-between">
-                  <span>Password <span className="text-rose-500">*</span></span>
+                  <span>Login Password <span className="text-rose-500">*</span></span>
                   <span className="text-[10px] text-text-muted font-normal">For Teacher Login</span>
                 </label>
                 <div className="relative">
                   <Key className="w-3.5 h-3.5 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
-                    type="password"
+                    type="text"
                     required
                     placeholder="Enter password (e.g. 123456)"
                     value={formData.password}

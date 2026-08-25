@@ -1,71 +1,115 @@
 'use client';
 
 import React from 'react';
-import { X, Printer, Award, School } from 'lucide-react';
+import { X, Printer, Award, School, Download, FileText } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { exportSingleResultPDF, printSingleResultPDF } from '../lib/exportUtils';
+import { useSchoolStore } from '../lib/store';
 
-export default function PrintResultModal({ data, onClose }) {
-  if (!data) return null;
+export default function PrintResultModal({ result: propResult, student: propStudent, data, onClose }) {
+  const { settings: storeSettings, showToast } = useSchoolStore();
 
-  const { result, student, settings } = data;
+  const result = propResult || data?.result;
+  const student = propStudent || data?.student;
+  const settings = data?.settings || storeSettings || {};
 
-  const total = result.subjects.reduce((sum, s) => sum + Number(s.totalMarks), 0);
-  const obt = result.subjects.reduce((sum, s) => sum + Number(s.marks), 0);
-  const pct = total > 0 ? ((obt / total) * 100).toFixed(1) : 0;
-  const grade = pct >= 90 ? 'A+' : pct >= 80 ? 'A' : pct >= 70 ? 'B+' : pct >= 60 ? 'B' : pct >= 50 ? 'C' : pct >= 40 ? 'D' : 'F';
-  const isPass = pct >= 40;
+  if (!result) return null;
+
+  const rawSubjects = Array.isArray(result.subjects) && result.subjects.length > 0
+    ? result.subjects
+    : [{ subjectName: result.subject || 'General', totalMarks: result.totalMarks || 100, marks: result.marks || 0 }];
+
+  const total = rawSubjects.reduce((sum, s) => sum + (Number(s.totalMarks) || 0), 0);
+  const obt = rawSubjects.reduce((sum, s) => sum + (Number(s.marks) || 0), 0);
+  const pct = total > 0 ? ((obt / total) * 100).toFixed(1) : '0.0';
+  const grade = Number(pct) >= 90 ? 'A+' : Number(pct) >= 80 ? 'A' : Number(pct) >= 70 ? 'B+' : Number(pct) >= 60 ? 'B' : Number(pct) >= 50 ? 'C' : Number(pct) >= 40 ? 'D' : 'F';
+  const isPass = Number(pct) >= 40;
 
   const handlePrint = () => {
     window.print();
   };
 
+  const handleDownloadPDF = () => {
+    exportSingleResultPDF(result, student, settings);
+    showToast(`Downloaded marksheet PDF for ${student?.name || 'student'}!`, 'success');
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs overflow-y-auto print:p-0 print:bg-white print:static">
-      <div className="bg-white text-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-8 print:shadow-none print:m-0 print:max-w-none print:w-full">
-        {/* Print Controls */}
-        <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between print:hidden">
-          <span className="text-xs font-bold text-slate-700">Official Marksheet Preview</span>
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-xs p-3 sm:p-6 flex justify-center items-start print:p-0 print:bg-white print:static"
+    >
+      <div className="bg-white text-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-4 sm:my-8 print:shadow-none print:m-0 print:max-w-none print:w-full flex flex-col relative animate-in fade-in zoom-in-95 duration-200">
+        
+        {/* Sticky Print Controls Header */}
+        <div className="sticky top-0 z-30 p-3.5 sm:p-4 border-b border-slate-200 bg-slate-100/95 backdrop-blur-md flex items-center justify-between shadow-xs print:hidden">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <Award className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-slate-800 block">Official Marksheet Preview</span>
+              <span className="text-[10px] text-slate-500 font-medium">{student?.name || 'Student'} • {result.examName || 'Examination'}</span>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2">
             <button
+              onClick={handleDownloadPDF}
+              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+              title="Download Marksheet as PDF"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Download PDF</span>
+            </button>
+            <button
               onClick={handlePrint}
-              className="px-4 py-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+              title="Print Marksheet"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print Marksheet</span>
+              <span>Print</span>
             </button>
-            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer">
-              <X className="w-5 h-5" />
+            <button
+              onClick={onClose}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-rose-100 hover:text-rose-700 text-slate-600 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+              title="Close Marksheet Preview"
+            >
+              <X className="w-4 h-4" />
+              <span className="text-xs">Cancel</span>
             </button>
           </div>
         </div>
 
         {/* MARKSHEET BODY */}
-        <div className="p-8 print:p-6 font-sans">
-          <div className="border-4 border-double border-indigo-950 p-6 rounded-xl space-y-6">
+        <div className="p-6 sm:p-8 print:p-6 font-sans overflow-y-auto">
+          <div className="border-4 border-double border-indigo-950 p-6 rounded-xl space-y-6 bg-white">
             {/* Header */}
             <div className="text-center border-b-2 border-indigo-950 pb-4 space-y-1">
               <h1 className="text-2xl font-black uppercase tracking-wider text-indigo-950">
-                {settings.instituteName}
+                {settings.instituteName || 'Smart School & Computer Institute'}
               </h1>
               <p className="text-xs text-slate-600 font-medium">
-                {settings.address} • Affiliation: {settings.affiliationNumber || 'Recognized'}
+                {settings.address || 'Main Campus'} • Affiliation: {settings.affiliationNumber || 'Recognized'}
               </p>
               <div className="inline-block mt-2 px-4 py-1 rounded-full bg-indigo-950 text-amber-300 text-xs font-black uppercase tracking-widest shadow-xs">
                 OFFICIAL REPORT CARD & STATEMENT OF MARKS
               </div>
-              <p className="text-xs font-bold text-slate-800 pt-1">{result.examName}</p>
+              <p className="text-xs font-bold text-slate-800 pt-1">{result.examName || 'Examination'}</p>
             </div>
 
             {/* Student Info Box */}
             <div className="grid grid-cols-2 gap-4 text-xs p-3 rounded-lg bg-slate-50 border border-slate-300">
               <div className="space-y-1">
-                <div>Student Name: <strong className="text-indigo-950 font-bold">{student?.name}</strong></div>
+                <div>Student Name: <strong className="text-indigo-950 font-bold">{student?.name || result?.studentName || '—'}</strong></div>
                 <div>Father's Name: <strong>{student?.fatherName || '—'}</strong></div>
-                <div>Class / Course: <strong>{student?.studentType === 'school' ? `Class ${student?.className || ''}` : student?.course}</strong></div>
+                <div>Class / Course: <strong>{student?.studentType === 'school' ? `Class ${student?.className || ''} - ${student?.section || 'A'}` : (student?.course || result?.class || '—')}</strong></div>
               </div>
               <div className="space-y-1 text-right">
-                <div>Student ID: <strong className="font-mono">{student?.studentId}</strong></div>
-                <div>Roll Number: <strong>{student?.rollNumber || 'N/A'}</strong></div>
+                <div>Student ID: <strong className="font-mono">{student?.studentId || result?.studentId || '—'}</strong></div>
+                <div>Roll Number: <strong>{student?.rollNumber || result?.rollNumber || 'N/A'}</strong></div>
                 <div>Academic Session: <strong>{student?.session || settings.currentSession || '2026-27'}</strong></div>
               </div>
             </div>
@@ -74,7 +118,7 @@ export default function PrintResultModal({ data, onClose }) {
             <table className="w-full text-xs text-left border-collapse border border-slate-300">
               <thead className="bg-indigo-950 text-white font-bold">
                 <tr>
-                  <th className="p-2 border border-slate-300">S.No</th>
+                  <th className="p-2 border border-slate-300 text-center">S.No</th>
                   <th className="p-2 border border-slate-300">Subject Name</th>
                   <th className="p-2 text-center border border-slate-300">Max Marks</th>
                   <th className="p-2 text-center border border-slate-300">Marks Obtained</th>
@@ -82,8 +126,10 @@ export default function PrintResultModal({ data, onClose }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {result.subjects.map((sub, idx) => {
-                  const subPct = sub.totalMarks > 0 ? (sub.marks / sub.totalMarks) * 100 : 0;
+                {rawSubjects.map((sub, idx) => {
+                  const sMax = Number(sub.totalMarks) || 0;
+                  const sObt = Number(sub.marks) || 0;
+                  const subPct = sMax > 0 ? (sObt / sMax) * 100 : 0;
                   const subGrade = subPct >= 90 ? 'A+' : subPct >= 80 ? 'A' : subPct >= 70 ? 'B+' : subPct >= 60 ? 'B' : subPct >= 50 ? 'C' : subPct >= 40 ? 'D' : 'F';
                   return (
                     <tr key={idx} className="hover:bg-slate-50">
@@ -128,7 +174,7 @@ export default function PrintResultModal({ data, onClose }) {
               </div>
 
               <div className="p-1 border border-slate-300 rounded-md">
-                <QRCodeSVG value={`RESULT:${result.examName}|STUDENT:${student?.studentId}|PCT:${pct}%|GRADE:${grade}`} size={52} />
+                <QRCodeSVG value={`RESULT:${result.examName || 'Exam'}|STUDENT:${student?.studentId || result?.studentId}|PCT:${pct}%|GRADE:${grade}`} size={52} />
               </div>
 
               <div className="text-center space-y-1">

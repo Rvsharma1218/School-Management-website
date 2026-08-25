@@ -14,7 +14,6 @@ import TeachersView from '../components/TeachersView';
 import ReportsView from '../components/ReportsView';
 import QrScannerView from '../components/QrScannerView';
 import SettingsView from '../components/SettingsView';
-import CommunicationView from '../components/CommunicationView';
 import PrintReceiptModal from '../components/PrintReceiptModal';
 import PrintResultModal from '../components/PrintResultModal';
 import PrintIdCardsModal from '../components/PrintIdCardsModal';
@@ -22,6 +21,11 @@ import GlobalSearchModal from '../components/GlobalSearchModal';
 import AddEditStudentModal from '../components/AddEditStudentModal';
 import CollectFeeModal from '../components/CollectFeeModal';
 import StudentFeeDetailModal from '../components/StudentFeeDetailModal';
+import PromoteStudentsModal from '../components/PromoteStudentsModal';
+import WhatsAppReminderModal from '../components/WhatsAppReminderModal';
+import NoticeBoardView from '../components/NoticeBoardView';
+import AddEditNoticeModal from '../components/AddEditNoticeModal';
+import NoticeDetailModal from '../components/NoticeDetailModal';
 import { ToastContainer, ConfirmDialog } from '../components/ToastNotification';
 
 // Auth Components
@@ -46,11 +50,105 @@ function AppContent() {
     printReceiptData, setPrintReceiptData,
     printResultData,  setPrintResultData,
     printIdCardsData, setPrintIdCardsData,
-    isGlobalSearchOpen, setIsGlobalSearchOpen
+    whatsAppReminderData, setWhatsAppReminderData,
+    isPromoteModalOpen, setIsPromoteModalOpen,
+    isGlobalSearchOpen, setIsGlobalSearchOpen,
+    isAddNoticeOpen, setIsAddNoticeOpen,
+    editingNotice, setEditingNotice,
+    viewingNotice, setViewingNotice
   } = useSchoolStore();
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const prevModalOpenRef = React.useRef(false);
+
+  // Register Background Notification Service Worker
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .catch((err) => {
+          console.warn('SW registration note:', err.message);
+        });
+    }
+  }, []);
+
+  // Mobile Back Button / Gesture Navigation Support
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const isAnyModalOpen = !!(isAddStudentOpen || editingStudent || collectFeeStudent || feeDetailStudent || printReceiptData || printResultData || printIdCardsData || isGlobalSearchOpen || isMobileNavOpen || isAddNoticeOpen || viewingNotice);
+
+    if (isAnyModalOpen && !prevModalOpenRef.current) {
+      window.history.pushState({ modalOpen: true }, '');
+    }
+    prevModalOpenRef.current = isAnyModalOpen;
+
+    const handlePopState = () => {
+      if (isPromoteModalOpen) {
+        setIsPromoteModalOpen(false);
+        return;
+      }
+      if (isAddNoticeOpen || editingNotice) {
+        setIsAddNoticeOpen(false);
+        setEditingNotice(null);
+        return;
+      }
+      if (viewingNotice) {
+        setViewingNotice(null);
+        return;
+      }
+      if (isMobileNavOpen) {
+        setIsMobileNavOpen(false);
+        return;
+      }
+      if (isAddStudentOpen || editingStudent) {
+        setIsAddStudentOpen(false);
+        setEditingStudent(null);
+        return;
+      }
+      if (collectFeeStudent) {
+        setCollectFeeStudent(null);
+        return;
+      }
+      if (feeDetailStudent) {
+        setFeeDetailStudent(null);
+        return;
+      }
+      if (printReceiptData) {
+        setPrintReceiptData(null);
+        return;
+      }
+      if (printResultData) {
+        setPrintResultData(null);
+        return;
+      }
+      if (printIdCardsData) {
+        setPrintIdCardsData(null);
+        return;
+      }
+      if (isGlobalSearchOpen) {
+        setIsGlobalSearchOpen(false);
+        return;
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [
+    isAddStudentOpen,
+    editingStudent,
+    collectFeeStudent,
+    feeDetailStudent,
+    printReceiptData,
+    printResultData,
+    printIdCardsData,
+    isGlobalSearchOpen,
+    isMobileNavOpen
+  ]);
 
   // Security route guards
   useEffect(() => {
@@ -122,7 +220,13 @@ function AppContent() {
         <main className="flex-1 overflow-x-hidden p-4 sm:p-6 lg:p-8">
           <div className="w-full max-w-[1600px] mx-auto">
             {currentPath === '/dashboard' && <DashboardView />}
-            {currentPath === '/communication' && <CommunicationView />}
+            {currentPath === '/notices' && (
+              <NoticeBoardView
+                onOpenPublish={() => { setEditingNotice(null); setIsAddNoticeOpen(true); }}
+                onOpenView={(n) => setViewingNotice(n)}
+                onOpenEdit={(n) => { setEditingNotice(n); setIsAddNoticeOpen(true); }}
+              />
+            )}
             {currentPath === '/students' && <StudentsView />}
             {currentPath === '/fees' && (currentUser.role === 'principal' ? <FeesView /> : <AccessDeniedView />)}
             {currentPath === '/attendance' && <AttendanceView />}
@@ -174,6 +278,28 @@ function AppContent() {
       )}
       {isGlobalSearchOpen && (
         <GlobalSearchModal isOpen={isGlobalSearchOpen} onClose={() => setIsGlobalSearchOpen(false)} />
+      )}
+      {isPromoteModalOpen && (
+        <PromoteStudentsModal isOpen={isPromoteModalOpen} onClose={() => setIsPromoteModalOpen(false)} />
+      )}
+      {whatsAppReminderData && (
+        <WhatsAppReminderModal isOpen={!!whatsAppReminderData} onClose={() => setWhatsAppReminderData(null)} {...(whatsAppReminderData || {})} />
+      )}
+
+      {/* Notice Board Modals */}
+      {isAddNoticeOpen && (
+        <AddEditNoticeModal
+          isOpen={isAddNoticeOpen}
+          noticeToEdit={editingNotice}
+          onClose={() => { setIsAddNoticeOpen(false); setEditingNotice(null); }}
+        />
+      )}
+      {viewingNotice && (
+        <NoticeDetailModal
+          notice={viewingNotice}
+          onClose={() => setViewingNotice(null)}
+          onEdit={(n) => { setViewingNotice(null); setEditingNotice(n); setIsAddNoticeOpen(true); }}
+        />
       )}
 
       {/* Global Theme-matched Toast Notifications & Confirmation Dialog */}

@@ -1,1 +1,0 @@
-{"isEntrypoint":false,"deps":[],"parts":[],"conditionalDeps":[{"$default":"sqlite3|lib/src/platform/fallback.dart","dart.library.js_interop":"sqlite3|lib/src/platform/web.dart"}],"sdkDeps":[],"hasMain":false}

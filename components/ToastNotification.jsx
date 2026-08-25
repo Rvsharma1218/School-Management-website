@@ -69,10 +69,10 @@ export function ConfirmDialog() {
   if (!confirmDialog) return null;
 
   const {
-    title = 'Confirm Action',
-    message = 'Are you sure you want to proceed?',
-    confirmText = 'Confirm',
-    cancelText = 'Cancel',
+    title = 'Are you sure?',
+    message = 'Are you sure you want to proceed? This action cannot be reversed.',
+    confirmText = 'Yes, Delete',
+    cancelText = 'No, Cancel',
     type = 'danger',
     onConfirm,
     onCancel

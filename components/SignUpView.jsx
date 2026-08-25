@@ -45,6 +45,11 @@ export default function SignUpView() {
         password,
         role
       );
+
+      // Auto 1-time clean refresh on sign up into dashboard
+      if (typeof window !== 'undefined') {
+        window.location.href = '/dashboard';
+      }
     } catch (err) {
       console.warn('Sign Up error:', err.message);
       if (err.message?.includes('email-already-in-use')) {
@@ -65,8 +70,8 @@ export default function SignUpView() {
       {/* ── Main Split-Screen Container ── */}
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden shadow-2xl bg-white border border-white/20">
         
-        {/* ── Left Side: Academic Branding Hero ── */}
-        <div className="lg:col-span-5 bg-gradient-to-br from-[#1f108e] to-[#0f0069] p-8 lg:p-12 text-white flex flex-col justify-between relative overflow-hidden">
+        {/* ── Left Side: Academic Branding Hero (Desktop) ── */}
+        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-[#1f108e] to-[#0f0069] p-8 lg:p-12 text-white flex-col justify-between relative overflow-hidden">
           
           <div className="absolute -right-16 -top-16 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-[#316bf3]/20 rounded-full blur-3xl pointer-events-none" />
@@ -119,13 +124,24 @@ export default function SignUpView() {
         </div>
 
         {/* ── Right Side: Form Panel ── */}
-        <div className="lg:col-span-7 bg-[#f8f9ff] p-8 lg:p-12 flex flex-col justify-center">
+        <div className="col-span-1 lg:col-span-7 bg-[#f8f9ff] p-5 sm:p-8 lg:p-12 flex flex-col justify-center">
           
-          <div className="max-w-lg w-full mx-auto space-y-6">
+          <div className="max-w-lg w-full mx-auto space-y-5">
             
+            {/* Mobile-Only Header Brand Logo */}
+            <div className="flex lg:hidden items-center gap-3 pb-2 border-b border-[#c8c4d5]/40">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1f108e] to-[#0f0069] flex items-center justify-center text-white shadow-sm flex-shrink-0">
+                <School className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-black text-sm text-[#1f108e] leading-tight">Smart School</h2>
+                <p className="text-[10px] text-slate-500 font-medium">SaaS Management Platform</p>
+              </div>
+            </div>
+
             {/* Header Title */}
             <div>
-              <h2 className="text-2xl font-black text-[#0b1c30] tracking-tight">Create Your Account</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-[#0b1c30] tracking-tight">Create Your Account</h2>
               <p className="text-xs text-[#464553] mt-1">Get started with a free setup for your institute.</p>
             </div>
 

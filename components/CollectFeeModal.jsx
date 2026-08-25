@@ -73,7 +73,16 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
       return;
     }
 
-    const payDate = paymentDate ? new Date(paymentDate) : new Date();
+    let payDate = new Date();
+    if (paymentDate) {
+      const parts = paymentDate.split('-').map(Number);
+      if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        const now = new Date();
+        payDate = new Date(parts[0], parts[1] - 1, parts[2], now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      } else {
+        payDate = new Date(paymentDate);
+      }
+    }
     const finalRecNo = receiptNumber || (getNextReceiptNumber ? getNextReceiptNumber(payments, payDate.getFullYear()) : `REC-${payDate.getFullYear()}-001`);
     const finalFeeMonth = feeMonth || activeMonthName;
     const finalMonthKey = currentMonth?.monthKey || `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}`;
@@ -100,6 +109,22 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
       lateFine:       Number(currentMonth?.lateFine)       || 0,
     };
 
+    const updatedMonthlyParticulars = {
+      ...(currentStudent.monthlyParticulars || {}),
+      [finalMonthKey]: {
+        ...particularsSnapshot,
+        dueDate: `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}-10`,
+        totalDue: totalDemand,
+        monthName: finalFeeMonth
+      }
+    };
+    const tFee = Number(currentStudent.feeStructure?.tuitionFee) > 0 ? Number(currentStudent.feeStructure.tuitionFee) : Number(amount);
+    const updatedFeeStructure = {
+      ...(currentStudent.feeStructure || {}),
+      tuitionFee: tFee,
+      dueDay: Number(currentStudent.feeStructure?.dueDay) || 10
+    };
+
     const newPayment = await addPayment({
       studentId: currentStudent.id,
       studentName: currentStudent.name,
@@ -115,31 +140,11 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
       alreadyPaid: alreadyPaidThisMonth,
       totalPaidAfter: totalPaidAfterPayment,
       balanceDue: remainingAfterPayment,
-      particularsSnapshot
+      particularsSnapshot,
+      monthlyParticulars: updatedMonthlyParticulars,
+      feeStructure: updatedFeeStructure,
+      monthlyFee: tFee
     });
-
-    const updatedMonthlyParticulars = {
-      ...(currentStudent.monthlyParticulars || {}),
-      [finalMonthKey]: {
-        ...particularsSnapshot,
-        dueDate: `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}-10`,
-        totalDue: totalDemand,
-        monthName: finalFeeMonth
-      }
-    };
-    const tFee = Number(currentStudent.feeStructure?.tuitionFee) > 0 ? Number(currentStudent.feeStructure.tuitionFee) : Number(amount);
-    if (updateStudent) {
-      updateStudent(currentStudent.id, {
-        ...currentStudent,
-        monthlyFee: tFee,
-        feeStructure: {
-          ...(currentStudent.feeStructure || {}),
-          tuitionFee: tFee,
-          dueDay: Number(currentStudent.feeStructure?.dueDay) || 10
-        },
-        monthlyParticulars: updatedMonthlyParticulars
-      });
-    }
 
     onClose();
     showToast(`Payment of ₹${Number(amount).toLocaleString('en-IN')} recorded & Receipt generated!`, "success");

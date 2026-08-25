@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { exportPaymentsToExcel, exportDefaultersToExcel, openWhatsAppFeeReminder, openWhatsAppReceiptShare, exportReceiptPDF } from '../lib/exportUtils';
 import CollectFeeModal from './CollectFeeModal';
+import WhatsAppReminderModal from './WhatsAppReminderModal';
 
 export default function FeesView() {
   const {
@@ -21,6 +22,8 @@ export default function FeesView() {
     feeDetailStudent,
     setFeeDetailStudent,
     setPrintReceiptData,
+    whatsAppReminderData,
+    setWhatsAppReminderData,
     deletePayment
   } = useSchoolStore();
 
@@ -115,11 +118,10 @@ export default function FeesView() {
       <div className="flex items-center gap-2 border-b border-border pb-1 overflow-x-auto custom-scrollbar">
         <button
           onClick={() => setActiveTab('dashboard')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'dashboard'
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${activeTab === 'dashboard'
               ? 'bg-primary text-white shadow-xs'
               : 'text-text-secondary hover:text-text hover:bg-surface2'
-          }`}
+            }`}
         >
           <BarChart3 className="w-3.5 h-3.5" />
           <span>Fee Dashboard</span>
@@ -127,11 +129,10 @@ export default function FeesView() {
 
         <button
           onClick={() => setActiveTab('ledger')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'ledger'
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${activeTab === 'ledger'
               ? 'bg-primary text-white shadow-xs'
               : 'text-text-secondary hover:text-text hover:bg-surface2'
-          }`}
+            }`}
         >
           <Receipt className="w-3.5 h-3.5" />
           <span>Transactions Register ({payments.length})</span>
@@ -139,11 +140,10 @@ export default function FeesView() {
 
         <button
           onClick={() => setActiveTab('defaulters')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
-            activeTab === 'defaulters'
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${activeTab === 'defaulters'
               ? 'bg-primary text-white shadow-xs'
               : 'text-text-secondary hover:text-text hover:bg-surface2'
-          }`}
+            }`}
         >
           <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
           <span>Outstanding Defaulters ({defaultersList.length})</span>
@@ -243,11 +243,11 @@ export default function FeesView() {
                         </td>
                       </tr>
                     ) : (
-                      payments.slice(0, 5).map(p => {
+                      payments.slice(0, 5).map((p, idx) => {
                         const student = students.find(s => s.id === p.studentId);
                         return (
                           <tr
-                            key={p.id}
+                            key={p.id ? `${p.id}_${idx}` : `pay_${idx}`}
                             onClick={() => student && setFeeDetailStudent(student)}
                             className="hover:bg-surface2/50 transition-colors cursor-pointer"
                             title="Click to view & manage student fee structure"
@@ -363,10 +363,10 @@ export default function FeesView() {
                       </td>
                     </tr>
                   ) : (
-                    filteredPayments.map(p => {
+                    filteredPayments.map((p, idx) => {
                       const student = students.find(s => s.id === p.studentId);
                       return (
-                        <tr key={p.id} className="hover:bg-surface2/30 transition-colors">
+                        <tr key={p.id ? `${p.id}_${idx}` : `ledger_${idx}`} className="hover:bg-surface2/30 transition-colors">
                           <td className="py-3.5 px-4 font-mono font-bold text-primary">{p.receiptNumber}</td>
                           <td className="py-3.5 px-4 font-mono text-text-secondary">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : '-'}</td>
                           <td className="py-3.5 px-4 font-bold text-text">{p.studentName || student?.name}</td>
@@ -443,13 +443,24 @@ export default function FeesView() {
               <h2 className="text-xl lg:text-2xl font-bold text-rose-600 tracking-tight">Outstanding Defaulters</h2>
               <p className="text-xs text-text-secondary mt-0.5">List of students with auto-accrued monthly dues and quick reminders.</p>
             </div>
-            <button
-              onClick={() => exportDefaultersToExcel(defaultersList, settings.instituteName)}
-              className="px-4 py-2 rounded-xl bg-white border border-border hover:bg-surface2 text-text font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <FileSpreadsheet className="w-4 h-4 text-rose-600" />
-              <span>Export Defaulters</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {defaultersList.length > 0 && (
+                <button
+                  onClick={() => setWhatsAppReminderData({ students: defaultersList })}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Bulk WhatsApp ({defaultersList.length})</span>
+                </button>
+              )}
+              <button
+                onClick={() => exportDefaultersToExcel(defaultersList, settings.instituteName)}
+                className="px-4 py-2 rounded-xl bg-white border border-border hover:bg-surface2 text-text font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-rose-600" />
+                <span>Export Defaulters</span>
+              </button>
+            </div>
           </div>
 
           <div className="bg-white border border-border rounded-2xl p-4 shadow-sm">
@@ -506,8 +517,9 @@ export default function FeesView() {
                             <div className="flex items-center justify-end gap-2">
                               {s.mobile && (
                                 <button
-                                  onClick={() => openWhatsAppFeeReminder(s, m.currentDue, s.dueDate, settings)}
+                                  onClick={() => setWhatsAppReminderData({ student: s, dueAmount: m.currentDue })}
                                   className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-[11px] flex items-center gap-1 border border-emerald-200 cursor-pointer"
+                                  title="Send WhatsApp Fee Due Reminder (Hindi / English)"
                                 >
                                   <MessageSquare className="w-3 h-3" />
                                   <span>WhatsApp</span>
@@ -532,6 +544,13 @@ export default function FeesView() {
           </div>
         </div>
       )}
+
+      {/* WhatsApp Reminder Modal (Hindi & English) */}
+      <WhatsAppReminderModal
+        isOpen={!!whatsAppReminderData}
+        onClose={() => setWhatsAppReminderData(null)}
+        {...(whatsAppReminderData || {})}
+      />
     </div>
   );
 }

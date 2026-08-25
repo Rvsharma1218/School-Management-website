@@ -11,7 +11,9 @@ import {
   exportAttendanceToExcel,
   openWhatsAppAttendanceAlert,
   exportTodayAttendancePDF,
+  printTodayAttendancePDF,
   exportDateRangeAttendancePDF,
+  printDateRangeAttendancePDF,
   exportStudentAttendancePDF
 } from '../lib/exportUtils';
 
@@ -185,10 +187,19 @@ export default function AttendanceView() {
           <button
             onClick={() => setIsDateRangeOpen(!isDateRangeOpen)}
             className="px-3.5 py-2 rounded-xl bg-white border border-border hover:bg-surface2 text-text font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            title="Download Date Range Attendance PDF"
+            title="Date Range Attendance Register"
           >
             <Calendar className="w-3.5 h-3.5 text-primary" />
-            <span className="hidden sm:inline">Date Range PDF</span>
+            <span className="hidden sm:inline">Date Range</span>
+          </button>
+
+          <button
+            onClick={() => printTodayAttendancePDF(filteredStudents, attendance, selectedDate, settings)}
+            className="px-3.5 py-2 rounded-xl bg-white border border-border hover:bg-surface2 text-text font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all"
+            title="Print Attendance Register"
+          >
+            <Printer className="w-3.5 h-3.5 text-primary" />
+            <span>Print Register</span>
           </button>
 
           <button
@@ -197,7 +208,7 @@ export default function AttendanceView() {
             title="Download Today's Attendance Register as PDF"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Today's Register PDF</span>
+            <span>Download PDF</span>
           </button>
         </div>
       </div>
@@ -208,8 +219,8 @@ export default function AttendanceView() {
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-primary" />
             <div>
-              <h4 className="text-xs font-bold text-text">Export Date Range Attendance Sheet</h4>
-              <p className="text-[11px] text-text-muted">Select span to download complete matrix attendance register PDF.</p>
+              <h4 className="text-xs font-bold text-text">Date Range Attendance Register</h4>
+              <p className="text-[11px] text-text-muted">Print or download complete attendance register matrix.</p>
             </div>
           </div>
 
@@ -234,6 +245,17 @@ export default function AttendanceView() {
             </div>
             <button
               onClick={() => {
+                printDateRangeAttendancePDF(filteredStudents, attendance, fromDate, toDate, settings);
+                setIsDateRangeOpen(false);
+              }}
+              className="px-3.5 py-1.5 rounded-lg bg-surface2 border border-border hover:bg-white text-text font-bold text-xs flex items-center gap-1 cursor-pointer shadow-2xs"
+              title="Print Date Range Register"
+            >
+              <Printer className="w-3.5 h-3.5 text-primary" />
+              <span>Print</span>
+            </button>
+            <button
+              onClick={() => {
                 exportDateRangeAttendancePDF(filteredStudents, attendance, fromDate, toDate, settings);
                 setIsDateRangeOpen(false);
               }}
@@ -254,13 +276,22 @@ export default function AttendanceView() {
               <h2 className="text-xl lg:text-2xl font-bold text-text tracking-tight">Attendance Overview</h2>
               <p className="text-xs text-text-secondary mt-0.5">Real-time attendance metrics for the current academic session.</p>
             </div>
-            <button
-              onClick={() => exportTodayAttendancePDF(filteredStudents, attendance, selectedDate, settings)}
-              className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>Generate Attendance Report (PDF)</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => printTodayAttendancePDF(filteredStudents, attendance, selectedDate, settings)}
+                className="px-3.5 py-2 rounded-xl bg-white border border-border hover:bg-surface2 text-text font-bold text-xs shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Printer className="w-4 h-4 text-primary" />
+                <span>Print Register</span>
+              </button>
+              <button
+                onClick={() => exportTodayAttendancePDF(filteredStudents, attendance, selectedDate, settings)}
+                className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Report (PDF)</span>
+              </button>
+            </div>
           </div>
 
           {/* Stats Cards Row */}

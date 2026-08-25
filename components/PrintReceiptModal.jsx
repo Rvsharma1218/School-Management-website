@@ -54,7 +54,7 @@ function numberToWords(amount) {
 }
 
 export default function PrintReceiptModal({ payment, student, onClose }) {
-  const { settings } = useSchoolStore();
+  const { settings, payments } = useSchoolStore();
 
   if (!payment || !student) return null;
 
@@ -63,11 +63,11 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
   };
 
   const handleDownloadPDF = () => {
-    exportReceiptPDF(payment, student, settings);
+    exportReceiptPDF(payment, student, settings, payments);
   };
 
   const handleWhatsApp = () => {
-    openWhatsAppReceiptShare(payment, student, settings);
+    openWhatsAppReceiptShare(payment, student, settings, payments);
   };
 
   // Safe date parsing
@@ -98,7 +98,30 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
   const totalCalculated = particularsList.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
   const totalAmount = totalCalculated > 0 ? totalCalculated : Number(student.totalFees || payment.amount || 0);
   const amountPaid = Number(payment.amount || 0);
-  const previousPaid = payment.previousPaid !== undefined ? Number(payment.previousPaid) : Math.max(0, (Number(student.paidFees) || 0) - amountPaid);
+
+  // Find previous payment for this student
+  const studentPayments = (payments || []).filter(
+    p => (p.studentId === student.id || (student.studentId && p.studentId === student.studentId)) && p.id !== payment.id
+  );
+  studentPayments.sort((a, b) => new Date(b.paymentDate || 0) - new Date(a.paymentDate || 0));
+  const lastPriorPayment = studentPayments[0];
+
+  const previousPaid = payment.previousPaid !== undefined && Number(payment.previousPaid) > 0
+    ? Number(payment.previousPaid)
+    : (lastPriorPayment ? Number(lastPriorPayment.amount) : Math.max(0, (Number(student.paidFees) || 0) - amountPaid));
+
+  let lastPaymentDateFormatted = '';
+  if (payment.lastPaidDate) {
+    const d = new Date(payment.lastPaidDate);
+    if (!isNaN(d.getTime())) lastPaymentDateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } else if (lastPriorPayment?.paymentDate) {
+    const d = new Date(lastPriorPayment.paymentDate);
+    if (!isNaN(d.getTime())) lastPaymentDateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } else if (student.lastPaidDate) {
+    const d = new Date(student.lastPaidDate);
+    if (!isNaN(d.getTime())) lastPaymentDateFormatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
   const totalPaidAfter = payment.totalPaidAfter !== undefined ? Number(payment.totalPaidAfter) : (previousPaid + amountPaid);
   const balanceDue = Math.max(0, totalAmount - totalPaidAfter);
 
@@ -286,18 +309,31 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
                     );
                   })}
 
-                  {/* Summary Rows (Clean single payment display) */}
+                  {/* Summary Rows (Multi-payment & Full Paid Breakdown) */}
                   <tr className="border-t border-black font-bold bg-slate-50">
                     <td className="border-r border-black"></td>
                     <td className="border-r border-black py-1.5 px-2.5 text-right font-bold text-slate-800">Total Fee Demand</td>
                     <td className="border-r border-black py-1.5 px-2 text-right font-mono font-bold text-black">{totalAmount.toFixed(2)}</td>
                     <td className="py-1.5 px-1.5 text-center font-mono font-bold text-black">00</td>
                   </tr>
+
+                  {previousPaid > 0 && (
+                    <tr className="border-t border-black/80 font-bold bg-amber-50/70 text-amber-950">
+                      <td className="border-r border-black"></td>
+                      <td className="border-r border-black py-1.5 px-2.5 text-right font-bold">
+                        Previous Payment {lastPaymentDateFormatted ? `(Last Paid: ${lastPaymentDateFormatted})` : ''}
+                      </td>
+                      <td className="border-r border-black py-1.5 px-2 text-right font-mono font-bold text-amber-900">
+                        {previousPaid.toFixed(2)}
+                      </td>
+                      <td className="py-1.5 px-1.5 text-center font-mono font-bold text-amber-900">00</td>
+                    </tr>
+                  )}
                   
                   <tr className="border-t border-black/80 font-bold bg-emerald-50 text-emerald-950">
                     <td className="border-r border-black"></td>
                     <td className="border-r border-black py-1.5 px-2.5 text-right font-bold">
-                      Current Payment (This Voucher)
+                      Current Payment (Paid Now)
                     </td>
                     <td className="border-r border-black py-1.5 px-2 text-right font-mono font-black text-emerald-800">
                       {amountPaid.toFixed(2)}
@@ -305,15 +341,28 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
                     <td className="py-1.5 px-1.5 text-center font-mono font-bold text-emerald-800">00</td>
                   </tr>
 
+                  {previousPaid > 0 && (
+                    <tr className="border-t border-black/80 font-bold bg-blue-50/70 text-blue-950">
+                      <td className="border-r border-black"></td>
+                      <td className="border-r border-black py-1.5 px-2.5 text-right font-bold">
+                        Total Amount Paid
+                      </td>
+                      <td className="border-r border-black py-1.5 px-2 text-right font-mono font-bold text-blue-900">
+                        {totalPaidAfter.toFixed(2)}
+                      </td>
+                      <td className="py-1.5 px-1.5 text-center font-mono font-bold text-blue-900">00</td>
+                    </tr>
+                  )}
+
                   <tr className="border-t border-black/80 font-bold bg-rose-50 text-rose-950">
                     <td className="border-r border-black"></td>
                     <td className="border-r border-black py-1.5 px-2.5 text-right font-bold">
-                      Pending Balance Due
+                      {balanceDue <= 0 ? 'Remaining Balance (FULL PAID)' : 'Pending Balance Due'}
                     </td>
-                    <td className="border-r border-black py-1.5 px-2 text-right font-mono font-black text-rose-700">
+                    <td className={`border-r border-black py-1.5 px-2 text-right font-mono font-black ${balanceDue <= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                       {balanceDue.toFixed(2)}
                     </td>
-                    <td className="py-1.5 px-1.5 text-center font-mono font-bold text-rose-700">00</td>
+                    <td className={`py-1.5 px-1.5 text-center font-mono font-bold ${balanceDue <= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>00</td>
                   </tr>
                 </tbody>
               </table>
@@ -329,9 +378,17 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
 
             {/* Payment Badge */}
             <div className="flex justify-center my-1">
-              <div className="inline-flex items-center gap-1.5 border border-emerald-700 bg-emerald-50 px-3 py-0.5 rounded text-emerald-900 font-bold text-[10.5px]">
-                <span className="text-emerald-700 font-mono">☑</span>
-                <span>Paid on {paymentDateLong} via {payment.paymentMode || 'Cash'}</span>
+              <div className={`inline-flex items-center gap-1.5 border px-3 py-0.5 rounded font-bold text-[10.5px] ${
+                balanceDue <= 0
+                  ? 'border-emerald-700 bg-emerald-50 text-emerald-900'
+                  : 'border-blue-700 bg-blue-50 text-blue-900'
+              }`}>
+                <span className="font-mono">☑</span>
+                <span>
+                  {balanceDue <= 0
+                    ? `FULL PAID: ₹${totalPaidAfter.toLocaleString('en-IN')} Cleared (Paid ₹${amountPaid.toLocaleString('en-IN')} on ${paymentDateLong} via ${payment.paymentMode || 'Cash'})`
+                    : `Paid ₹${amountPaid.toLocaleString('en-IN')} on ${paymentDateLong} via ${payment.paymentMode || 'Cash'}`}
+                </span>
               </div>
             </div>
 

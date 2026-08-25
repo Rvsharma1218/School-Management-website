@@ -8,9 +8,27 @@ const inter = Inter({
   display: "swap",
 });
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: '#1f108e',
+};
+
 export const metadata = {
-  title: "Apex School & Computer Institute — Student Management System",
+  title: "School Management",
   description: "Complete student administration, attendance register, fee collection & receipts, marksheet results, and ID card generator.",
+  openGraph: {
+    title: "School Management",
+    description: "Complete student administration, attendance register, fee collection & receipts, marksheet results, and ID card generator.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "School Management",
+    description: "Complete student administration, attendance register, fee collection & receipts, marksheet results, and ID card generator.",
+  },
 };
 
 export default function RootLayout({ children }) {

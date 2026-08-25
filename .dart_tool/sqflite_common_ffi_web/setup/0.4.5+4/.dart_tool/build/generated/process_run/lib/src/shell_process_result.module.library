@@ -1,1 +1,0 @@
-{"isEntrypoint":false,"deps":["meta|lib/meta.dart","process_run|lib/shell.dart","process_run|lib/src/utils/uint8list_utils.dart"],"parts":[],"conditionalDeps":[],"sdkDeps":["collection","convert","typed_data"],"hasMain":false}

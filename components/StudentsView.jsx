@@ -1,13 +1,15 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSchoolStore, calculateStudentFeeMetrics } from '../lib/store';
 import {
   Users, Search, Plus, X, GraduationCap, Monitor, Phone,
   MessageSquare, User, Calendar, Mail, MapPin, CheckCircle, Info, Trash2,
-  AlertCircle, ShieldAlert, Award, FileText, Check, Layout, ClipboardList, CreditCard
+  AlertCircle, ShieldAlert, Award, FileText, Check, Layout, ClipboardList, CreditCard,
+  Camera, Upload, Crop
 } from 'lucide-react';
 import { openWhatsAppFeeReminder } from '../lib/exportUtils';
+import ImageCropperModal from './ImageCropperModal';
+import PromoteStudentsModal from './PromoteStudentsModal';
+import WhatsAppReminderModal from './WhatsAppReminderModal';
 
 export default function StudentsView() {
   const {
@@ -18,9 +20,14 @@ export default function StudentsView() {
     addStudent,
     updateStudent,
     deleteStudent,
+    promoteStudents,
     selectedStudentId,
     setSelectedStudentId,
     setFeeDetailStudent,
+    isPromoteModalOpen,
+    setIsPromoteModalOpen,
+    whatsAppReminderData,
+    setWhatsAppReminderData,
     showToast
   } = useSchoolStore();
 
@@ -30,6 +37,9 @@ export default function StudentsView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState(isPrincipal ? 'all' : assignedClass);
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const photoInputRef = useRef(null);
   
   // Reset to assigned class whenever teacher opens StudentsView
   useEffect(() => {
@@ -73,6 +83,7 @@ export default function StudentsView() {
     if (activeStudent && panelMode !== 'add') {
       setProfileForm({
         name: activeStudent.name || '',
+        photoPath: activeStudent.photoPath || activeStudent.photoUrl || '',
         dob: activeStudent.dob || '',
         gender: activeStudent.gender || 'Male',
         mobile: activeStudent.mobile || '',
@@ -127,7 +138,7 @@ export default function StudentsView() {
       admissionNumber: '',
       studentId: '',
       admissionDate: new Date().toISOString().split('T')[0],
-      className: settings.schoolClasses?.[0] || '1st',
+      className: isPrincipal ? (settings.schoolClasses?.[0] || '1st') : assignedClass,
       section: 'A',
       rollNumber: '',
       course: settings.computerCourses?.[0] || '',
@@ -173,6 +184,16 @@ export default function StudentsView() {
         </div>
 
         <div className="flex items-center gap-2">
+          {isPrincipal && (
+            <button
+              onClick={() => setIsPromoteModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              title="Promote students to next class (1-Click)"
+            >
+              <GraduationCap className="w-4 h-4 text-purple-600" />
+              <span>Promote Class</span>
+            </button>
+          )}
           <button
             onClick={() => showToast("Opening Reports view for Excel import/export...", "info")}
             className="px-3.5 py-2 rounded-xl bg-white border border-border hover:bg-surface2 text-text font-bold text-xs transition-colors cursor-pointer shadow-2xs"
@@ -451,11 +472,12 @@ export default function StudentsView() {
               {/* Actions row */}
               <div className="grid grid-cols-2 gap-3 pt-4 text-xs font-bold">
                 <button
-                  onClick={() => openWhatsAppFeeReminder(activeStudent, settings)}
+                  onClick={() => setWhatsAppReminderData({ student: activeStudent })}
                   className="py-2.5 rounded-xl border border-border bg-surface2 hover:bg-border text-text text-center transition-colors cursor-pointer flex items-center justify-center gap-1"
+                  title="Send WhatsApp Fee Reminder / Message (Hindi / English)"
                 >
-                  <MessageSquare className="w-4 h-4 text-primary" />
-                  <span>Message</span>
+                  <MessageSquare className="w-4 h-4 text-emerald-600" />
+                  <span>WhatsApp</span>
                 </button>
                 <button
                   onClick={() => setPanelMode('edit')}
@@ -478,13 +500,13 @@ export default function StudentsView() {
                   <button
                     type="button"
                     onClick={() => setPanelMode('quickview')}
-                    className="px-3 py-1 rounded bg-surface2 hover:bg-border text-text font-bold text-[10px] border border-border"
+                    className="px-3 py-1 rounded bg-surface2 hover:bg-border text-text font-bold text-[10px] border border-border cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-3.5 py-1 rounded bg-primary hover:bg-primary-dark text-white font-bold text-[10px] shadow-xs"
+                    className="px-3.5 py-1 rounded bg-primary hover:bg-primary-dark text-white font-bold text-[10px] shadow-xs cursor-pointer"
                   >
                     {panelMode === 'add' ? 'Create' : 'Save'}
                   </button>
@@ -492,6 +514,67 @@ export default function StudentsView() {
               </div>
 
               <div className="p-5 space-y-4 max-h-[580px] overflow-y-auto custom-scrollbar text-xs font-semibold text-text-secondary">
+                {/* Student Photo in Form */}
+                <div className="flex items-center gap-3 p-3 bg-surface2/40 rounded-xl border border-border/80">
+                  <div className="w-14 h-16 rounded-xl bg-slate-900 border border-amber-400/50 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-2xs">
+                    {profileForm.photoPath ? (
+                      <img src={profileForm.photoPath} alt="Photo" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    ) : (
+                      <User className="w-7 h-7 text-slate-400" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-[11px] font-bold text-text">Student Photo</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <label className="cursor-pointer">
+                        <input
+                          ref={photoInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                setImageToCrop(ev.target?.result);
+                                setIsCropperOpen(true);
+                              };
+                              reader.readAsDataURL(file);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                        <span className="px-2 py-1 rounded bg-primary hover:bg-primary-dark text-white text-[10px] font-bold flex items-center gap-1 shadow-2xs">
+                          <Upload className="w-3 h-3" />
+                          <span>{profileForm.photoPath ? 'Change' : 'Upload'}</span>
+                        </span>
+                      </label>
+                      {profileForm.photoPath && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImageToCrop(profileForm.photoPath);
+                              setIsCropperOpen(true);
+                            }}
+                            className="px-2 py-1 rounded bg-amber-400 hover:bg-amber-500 text-slate-950 text-[10px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer"
+                          >
+                            <Crop className="w-3 h-3" /> Crop
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleInputChange('photoPath', '')}
+                            className="p-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-bold cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Inputs Fields */}
                 <div>
                   <label className="block mb-1 text-text">Full Name *</label>
@@ -670,6 +753,34 @@ export default function StudentsView() {
           )}
         </div>
       </div>
+      {/* Interactive Photo Cropper Modal */}
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        imageSrc={imageToCrop}
+        title="Crop Student Photo"
+        initialAspect="3:4"
+        onCropComplete={(croppedDataUrl) => {
+          handleInputChange('photoPath', croppedDataUrl);
+          showToast('Photo cropped and applied!', 'success');
+        }}
+        onClose={() => {
+          setIsCropperOpen(false);
+          setImageToCrop(null);
+        }}
+      />
+
+      {/* 1-Click Student Promotion Modal */}
+      <PromoteStudentsModal
+        isOpen={isPromoteModalOpen}
+        onClose={() => setIsPromoteModalOpen(false)}
+      />
+
+      {/* WhatsApp Reminder Modal (Hindi & English) */}
+      <WhatsAppReminderModal
+        isOpen={!!whatsAppReminderData}
+        onClose={() => setWhatsAppReminderData(null)}
+        {...(whatsAppReminderData || {})}
+      />
     </div>
   );
 }

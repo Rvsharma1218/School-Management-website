@@ -1,1 +1,0 @@
-{"isEntrypoint":false,"deps":["test_core|lib/src/util/print_sink.dart","test_core|lib/src/runner/engine.dart","test_core|lib/src/runner/reporter.dart","test_core|lib/src/runner/reporter/failures_only.dart"],"parts":[],"conditionalDeps":[],"sdkDeps":[],"hasMain":false}

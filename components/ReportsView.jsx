@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { useSchoolStore } from '../lib/store';
+import * as XLSX from 'xlsx';
+import { useSchoolStore, calculateStudentFeeMetrics } from '../lib/store';
 import {
   FileSpreadsheet, Download, FileText, Users, CreditCard,
   CalendarCheck, Award, Upload, CheckCircle2, AlertCircle,
@@ -17,7 +18,11 @@ import {
   downloadStudentImportTemplate,
   exportFullStudentsMasterToExcel,
   exportFullStudentsMasterPDF,
-  importFullStudentsFromExcel
+  importFullStudentsFromExcel,
+  exportExamResultsToExcel,
+  exportExamResultsPDF,
+  exportFacultyToExcel,
+  exportFacultyPDF
 } from '../lib/exportUtils';
 
 export default function ReportsView() {
@@ -49,7 +54,55 @@ export default function ReportsView() {
   const importFileRef = useRef(null);
   const [isImporting, setIsImporting] = useState(false);
   const [previewRows, setPreviewRows] = useState(null); // Preview parsed rows before saving
-  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  // Attendance Date Range Filter State
+  const [attFromDate, setAttFromDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split('T')[0];
+  });
+  const [attToDate, setAttToDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Attendance summary in selected range
+  const attSummaryList = students.map(s => {
+    let p = 0, a = 0, l = 0;
+    Object.keys(attendance).forEach(dateStr => {
+      if (dateStr >= attFromDate && dateStr <= attToDate) {
+        const st = attendance[dateStr]?.[s.id];
+        if (st === 'present') p++;
+        else if (st === 'absent') a++;
+        else if (st === 'leave') l++;
+      }
+    });
+    const total = p + a + l;
+    const pct = total > 0 ? ((p / total) * 100).toFixed(1) : '-';
+    return { student: s, present: p, absent: a, leave: l, total, pct };
+  });
+
+  const totalAttStudents = attSummaryList.length;
+  const totalAttPresent = attSummaryList.reduce((acc, r) => acc + r.present, 0);
+  const totalAttAbsent = attSummaryList.reduce((acc, r) => acc + r.absent, 0);
+  const totalAttDays = attSummaryList.reduce((acc, r) => acc + r.total, 0);
+  const overallAttPct = totalAttDays > 0 ? ((totalAttPresent / totalAttDays) * 100).toFixed(1) : '-';
+
+  const handleExportAttendanceRangeExcel = () => {
+    const rows = attSummaryList.map((r, idx) => ({
+      'S.No': idx + 1,
+      'Student ID': r.student.studentId || '-',
+      'Student Name': r.student.name || '-',
+      'Class / Course': r.student.studentType === 'school' ? `Class ${r.student.className || ''}` : (r.student.course || ''),
+      'Date Range': `${attFromDate} to ${attToDate}`,
+      'Total Days': r.total,
+      'Present': r.present,
+      'Absent': r.absent,
+      'Leave': r.leave,
+      'Attendance %': `${r.pct}%`
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Attendance Summary');
+    XLSX.writeFile(wb, `Attendance_${attFromDate}_to_${attToDate}.xlsx`);
+    showToast("Date-Range Attendance Excel exported!", "success");
+  };
 
   // Filtered Students for the Master Table
   const filteredMasterStudents = students.filter(s => {
@@ -58,11 +111,12 @@ export default function ReportsView() {
       if (s.studentType === 'computer' && s.course !== selectedClass) return false;
     }
     if (selectedStatus !== 'all' && (s.status || 'active').toLowerCase() !== selectedStatus.toLowerCase()) return false;
-    
-    const totalFees = Number(s.totalFees) || 0;
-    const paidFees = Number(s.paidFees) || 0;
-    const pending = Math.max(0, totalFees - paidFees);
-    if (selectedFeeStatus === 'paid' && (pending > 0 || totalFees === 0)) return false;
+
+    const m = calculateStudentFeeMetrics(s, payments);
+    const totalFees = m.setTotalFees;
+    const paidFees = m.totalPaid;
+    const pending = m.currentDue;
+    if (selectedFeeStatus === 'paid' && (pending > 0 || (totalFees === 0 && paidFees === 0))) return false;
     if (selectedFeeStatus === 'due' && pending <= 0) return false;
     if (selectedFeeStatus === 'unpaid' && paidFees > 0) return false;
 
@@ -177,8 +231,8 @@ export default function ReportsView() {
       icon: Award,
       color: 'bg-amber-500/10 text-amber-600 border-amber-200',
       totalCount: `${results.length} Marksheets`,
-      onPdf: () => exportFullStudentsMasterPDF(students, settings),
-      onExcel: () => exportFullStudentsMasterToExcel(students, settings.instituteName)
+      onPdf: () => exportExamResultsPDF(results, students, settings),
+      onExcel: () => exportExamResultsToExcel(results, students, settings.instituteName)
     },
     {
       id: 'faculty',
@@ -188,8 +242,8 @@ export default function ReportsView() {
       icon: GraduationCap,
       color: 'bg-purple-500/10 text-purple-600 border-purple-200',
       totalCount: `${teachers.length} Faculty Members`,
-      onPdf: () => exportFullStudentsMasterPDF(students, settings),
-      onExcel: () => exportFullStudentsMasterToExcel(students, settings.instituteName)
+      onPdf: () => exportFacultyPDF(teachers, settings),
+      onExcel: () => exportFacultyToExcel(teachers, settings.instituteName)
     }
   ];
 
@@ -197,7 +251,7 @@ export default function ReportsView() {
 
   return (
     <div className="space-y-6 pb-16 font-sans">
-      
+
       {/* Hidden File Input for Excel Import */}
       <input
         type="file"
@@ -212,11 +266,10 @@ export default function ReportsView() {
         <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar">
           <button
             onClick={() => setActiveTab('master')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
-              activeTab === 'master'
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${activeTab === 'master'
                 ? 'bg-primary text-white shadow-md'
                 : 'text-text-secondary hover:text-text hover:bg-surface2'
-            }`}
+              }`}
           >
             <Database className="w-4 h-4" />
             <span>Complete Student Master Data</span>
@@ -224,11 +277,10 @@ export default function ReportsView() {
 
           <button
             onClick={() => setActiveTab('center')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
-              activeTab === 'center'
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${activeTab === 'center'
                 ? 'bg-primary text-white shadow-md'
                 : 'text-text-secondary hover:text-text hover:bg-surface2'
-            }`}
+              }`}
           >
             <Award className="w-4 h-4" />
             <span>Institutional Reports Center</span>
@@ -236,11 +288,10 @@ export default function ReportsView() {
 
           <button
             onClick={() => setActiveTab('bulk')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
-              activeTab === 'bulk'
+            className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${activeTab === 'bulk'
                 ? 'bg-primary text-white shadow-md'
                 : 'text-text-secondary hover:text-text hover:bg-surface2'
-            }`}
+              }`}
           >
             <Layers className="w-4 h-4" />
             <span>Excel Template & Bulk Import Hub</span>
@@ -265,7 +316,7 @@ export default function ReportsView() {
           ───────────────────────────────────────────────────────────────────────────── */}
       {activeTab === 'master' && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          
+
           {/* Top Banner & Fast Action Bar */}
           <div className="bg-gradient-to-r from-[#eff4ff] via-[#dce9ff] to-[#eff4ff] p-6 rounded-3xl border border-[#c8c4d5]/40 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-5">
             <div>
@@ -423,11 +474,12 @@ export default function ReportsView() {
                     </tr>
                   ) : (
                     paginatedStudents.map((s, idx) => {
-                      const total = Number(s.totalFees) || 0;
-                      const paid = Number(s.paidFees) || 0;
-                      const pending = Math.max(0, total - paid);
-                      const isPaid = pending === 0 && total > 0;
-                      const isUnpaid = paid === 0;
+                      const m = calculateStudentFeeMetrics(s, payments);
+                      const total = m.setTotalFees;
+                      const paid = m.totalPaid;
+                      const pending = m.currentDue;
+                      const isPaid = pending <= 0 && (total > 0 || paid > 0);
+                      const isUnpaid = paid <= 0 && pending > 0;
 
                       return (
                         <tr key={s.id || idx} className="hover:bg-surface2/40 transition-colors group">
@@ -491,13 +543,12 @@ export default function ReportsView() {
 
                           {/* Dues & Fee Status */}
                           <td className="py-3 px-4">
-                            <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                              isPaid
+                            <span className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold ${isPaid
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 : isUnpaid
-                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                : 'bg-amber-50 text-amber-700 border border-amber-200'
-                            }`}>
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}>
                               {isPaid ? '✓ Paid' : `Due ₹${pending.toLocaleString('en-IN')}`}
                             </span>
                           </td>
@@ -563,15 +614,143 @@ export default function ReportsView() {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1 rounded-lg capitalize transition-colors cursor-pointer ${
-                    selectedCategory === cat ? 'bg-primary text-white shadow-2xs' : 'text-text-secondary hover:text-text'
-                  }`}
+                  className={`px-3 py-1 rounded-lg capitalize transition-colors cursor-pointer ${selectedCategory === cat ? 'bg-primary text-white shadow-2xs' : 'text-text-secondary hover:text-text'
+                    }`}
                 >
                   {cat === 'all' ? 'All Reports' : cat}
                 </button>
               ))}
             </div>
           </div>
+
+          {/* ── Attendance Summary & Date Range Card ── */}
+          {(selectedCategory === 'all' || selectedCategory === 'attendance') && (
+            <div className="bg-white border border-indigo-200 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-border pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center font-bold">
+                    <CalendarCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-text">Student Attendance Date Range Summary</h3>
+                    <p className="text-xs text-text-secondary mt-0.5">Filter institutional attendance across custom date spans with per-student metrics.</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2 bg-surface2 px-3 py-1.5 rounded-xl border border-border text-xs">
+                    <span className="font-bold text-text-secondary">From:</span>
+                    <input
+                      type="date"
+                      value={attFromDate}
+                      onChange={e => setAttFromDate(e.target.value)}
+                      className="bg-transparent font-bold text-text focus:outline-none cursor-pointer"
+                    />
+                    <span className="font-bold text-text-secondary ml-1">To:</span>
+                    <input
+                      type="date"
+                      value={attToDate}
+                      onChange={e => setAttToDate(e.target.value)}
+                      className="bg-transparent font-bold text-text focus:outline-none cursor-pointer"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleExportAttendanceRangeExcel}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center gap-1.5 border border-emerald-200 cursor-pointer transition-colors"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                    <span>Export Range Excel</span>
+                  </button>
+
+                  <button
+                    onClick={() => exportDateRangeAttendancePDF(students, attendance, attFromDate, attToDate, settings)}
+                    className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export Range PDF</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Attendance Range Metrics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-3.5">
+                  <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Total Students</span>
+                  <p className="text-xl font-black text-indigo-900 mt-0.5">{totalAttStudents}</p>
+                  <p className="text-[10px] text-indigo-600 font-medium mt-0.5">Enrolled institutional students</p>
+                </div>
+
+                <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-3.5">
+                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Total Present</span>
+                  <p className="text-xl font-black text-emerald-900 mt-0.5">{totalAttPresent}</p>
+                  <p className="text-[10px] text-emerald-600 font-medium mt-0.5">Present days logged</p>
+                </div>
+
+                <div className="bg-rose-50/60 border border-rose-100 rounded-2xl p-3.5">
+                  <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">Total Absent</span>
+                  <p className="text-xl font-black text-rose-900 mt-0.5">{totalAttAbsent}</p>
+                  <p className="text-[10px] text-rose-600 font-medium mt-0.5">Absent days logged</p>
+                </div>
+
+                <div className="bg-amber-50/60 border border-amber-100 rounded-2xl p-3.5">
+                  <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Average Attendance</span>
+                  <p className="text-xl font-black text-amber-900 mt-0.5">{overallAttPct}%</p>
+                  <p className="text-[10px] text-amber-600 font-medium mt-0.5">{totalAttDays} total student-days</p>
+                </div>
+              </div>
+
+              {/* Student Attendance Breakdown Table */}
+              <div className="border border-border rounded-2xl overflow-hidden max-h-72 overflow-y-auto custom-scrollbar">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-surface2/80 border-b border-border text-text-secondary font-bold text-[10px] uppercase sticky top-0 z-10">
+                      <th className="py-2.5 px-4 w-12 text-center">#</th>
+                      <th className="py-2.5 px-4">Student</th>
+                      <th className="py-2.5 px-4">Class / Course</th>
+                      <th className="py-2.5 px-4 text-center">Total Days</th>
+                      <th className="py-2.5 px-4 text-center text-emerald-600">Present</th>
+                      <th className="py-2.5 px-4 text-center text-rose-600">Absent</th>
+                      <th className="py-2.5 px-4 text-center text-amber-600">Leave</th>
+                      <th className="py-2.5 px-4 text-right">Attendance %</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border text-text">
+                    {attSummaryList.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-text-muted text-xs">
+                          No attendance data recorded in the selected date range.
+                        </td>
+                      </tr>
+                    ) : (
+                      attSummaryList.map((r, idx) => (
+                        <tr key={r.student.id || idx} className="hover:bg-surface2/30 transition-colors">
+                          <td className="py-2.5 px-4 text-center font-bold text-text-muted">{idx + 1}</td>
+                          <td className="py-2.5 px-4 font-bold text-text">
+                            <div>{r.student.name}</div>
+                            <div className="text-[9px] text-text-muted">ID: {r.student.studentId || '-'}</div>
+                          </td>
+                          <td className="py-2.5 px-4 text-text-secondary font-medium">
+                            {r.student.studentType === 'school' ? `Class ${r.student.className || ''}` : (r.student.course || '-')}
+                          </td>
+                          <td className="py-2.5 px-4 text-center font-bold">{r.total}</td>
+                          <td className="py-2.5 px-4 text-center font-bold text-emerald-600">{r.present}</td>
+                          <td className="py-2.5 px-4 text-center font-bold text-rose-600">{r.absent}</td>
+                          <td className="py-2.5 px-4 text-center font-bold text-amber-600">{r.leave}</td>
+                          <td className="py-2.5 px-4 text-right font-black">
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] ${Number(r.pct) >= 75 ? 'bg-emerald-100 text-emerald-700' : Number(r.pct) >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                              }`}>
+                              {r.pct}%
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Master 6 Report Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -638,7 +817,7 @@ export default function ReportsView() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
+
             {/* Import Box */}
             <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-4">
               <h3 className="font-bold text-base text-text flex items-center gap-2">
@@ -717,7 +896,7 @@ export default function ReportsView() {
       {previewRows && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white border border-border rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            
+
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-border bg-surface2/60 flex items-center justify-between">
               <div className="flex items-center gap-2.5">

@@ -9,7 +9,7 @@ import {
 
 export default function SignInView() {
   const { signIn, teacherSignIn, fetchSchoolTeachersByEmail, teachers, settings, currentUser, navigate } = useSchoolStore();
-  const [email, setEmail] = useState('admin@example.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('principal'); // 'principal' | 'teacher'
   const [selectedTeacherId, setSelectedTeacherId] = useState('');
@@ -52,6 +52,11 @@ export default function SignInView() {
       } else {
         await signIn(email.trim(), password);
       }
+      
+      // Auto 1-time clean refresh on login into dashboard
+      if (typeof window !== 'undefined') {
+        window.location.href = '/dashboard';
+      }
     } catch (err) {
       console.warn('Sign In attempt error:', err.message);
       // Friendly readable error messages
@@ -69,31 +74,14 @@ export default function SignInView() {
     }
   };
 
-  // Quick Demo Account Auto-Fill
-  const handleFillDemo = (fillRole) => {
-    setRole(fillRole);
-    if (fillRole === 'principal') {
-      setEmail('admin@example.com');
-      setPassword('admin123');
-    } else {
-      setEmail('admin@example.com');
-      if (teachers.length > 0) {
-        setSelectedTeacherId(teachers[0].authUid || teachers[0].id);
-        setPassword(teachers[0].password || '123456');
-      } else {
-        setPassword('teacher123');
-      }
-    }
-  };
-
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 md:p-8 bg-gradient-to-br from-[#1f108e] via-[#150b69] to-[#0b043b] text-[#0b1c30] font-sans antialiased">
       
       {/* ── Main Split-Screen Container ── */}
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 rounded-3xl overflow-hidden shadow-2xl bg-white border border-white/20">
         
-        {/* ── Left Side: Academic Branding Hero ── */}
-        <div className="lg:col-span-5 bg-gradient-to-br from-[#1f108e] to-[#0f0069] p-8 lg:p-12 text-white flex flex-col justify-between relative overflow-hidden">
+        {/* ── Left Side: Academic Branding Hero (Desktop) ── */}
+        <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-[#1f108e] to-[#0f0069] p-8 lg:p-12 text-white flex-col justify-between relative overflow-hidden">
           
           {/* Subtle decorative background circles */}
           <div className="absolute -right-16 -top-16 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
@@ -148,13 +136,24 @@ export default function SignInView() {
         </div>
 
         {/* ── Right Side: Modern Glass Form Panel ── */}
-        <div className="lg:col-span-7 bg-[#f8f9ff] p-8 lg:p-12 flex flex-col justify-center">
+        <div className="col-span-1 lg:col-span-7 bg-[#f8f9ff] p-5 sm:p-8 lg:p-12 flex flex-col justify-center">
           
-          <div className="max-w-md w-full mx-auto space-y-6">
+          <div className="max-w-md w-full mx-auto space-y-5">
             
+            {/* Mobile-Only Header Brand Logo */}
+            <div className="flex lg:hidden items-center gap-3 pb-2 border-b border-[#c8c4d5]/40">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1f108e] to-[#0f0069] flex items-center justify-center text-white shadow-sm flex-shrink-0">
+                <School className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-black text-sm text-[#1f108e] leading-tight">{settings.instituteName || 'Smart School'}</h2>
+                <p className="text-[10px] text-slate-500 font-medium">SaaS Management Platform</p>
+              </div>
+            </div>
+
             {/* Header Title */}
             <div>
-              <h2 className="text-2xl font-black text-[#0b1c30] tracking-tight">Sign In to Your Portal</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-[#0b1c30] tracking-tight">Sign In to Your Portal</h2>
               <p className="text-xs text-[#464553] mt-1">
                 {role === 'principal'
                   ? 'Enter principal credentials to access full administrative controls.'
@@ -303,15 +302,6 @@ export default function SignInView() {
                   />
                   <span>Remember my session</span>
                 </label>
-
-                {/* Quick Auto-Fill Demo Trigger */}
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo(role)}
-                  className="text-[11px] font-bold text-[#1f108e] bg-[#eff4ff] hover:bg-[#dce9ff] px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-                >
-                  ⚡ Fill Demo {role === 'principal' ? 'Admin' : 'Teacher'}
-                </button>
               </div>
 
               {/* Submit CTA Button */}

@@ -1,1 +1,0 @@
-{"isEntrypoint":false,"deps":["path|lib/path.dart","sqflite_common|lib/sqlite_api.dart","sqflite_common|lib/src/path_utils.dart"],"parts":[],"conditionalDeps":[],"sdkDeps":["typed_data"],"hasMain":false}

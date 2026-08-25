@@ -1,1 +1,0 @@
-{"isEntrypoint":false,"deps":[],"parts":[],"conditionalDeps":[{"$default":"test_core|lib/src/runner/reporter/direct_stub.dart","dart.library.io":"test_core|lib/src/runner/reporter/direct_io.dart"}],"sdkDeps":[],"hasMain":false}

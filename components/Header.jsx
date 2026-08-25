@@ -20,26 +20,53 @@ export default function Header({ onMenuClick }) {
     logout,
     currentPath,
     navigate,
-    syncStatus
+    syncStatus,
+    notices,
+    unreadNoticeCount,
+    setViewingNotice,
+    markNoticeAsRead,
+    markAllNoticesAsRead,
+    showToast
   } = useSchoolStore();
 
   const [mounted, setMounted] = useState(false);
   const [time, setTime] = useState(new Date());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [browserPerm, setBrowserPerm] = useState('granted');
   const dropdownRef = useRef(null);
+  const notifRef = useRef(null);
 
   useEffect(() => {
     setMounted(true);
     const t = setInterval(() => setTime(new Date()), 1000);
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setBrowserPerm(Notification.permission);
+    }
     return () => clearInterval(t);
   }, []);
 
-  // Close dropdown on click outside
+  const enableDesktopNotifications = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        const p = await Notification.requestPermission();
+        setBrowserPerm(p);
+        if (p === 'granted') {
+          showToast('Desktop notifications enabled!', 'success');
+        }
+      } catch (_) { }
+    }
+  };
+
+  // Close dropdowns on click outside
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setIsNotificationsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -50,6 +77,7 @@ export default function Header({ onMenuClick }) {
 
   const viewTitles = {
     '/dashboard': 'Dashboard',
+    '/notices': 'Notice Board & Circulars',
     '/students': 'Student Directory',
     '/fees': 'Fees & Collections',
     '/attendance': 'Daily Attendance',
@@ -59,7 +87,6 @@ export default function Header({ onMenuClick }) {
     '/reports': 'Report Center',
     '/qrscanner': 'QR Scanner',
     '/settings': 'System Settings',
-    '/communication': 'Communication Center',
     '/users': 'User Account Management',
     '/profile': 'My Account Profile',
     '/setup': 'Initial Setup Wizard',
@@ -67,6 +94,33 @@ export default function Header({ onMenuClick }) {
   };
 
   const isPrincipal = currentUser.role === 'principal';
+  const currentUserId = currentUser.uid || currentUser.teacherId || currentUser.id || '';
+
+  const principalDisplayName = (() => {
+    if (!currentUser) return 'Principal';
+    if (currentUser.role === 'principal' && settings.principalName && settings.principalName.trim() !== '') {
+      return settings.principalName.trim();
+    }
+    if (currentUser.displayName && currentUser.displayName.trim() !== '') {
+      return currentUser.displayName.trim();
+    }
+    const raw = currentUser.name || '';
+    if (!raw) return currentUser.role === 'principal' ? 'Principal' : 'Teacher';
+    const clean = raw.includes('@') ? raw.split('@')[0] : raw;
+    const alphaOnly = clean.replace(/[0-9_.-]/g, ' ').trim();
+    if (alphaOnly && alphaOnly.length >= 3) {
+      return alphaOnly.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    }
+    return clean.charAt(0).toUpperCase() + clean.slice(1);
+  })();
+
+  const avatarInitials = principalDisplayName
+    .split(' ')
+    .filter(Boolean)
+    .map(w => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'PR';
 
   const handleLogoutConfirm = () => {
     setIsLogoutModalOpen(false);
@@ -84,7 +138,7 @@ export default function Header({ onMenuClick }) {
         <div className="min-w-0">
           <h1 className="text-lg font-bold text-text truncate">{viewTitles[currentPath] || 'Dashboard'}</h1>
           <p className="text-xs text-text-secondary font-semibold truncate hidden sm:block">
-            {settings.instituteName || 'Apex Academy'} &nbsp;·&nbsp; Session {settings.currentSession || '2026-27'}
+            {settings.instituteName || 'School Management'} &nbsp;·&nbsp; Session {settings.currentSession || '2026-27'}
           </p>
         </div>
       </div>
@@ -100,10 +154,10 @@ export default function Header({ onMenuClick }) {
       </button>
 
       {/* Right */}
-      <div className="flex items-center gap-4 flex-shrink-0">
+      <div className="flex items-center gap-3.5 flex-shrink-0">
         {/* Date & Time */}
         {mounted && (
-          <div className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-xl bg-surface2 border border-border text-xs font-bold text-text">
+          <div className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-surface2 border border-border text-xs font-bold text-text">
             <Calendar className="w-4 h-4 text-primary" />
             <span>{time.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
             <span className="text-text-muted mx-1">·</span>
@@ -115,7 +169,7 @@ export default function Header({ onMenuClick }) {
         {/* Add Student */}
         <button
           onClick={() => setIsAddStudentOpen(true)}
-          className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+          className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span className="hidden lg:inline">Add Student</span>
@@ -143,6 +197,136 @@ export default function Header({ onMenuClick }) {
           );
         })()}
 
+        {/* ── Notification Bell with Real-Time Notice Badges ── */}
+        <div className="relative" ref={notifRef}>
+          <button
+            onClick={() => setIsNotificationsOpen(p => !p)}
+            className="p-2 rounded-xl bg-[#eff4ff] hover:bg-[#dce9ff] text-[#464553] hover:text-[#0b1c30] transition-colors relative cursor-pointer border border-[#c8c4d5]/50 shadow-2xs"
+            title="Notice Board & Notifications"
+          >
+            <Bell className="w-4.5 h-4.5" />
+            {unreadNoticeCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-md animate-pulse">
+                {unreadNoticeCount > 9 ? '9+' : unreadNoticeCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notifications Popover Menu */}
+          {isNotificationsOpen && (
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-[#c8c4d5]/60 rounded-2xl shadow-2xl overflow-hidden text-xs z-50 animate-in fade-in slide-in-from-top-3 duration-200">
+              
+              {/* Header */}
+              <div className="p-3.5 bg-gradient-to-r from-[#1f108e] to-[#0f0069] text-white flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-4 h-4" />
+                  <span className="font-bold text-sm">Notice Board Alerts</span>
+                  {unreadNoticeCount > 0 && (
+                    <span className="px-2 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-extrabold">
+                      {unreadNoticeCount} new
+                    </span>
+                  )}
+                </div>
+
+                {unreadNoticeCount > 0 && (
+                  <button
+                    onClick={() => markAllNoticesAsRead()}
+                    className="text-[11px] text-white/80 hover:text-white underline cursor-pointer font-medium"
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              {/* Browser Desktop Notification Permission Banner */}
+              {browserPerm === 'default' && (
+                <div className="p-2.5 bg-amber-50 border-b border-amber-200 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-[11px] text-amber-800 font-semibold">
+                    <Bell className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                    <span>Get screen alerts for new circulars</span>
+                  </div>
+                  <button
+                    onClick={enableDesktopNotifications}
+                    className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold cursor-pointer whitespace-nowrap shadow-2xs"
+                  >
+                    Enable Alerts
+                  </button>
+                </div>
+              )}
+
+              {/* Notice List */}
+              <div className="max-h-80 overflow-y-auto divide-y divide-[#c8c4d5]/30">
+                {notices.length > 0 ? (
+                  notices.slice(0, 6).map((notice) => {
+                    const isRead = currentUserId ? (notice.readBy || []).includes(currentUserId) : true;
+                    const date = notice.createdAt ? new Date(notice.createdAt) : new Date();
+                    const timeAgo = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+                    return (
+                      <div
+                        key={notice.id}
+                        onClick={() => {
+                          setIsNotificationsOpen(false);
+                          setViewingNotice(notice);
+                        }}
+                        className={`p-3.5 hover:bg-[#eff4ff]/60 transition-colors cursor-pointer flex items-start gap-3 ${
+                          !isRead ? 'bg-[#eff4ff]/40' : ''
+                        }`}
+                      >
+                        <div className="mt-0.5 flex-shrink-0">
+                          {!isRead ? (
+                            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-rose-200 block" />
+                          ) : (
+                            <span className="w-2 h-2 rounded-full bg-slate-300 block" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-[#dce9ff] text-[#0051d5] uppercase">
+                              {notice.category || 'General'}
+                            </span>
+                            <span className="text-[10px] text-[#777584]">{timeAgo}</span>
+                          </div>
+
+                          <p className="font-bold text-xs text-[#0b1c30] truncate leading-tight">
+                            {notice.title}
+                          </p>
+
+                          {notice.content && (
+                            <p className="text-[11px] text-[#777584] line-clamp-1 mt-0.5">
+                              {notice.content}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="p-6 text-center text-[#777584]">
+                    <Bell className="w-6 h-6 mx-auto mb-1 opacity-40" />
+                    <p className="text-xs font-semibold">No circulars or notices yet</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Footer */}
+              <div className="p-2.5 bg-[#eff4ff]/60 border-t border-[#c8c4d5]/40 text-center">
+                <button
+                  onClick={() => {
+                    setIsNotificationsOpen(false);
+                    navigate('/notices');
+                  }}
+                  className="text-xs font-bold text-[#1f108e] hover:underline cursor-pointer"
+                >
+                  View Full Notice Board →
+                </button>
+              </div>
+
+            </div>
+          )}
+        </div>
+
         {/* User Info Profile Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
@@ -151,13 +335,13 @@ export default function Header({ onMenuClick }) {
           >
             <div className="w-10 h-10 rounded-full border border-border bg-primary/10 text-primary flex items-center justify-center font-bold text-sm overflow-hidden flex-shrink-0 shadow-2xs">
               {currentUser.photoPath ? (
-                <img src={currentUser.photoPath} alt={currentUser.name} className="w-full h-full object-cover" />
+                <img src={currentUser.photoPath} alt={principalDisplayName} className="w-full h-full object-cover" />
               ) : (
-                currentUser.name?.substring(0, 2).toUpperCase()
+                avatarInitials
               )}
             </div>
             <div className="hidden lg:block leading-none">
-              <p className="font-bold text-xs text-text">{currentUser.name}</p>
+              <p className="font-bold text-xs text-text">{principalDisplayName}</p>
               <p className="text-[10px] text-text-secondary mt-0.5 capitalize">{currentUser.role === 'principal' ? 'Principal / Admin' : 'Teacher'}</p>
             </div>
             <ChevronDown className="w-4 h-4 text-text-secondary hidden lg:block" />
@@ -168,7 +352,7 @@ export default function Header({ onMenuClick }) {
             <div className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-2xl shadow-xl py-2 overflow-hidden text-xs z-50 animate-in fade-in slide-in-from-top-3 duration-200">
               {/* Profile Card Header */}
               <div className="px-4 py-3 border-b border-border space-y-1">
-                <p className="font-bold text-text leading-tight">{currentUser.name}</p>
+                <p className="font-bold text-text leading-tight">{principalDisplayName}</p>
                 <p className="text-[10px] text-text-secondary font-mono">{currentUser.email}</p>
                 <div className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[9px] font-bold uppercase tracking-wider font-mono">
                   {currentUser.role === 'principal' ? 'Admin Access' : 'Teacher Access'}

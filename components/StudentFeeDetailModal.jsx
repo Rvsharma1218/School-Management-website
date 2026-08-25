@@ -10,7 +10,7 @@ import {
 import { openWhatsAppFeeReminder, exportReceiptPDF } from '../lib/exportUtils';
 
 export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
-  const { students, settings, payments, addPayment, updateStudent, setPrintReceiptData, getNextReceiptNumber, showToast } = useSchoolStore();
+  const { students, settings, payments, addPayment, updateStudent, setPrintReceiptData, getNextReceiptNumber, setWhatsAppReminderData, showToast } = useSchoolStore();
 
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -150,9 +150,38 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
   const particularValues = Object.values(particulars).map(v => Number(v) || 0);
   const totalDueForMonth = particularValues.reduce((acc, v) => acc + v, 0);
 
-  const studentMonthPayments = payments.filter(
-    p => p.studentId === currentStudent.id && (p.feeMonth === monthYearLabel || p.monthKey === monthKey)
-  );
+  const studentMonthPayments = (payments || []).filter(p => {
+    const isStudent = p.studentId === currentStudent.id ||
+      (currentStudent.studentId && p.studentId === currentStudent.studentId) ||
+      (currentStudent.admissionNumber && (p.admissionNumber === currentStudent.admissionNumber || p.admissionNo === currentStudent.admissionNumber)) ||
+      (p.studentName && currentStudent.name && p.studentName.trim().toLowerCase() === currentStudent.name.trim().toLowerCase());
+    if (!isStudent) return false;
+
+    // 1. Exact monthKey match ('2026-08')
+    if (p.monthKey && p.monthKey === monthKey) return true;
+
+    // 2. Exact or formatted feeMonth match ('August 2026')
+    if (p.feeMonth && p.feeMonth.trim().toLowerCase() === monthYearLabel.toLowerCase()) return true;
+    if (p.feeMonth && p.feeMonth.trim() === monthKey) return true;
+    if (p.feeMonth && p.feeMonth.toLowerCase().includes(monthNames[currentDate.getMonth()].toLowerCase()) && p.feeMonth.includes(String(currentDate.getFullYear()))) return true;
+
+    // 3. Numeric feeYear + feeMonthNum / feeMonth
+    if (p.feeYear && (p.feeMonthNum || p.feeMonth || p.month)) {
+      const pYear = Number(p.feeYear) || Number(p.year);
+      const pMonth = Number(p.feeMonthNum) || Number(p.month) || (typeof p.feeMonth === 'number' ? p.feeMonth : 0);
+      if (pYear === currentDate.getFullYear() && pMonth === (currentDate.getMonth() + 1)) return true;
+    }
+
+    // 4. Fallback to paymentDate only if feeMonth is not explicitly pointing to another month
+    if (!p.feeMonth || p.feeMonth === 'Monthly Tuition Fee' || p.feeMonth === 'Fee Payment') {
+      if (p.paymentDate && typeof p.paymentDate === 'string' && p.paymentDate.startsWith(monthKey)) return true;
+      if (p.paymentDate) {
+        const pDate = new Date(p.paymentDate);
+        if (pDate.getFullYear() === currentDate.getFullYear() && pDate.getMonth() === currentDate.getMonth()) return true;
+      }
+    }
+    return false;
+  });
   const paidForMonth = studentMonthPayments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
   const remainingForMonth = Math.max(0, totalDueForMonth - paidForMonth);
 
@@ -255,6 +284,23 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
 
     const recYear = currentDate.getFullYear();
     const receiptNo = getNextReceiptNumber ? getNextReceiptNumber(payments, recYear) : `REC-${recYear}-001`;
+
+    const updatedMonthlyParticulars = {
+      ...(currentStudent.monthlyParticulars || {}),
+      [monthKey]: {
+        ...particularsSnapshot,
+        dueDate,
+        totalDue: totalDemand,
+        monthName: monthYearLabel
+      }
+    };
+    const tFee = Number(feeStructure.tuitionFee) > 0 ? Number(feeStructure.tuitionFee) : finalTuition;
+    const updatedFeeStructure = {
+      ...(currentStudent.feeStructure || {}),
+      tuitionFee: tFee,
+      dueDay: Number(feeStructure.dueDay) || 10
+    };
+
     const newPayment = await addPayment({
       studentId: currentStudent.id,
       studentName: currentStudent.name,
@@ -271,27 +317,16 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
       alreadyPaid: alreadyPaidThisMonth,
       totalPaidAfter: totalPaidAfterPayment,
       balanceDue: remainingAfterPayment,
-      particularsSnapshot
+      particularsSnapshot,
+      monthlyParticulars: updatedMonthlyParticulars,
+      feeStructure: updatedFeeStructure,
+      monthlyFee: tFee
     });
 
-    const updatedMonthlyParticulars = {
-      ...(currentStudent.monthlyParticulars || {}),
-      [monthKey]: {
-        ...particularsSnapshot,
-        dueDate,
-        totalDue: totalDemand,
-        monthName: monthYearLabel
-      }
-    };
-    const tFee = Number(feeStructure.tuitionFee) > 0 ? Number(feeStructure.tuitionFee) : finalTuition;
-    updateStudent(currentStudent.id, {
+    await updateStudent(currentStudent.id, {
       ...currentStudent,
       monthlyFee: tFee,
-      feeStructure: {
-        ...(currentStudent.feeStructure || {}),
-        tuitionFee: tFee,
-        dueDay: Number(feeStructure.dueDay) || 10
-      },
+      feeStructure: updatedFeeStructure,
       monthlyParticulars: updatedMonthlyParticulars
     });
 
@@ -344,9 +379,9 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => openWhatsAppFeeReminder(currentStudent, settings)}
+              onClick={() => setWhatsAppReminderData({ student: currentStudent, dueAmount: totalRemainingBalance })}
               className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-              title="Send WhatsApp Fee Reminder"
+              title="Send WhatsApp Fee Due Reminder (Hindi / English)"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>WhatsApp</span>

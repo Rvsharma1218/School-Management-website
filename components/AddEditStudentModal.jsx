@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSchoolStore } from '../lib/store';
 import {
   X,
@@ -15,15 +13,24 @@ import {
   Calendar,
   CreditCard,
   Camera,
-  Upload
+  Upload,
+  Crop,
+  Trash2,
+  Image as ImageIcon
 } from 'lucide-react';
+import ImageCropperModal from './ImageCropperModal';
 
 export default function AddEditStudentModal({ student, isOpen, onClose }) {
-  const { students, settings, addStudent, updateStudent, getNextAdmissionNumber, getNextStudentId, showToast } = useSchoolStore();
+  const { students, settings, currentUser, addStudent, updateStudent, getNextAdmissionNumber, getNextStudentId, showToast } = useSchoolStore();
 
   const isEdit = !!student;
+  const teacherAssignedClass = currentUser?.role === 'teacher' ? (currentUser.assignedClass || 'Class Nursery') : '';
 
   const [studentType, setStudentType] = useState('school');
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const photoInputRef = useRef(null);
+
   const [formData, setFormData] = useState({
     name: '',
     fatherName: '',
@@ -38,7 +45,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
     admissionNumber: '',
     studentId: '',
     rollNumber: '',
-    className: '10th',
+    className: teacherAssignedClass || settings.schoolClasses?.[0] || '10th',
     section: 'A',
     course: 'ADCA (12 Months)',
     batch: '10:00 AM - 12:00 PM',
@@ -57,14 +64,16 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
       setStudentType(student.studentType || 'school');
       setFormData({
         ...student,
+        photoPath: student.photoPath || student.photoUrl || '',
         totalFees: String(student.totalFees || 0),
         paidFees: String(student.paidFees || 0),
         initialPaymentMode: 'Cash'
       });
     } else {
       const activeSession = settings.currentSession || '2026-27';
-      const nextAdm = getNextAdmissionNumber ? getNextAdmissionNumber(activeSession) : `ADM-2026-001`;
-      const nextId = getNextStudentId ? getNextStudentId(activeSession) : `STU2026001`;
+      const nextAdm = getNextAdmissionNumber ? getNextAdmissionNumber(students, activeSession) : `ADM-2026-001`;
+      const nextId = getNextStudentId ? getNextStudentId(students, activeSession) : `STU2026001`;
+      const defaultClass = teacherAssignedClass || settings.schoolClasses?.[0] || '10th';
 
       setStudentType('school');
       setFormData({
@@ -81,7 +90,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
         admissionNumber: nextAdm,
         studentId: nextId,
         rollNumber: '',
-        className: settings.schoolClasses?.[0] || '10th',
+        className: defaultClass,
         section: 'A',
         course: settings.computerCourses?.[0] || 'ADCA (12 Months)',
         batch: settings.batches?.[0] || '10:00 AM - 12:00 PM',
@@ -95,11 +104,11 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
         admissionDate: new Date().toISOString().split('T')[0]
       });
     }
-  }, [student, settings, students, isOpen]);
+  }, [student, settings, students, isOpen, teacherAssignedClass]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name?.trim() || !formData.mobile?.trim()) {
       showToast("Please provide at least Student Name and Mobile Number.", "error");
@@ -108,29 +117,55 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
 
     const payload = {
       ...formData,
+      photoPath: formData.photoPath || '',
+      photoUrl: formData.photoPath || '',
       studentType,
       totalFees: Number(formData.totalFees) || 0,
       paidFees: Number(formData.paidFees) || 0,
     };
 
     if (isEdit) {
-      updateStudent(student.id, payload);
+      await updateStudent(student.id, payload);
       showToast(`Student "${formData.name}" updated successfully!`, "success");
     } else {
-      addStudent(payload);
-      showToast(`New admission for "${formData.name}" completed!`, "success");
+      await addStudent(payload);
+      showToast(`New admission for "${formData.name}" completed in ${payload.className}!`, "success");
     }
     onClose();
   };
 
-  const handlePhotoUpload = (e) => {
+  const handlePhotoFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('Please select a valid image file.', 'error');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (event) => {
-        setFormData(prev => ({ ...prev, photoPath: event.target.result }));
+        const dataUrl = event.target.result;
+        setImageToCrop(dataUrl);
+        setIsCropperOpen(true);
       };
       reader.readAsDataURL(file);
+    }
+    // Reset input so re-selecting same file triggers onChange
+    e.target.value = '';
+  };
+
+  const handleCropComplete = (croppedDataUrl) => {
+    setFormData(prev => ({
+      ...prev,
+      photoPath: croppedDataUrl,
+      photoUrl: croppedDataUrl
+    }));
+    showToast('Student photo cropped and applied!', 'success');
+  };
+
+  const handleOpenExistingPhotoCropper = () => {
+    if (formData.photoPath) {
+      setImageToCrop(formData.photoPath);
+      setIsCropperOpen(true);
     }
   };
 
@@ -208,22 +243,71 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[68vh] overflow-y-auto custom-scrollbar">
           {/* Photo & Basic Info */}
-          <div className="flex flex-col sm:flex-row gap-5 items-start">
-            {/* Photo Avatar */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-24 h-24 rounded-2xl bg-surface2 border-2 border-dashed border-border overflow-hidden relative flex items-center justify-center text-text-muted group">
+          <div className="flex flex-col sm:flex-row gap-5 items-start bg-surface2/40 p-4 rounded-2xl border border-border/80">
+            {/* Photo Avatar with Actions */}
+            <div className="flex flex-col items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+              <div className="w-24 h-28 rounded-2xl bg-surface2 border-2 border-dashed border-amber-400/60 overflow-hidden relative flex items-center justify-center text-text-muted group shadow-sm bg-slate-900">
                 {formData.photoPath ? (
-                  <img src={formData.photoPath} alt="Preview" className="w-full h-full object-cover" />
+                  <img
+                    src={formData.photoPath}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
                 ) : (
-                  <User className="w-10 h-10 text-text-muted" />
+                  <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                    <User className="w-9 h-9 mb-1 text-slate-400/80" />
+                    <span className="text-[9px] font-bold text-slate-400">No Photo</span>
+                  </div>
                 )}
-                <label className="absolute inset-0 bg-black/40 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-semibold">
-                  <Camera className="w-5 h-5 mb-1" />
-                  <span>Upload</span>
-                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+
+                {/* Quick overlay button */}
+                <label className="absolute inset-0 bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold">
+                  <Camera className="w-5 h-5 mb-1 text-amber-300" />
+                  <span>{formData.photoPath ? 'Change' : 'Upload'}</span>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoFileSelect}
+                    className="hidden"
+                  />
                 </label>
               </div>
-              <span className="text-[10px] text-text-muted">Student Photo</span>
+
+              {/* Photo Action Buttons */}
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="px-2.5 py-1 rounded-lg bg-primary hover:bg-primary-dark text-white text-[10px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer transition-colors"
+                >
+                  <Upload className="w-3 h-3" />
+                  <span>{formData.photoPath ? 'Change' : 'Upload Photo'}</span>
+                </button>
+
+                {formData.photoPath && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleOpenExistingPhotoCropper}
+                      className="px-2 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 text-[10px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer transition-colors"
+                      title="Crop and frame photo"
+                    >
+                      <Crop className="w-3 h-3" />
+                      <span>Crop</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, photoPath: '', photoUrl: '' }))}
+                      className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-bold cursor-pointer transition-colors"
+                      title="Remove Photo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Core Fields */}
@@ -328,8 +412,8 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
                       setFormData({
                         ...formData,
                         session: newSess,
-                        admissionNumber: getNextAdmissionNumber(newSess),
-                        studentId: getNextStudentId(newSess)
+                        admissionNumber: getNextAdmissionNumber(students, newSess),
+                        studentId: getNextStudentId(students, newSess)
                       });
                     } else {
                       setFormData({ ...formData, session: newSess });
@@ -489,6 +573,19 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
           </div>
         </form>
       </div>
+
+      {/* Interactive Photo Cropper Modal */}
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        imageSrc={imageToCrop}
+        title="Crop Student Photo"
+        initialAspect="3:4"
+        onCropComplete={handleCropComplete}
+        onClose={() => {
+          setIsCropperOpen(false);
+          setImageToCrop(null);
+        }}
+      />
     </div>
   );
 }
