@@ -45,9 +45,18 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
   // Generate Message Template with Father Name & Month-wise Details
   const generateMessage = (stu, lang) => {
     if (!stu) return '';
-    const pendingDue = dueAmount !== null ? dueAmount : (stu.feeMetrics?.currentDue ?? stu.remainingFees ?? Math.max(0, (stu.totalFees || 0) - (stu.paidFees || 0)));
-    const totalFee = stu.totalFees || stu.feeMetrics?.setTotalFees || (stu.paidFees || 0) + pendingDue;
-    const paidFee = stu.paidFees || stu.feeMetrics?.totalPaid || 0;
+
+    // Calculate real total paid from all payment transactions
+    const stuPayments = (payments || []).filter(p =>
+      p.studentId === stu.id ||
+      (stu.studentId && p.studentId === stu.studentId) ||
+      (stu.admissionNumber && (p.admissionNumber === stu.admissionNumber || p.admissionNo === stu.admissionNumber)) ||
+      (p.studentName && stu.name && p.studentName.trim().toLowerCase() === stu.name.trim().toLowerCase())
+    );
+    const paidFee = stuPayments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0) || Number(stu.paidFees) || Number(stu.feeMetrics?.totalPaid) || 0;
+
+    const pendingDue = dueAmount !== null ? dueAmount : (stu.feeMetrics?.currentDue ?? stu.remainingFees ?? Math.max(0, (stu.totalFees || 0) - paidFee));
+    const totalFee = stu.totalFees || stu.feeMetrics?.setTotalFees || (paidFee + pendingDue);
     const className = stu.studentType === 'school' ? `Class ${stu.className || ''} ${stu.section ? `(${stu.section})` : ''}` : (stu.course || 'Student');
     const dueDateStr = stu.dueDate ? (stu.dueDate.includes('T') ? stu.dueDate.split('T')[0] : stu.dueDate) : '';
     const fatherName = (stu.fatherName || '').trim();
@@ -86,7 +95,6 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
           msg += `\n`;
         }
       } else if (stu.studentType === 'computer') {
-        const stuPayments = (payments || []).filter(p => p.studentId === stu.id || (stu.studentId && p.studentId === stu.studentId));
         if (stuPayments.length > 0) {
           msg += `📊 *जमा की गई किश्तों/रसीदों का विवरण:*\n`;
           stuPayments.forEach((p, idx) => {
@@ -97,10 +105,14 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
         }
       }
 
+      // Summary Box: Total Fee (Top) -> Paid Fee -> Due Balance -> Due Period -> Due Date
       msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-      msg += `💰 *कुल बकाया राशि (Due Balance):* ₹${Number(pendingDue).toLocaleString('en-IN')}\n`;
-      msg += `✅ *कुल जमा फीस (Total Paid):* ₹${Number(paidFee).toLocaleString('en-IN')}\n`;
       msg += `💳 *कुल देय फीस (Total Fees):* ₹${Number(totalFee).toLocaleString('en-IN')}\n`;
+      msg += `✅ *कुल जमा फीस (Total Paid):* ₹${Number(paidFee).toLocaleString('en-IN')}\n`;
+      msg += `💰 *कुल बकाया राशि (Due Balance):* ₹${Number(pendingDue).toLocaleString('en-IN')}\n`;
+      if (stu.studentType !== 'computer' && breakdown.pendingCount > 0) {
+        msg += `📌 *बकाया अवधि (Due Period):* ${breakdown.pendingCount} महीने (${breakdown.pendingMonths.join(', ')})\n`;
+      }
       if (dueDateStr) {
         msg += `📅 *अंतिम तिथि (Due Date):* ${dueDateStr}\n`;
       }
@@ -141,7 +153,6 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
           msg += `\n`;
         }
       } else if (stu.studentType === 'computer') {
-        const stuPayments = (payments || []).filter(p => p.studentId === stu.id || (stu.studentId && p.studentId === stu.studentId));
         if (stuPayments.length > 0) {
           msg += `📊 *Payments & Receipts Record:*\n`;
           stuPayments.forEach((p, idx) => {
@@ -152,10 +163,14 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
         }
       }
 
+      // Summary Box: Total Fee (Top) -> Paid Fee -> Due Balance -> Due Period -> Due Date
       msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-      msg += `💰 *Total Outstanding Due:* ₹${Number(pendingDue).toLocaleString('en-IN')}\n`;
-      msg += `✅ *Total Fee Paid:* ₹${Number(paidFee).toLocaleString('en-IN')}\n`;
       msg += `💳 *Overall Total Fee:* ₹${Number(totalFee).toLocaleString('en-IN')}\n`;
+      msg += `✅ *Total Fee Paid:* ₹${Number(paidFee).toLocaleString('en-IN')}\n`;
+      msg += `💰 *Total Outstanding Due:* ₹${Number(pendingDue).toLocaleString('en-IN')}\n`;
+      if (stu.studentType !== 'computer' && breakdown.pendingCount > 0) {
+        msg += `📌 *Due Period:* ${breakdown.pendingCount} ${breakdown.pendingCount === 1 ? 'Month' : 'Months'} (${breakdown.pendingMonths.join(', ')})\n`;
+      }
       if (dueDateStr) {
         msg += `📅 *Due Date:* ${dueDateStr}\n`;
       }
@@ -176,6 +191,9 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
     }
   }, [activeStudent, language]);
 
+  const [isAutoSending, setIsAutoSending] = useState(false);
+  const [autoSentCount, setAutoSentCount] = useState(0);
+
   if (!isOpen || !activeStudent) return null;
 
   const mobile = activeStudent.alternateMobile || activeStudent.mobile || '';
@@ -190,6 +208,30 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
     const url = `https://api.whatsapp.com/send?phone=${finalMobile}&text=${encodeURIComponent(customMessage)}`;
     window.open(url, '_blank');
     showToast?.(`WhatsApp reminder opened for ${activeStudent.name}!`, 'success');
+  };
+
+  const handleAutoSendAll = async () => {
+    if (studentList.length === 0) return;
+    setIsAutoSending(true);
+    let sent = 0;
+
+    for (let i = 0; i < studentList.length; i++) {
+      const s = studentList[i];
+      const sMobile = (s.alternateMobile || s.mobile || '').replace(/[^0-9]/g, '');
+      const sFinalMobile = sMobile.length === 10 ? `91${sMobile}` : sMobile;
+      if (sFinalMobile) {
+        setCurrentIdx(i);
+        const sMsg = generateMessage(s, language);
+        const url = `https://api.whatsapp.com/send?phone=${sFinalMobile}&text=${encodeURIComponent(sMsg)}`;
+        window.open(url, '_blank');
+        sent++;
+        setAutoSentCount(sent);
+        await new Promise(r => setTimeout(r, 1200));
+      }
+    }
+
+    setIsAutoSending(false);
+    showToast?.(`1-Click Auto Send complete! Opened ${sent} reminders.`, 'success');
   };
 
   const handleCopy = () => {
@@ -319,27 +361,41 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
 
           {/* Multi-student Queue Navigation (If Bulk mode) */}
           {studentList.length > 1 && (
-            <div className="p-3 bg-surface2 rounded-xl border border-border flex items-center justify-between text-xs">
-              <span className="font-bold text-textMuted">
-                Queue: {currentIdx + 1} / {studentList.length} Students
-              </span>
-              <div className="flex gap-2">
+            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-emerald-800">
+                  Bulk Queue: {currentIdx + 1} of {studentList.length} Students
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  disabled={currentIdx === 0}
-                  onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))}
-                  className="px-2.5 py-1 rounded-lg border border-border bg-surface font-bold text-text disabled:opacity-40 cursor-pointer"
+                  disabled={isAutoSending}
+                  onClick={handleAutoSendAll}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                  title="Auto-send WhatsApp reminders to all selected due students with 1-click"
                 >
-                  Previous
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>{isAutoSending ? `Sending (${autoSentCount}/${studentList.length})...` : `⚡ 1-Click Auto Send All (${studentList.length})`}</span>
                 </button>
-                <button
-                  type="button"
-                  disabled={currentIdx === studentList.length - 1}
-                  onClick={() => setCurrentIdx(prev => Math.min(studentList.length - 1, prev + 1))}
-                  className="px-2.5 py-1 rounded-lg border border-border bg-surface font-bold text-text disabled:opacity-40 cursor-pointer"
-                >
-                  Next
-                </button>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    disabled={currentIdx === 0 || isAutoSending}
+                    onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))}
+                    className="px-2.5 py-1 rounded-lg border border-border bg-surface font-bold text-text disabled:opacity-40 cursor-pointer"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    disabled={currentIdx === studentList.length - 1 || isAutoSending}
+                    onClick={() => setCurrentIdx(prev => Math.min(studentList.length - 1, prev + 1))}
+                    className="px-2.5 py-1 rounded-lg border border-border bg-surface font-bold text-text disabled:opacity-40 cursor-pointer"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           )}
