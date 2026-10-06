@@ -104,9 +104,9 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
       const fs = currentStudent.feeStructure || {};
       const mp = currentStudent.monthlyParticulars?.[monthKey] || {};
 
-      const tuitionDefault = (fs.tuitionFee !== undefined && fs.tuitionFee !== '' && fs.tuitionFee !== null)
+      const tuitionDefault = (fs.tuitionFee !== undefined && fs.tuitionFee !== '' && fs.tuitionFee !== null && Number(fs.tuitionFee) > 0)
         ? String(fs.tuitionFee)
-        : (currentStudent.monthlyFee ? String(currentStudent.monthlyFee) : (currentMonthData.tuitionFee ? String(currentMonthData.tuitionFee) : ''));
+        : (currentStudent.monthlyFee && Number(currentStudent.monthlyFee) > 0 ? String(currentStudent.monthlyFee) : (currentMonthData.tuitionFee ? String(currentMonthData.tuitionFee) : ''));
       const transportDefault = (fs.transportFee !== undefined && fs.transportFee !== '' && fs.transportFee !== null)
         ? String(fs.transportFee)
         : (currentMonthData.transportFee ? String(currentMonthData.transportFee) : '');

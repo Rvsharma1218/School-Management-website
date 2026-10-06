@@ -57,7 +57,10 @@ export default function StudentProfileModal({ student, onClose }) {
   const totalExpectedFees = Number(student.totalFees) > 0 ? Number(student.totalFees) : 0;
   const realPaidFees = studentPayments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0) || Number(student.paidFees) || 0;
   const realPendingDue = Math.max(0, totalExpectedFees - realPaidFees);
-  const monthlyTuition = Number(student.monthlyFee) || Number(student.feeStructure?.tuitionFee) || 0;
+  const fsTuition = Number(student.feeStructure?.tuitionFee);
+  const monthlyTuition = (!isNaN(fsTuition) && fsTuition > 0)
+    ? fsTuition
+    : (Number(student.monthlyFee) > 0 ? Number(student.monthlyFee) : 0);
   const feeDueDay = student.feeStructure?.dueDay || 10;
 
   // Attendance stats for this student
