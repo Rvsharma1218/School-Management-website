@@ -193,6 +193,7 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
 
   const [isAutoSending, setIsAutoSending] = useState(false);
   const [autoSentCount, setAutoSentCount] = useState(0);
+  const [sentMap, setSentMap] = useState({});
 
   if (!isOpen || !activeStudent) return null;
 
@@ -207,13 +208,35 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
     }
     const url = `https://api.whatsapp.com/send?phone=${finalMobile}&text=${encodeURIComponent(customMessage)}`;
     window.open(url, '_blank');
+    setSentMap(prev => ({ ...prev, [activeStudent.id]: true }));
     showToast?.(`WhatsApp reminder opened for ${activeStudent.name}!`, 'success');
+  };
+
+  const handleSendAndNext = () => {
+    if (!cleanMobile) {
+      showToast?.('No valid mobile number found for this student!', 'error');
+      return;
+    }
+    const url = `https://api.whatsapp.com/send?phone=${finalMobile}&text=${encodeURIComponent(customMessage)}`;
+    window.open(url, '_blank');
+    setSentMap(prev => ({ ...prev, [activeStudent.id]: true }));
+    showToast?.(`WhatsApp reminder opened for ${activeStudent.name}!`, 'success');
+
+    // Auto-advance to next student in list
+    if (studentList.length > 1) {
+      if (currentIdx < studentList.length - 1) {
+        setCurrentIdx(prev => prev + 1);
+      } else {
+        showToast?.('All students in queue reached!', 'success');
+      }
+    }
   };
 
   const handleAutoSendAll = async () => {
     if (studentList.length === 0) return;
     setIsAutoSending(true);
     let sent = 0;
+    let popupBlocked = false;
 
     for (let i = 0; i < studentList.length; i++) {
       const s = studentList[i];
@@ -223,15 +246,23 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
         setCurrentIdx(i);
         const sMsg = generateMessage(s, language);
         const url = `https://api.whatsapp.com/send?phone=${sFinalMobile}&text=${encodeURIComponent(sMsg)}`;
-        window.open(url, '_blank');
+        const win = window.open(url, '_blank');
+        if (!win || win.closed || typeof win.closed === 'undefined') {
+          popupBlocked = true;
+        }
         sent++;
+        setSentMap(prev => ({ ...prev, [s.id]: true }));
         setAutoSentCount(sent);
-        await new Promise(r => setTimeout(r, 1200));
+        await new Promise(r => setTimeout(r, 1400));
       }
     }
 
     setIsAutoSending(false);
-    showToast?.(`1-Click Auto Send complete! Opened ${sent} reminders.`, 'success');
+    if (popupBlocked) {
+      showToast?.(`Browser blocked some pop-ups! Please use the 'Send & Next' button or allow pop-ups for this site.`, 'warning');
+    } else {
+      showToast?.(`1-Click Auto Send complete! Opened ${sent} reminders.`, 'success');
+    }
   };
 
   const handleCopy = () => {
@@ -361,29 +392,32 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
 
           {/* Multi-student Queue Navigation (If Bulk mode) */}
           {studentList.length > 1 && (
-            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-emerald-800">
-                  Bulk Queue: {currentIdx + 1} of {studentList.length} Students
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isAutoSending}
-                  onClick={handleAutoSendAll}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1.5 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
-                  title="Auto-send WhatsApp reminders to all selected due students with 1-click"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>{isAutoSending ? `Sending (${autoSentCount}/${studentList.length})...` : `⚡ 1-Click Auto Send All (${studentList.length})`}</span>
-                </button>
-                <div className="flex gap-1">
+            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 space-y-2 text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-emerald-800">
+                    Bulk Queue: {currentIdx + 1} of {studentList.length} Students
+                  </span>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-600/15 text-emerald-700">
+                    Sent: {Object.keys(sentMap).length} / {studentList.length}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={isAutoSending}
+                    onClick={handleAutoSendAll}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] flex items-center gap-1 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                    title="Auto-open WhatsApp tabs for all selected students"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-300" />
+                    <span>{isAutoSending ? `Sending (${autoSentCount}/${studentList.length})…` : `⚡ Auto Send All`}</span>
+                  </button>
                   <button
                     type="button"
                     disabled={currentIdx === 0 || isAutoSending}
                     onClick={() => setCurrentIdx(prev => Math.max(0, prev - 1))}
-                    className="px-2.5 py-1 rounded-lg border border-border bg-surface font-bold text-text disabled:opacity-40 cursor-pointer"
+                    className="px-2 py-1 rounded-lg border border-border bg-surface font-bold text-text disabled:opacity-40 cursor-pointer text-[11px]"
                   >
                     Prev
                   </button>
@@ -391,24 +425,49 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
                     type="button"
                     disabled={currentIdx === studentList.length - 1 || isAutoSending}
                     onClick={() => setCurrentIdx(prev => Math.min(studentList.length - 1, prev + 1))}
-                    className="px-2.5 py-1 rounded-lg border border-border bg-surface font-bold text-text disabled:opacity-40 cursor-pointer"
+                    className="px-2 py-1 rounded-lg border border-border bg-surface font-bold text-text disabled:opacity-40 cursor-pointer text-[11px]"
                   >
                     Next
                   </button>
                 </div>
+              </div>
+
+              {/* Horizontal Pill Strip for Students in Queue */}
+              <div className="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-thin">
+                {studentList.map((stu, idx) => {
+                  const isSent = !!sentMap[stu.id];
+                  const isActive = idx === currentIdx;
+                  return (
+                    <button
+                      key={stu.id || idx}
+                      type="button"
+                      onClick={() => setCurrentIdx(idx)}
+                      className={`px-2 py-1 rounded-lg font-bold text-[10px] whitespace-nowrap flex items-center gap-1 cursor-pointer transition-all ${
+                        isActive
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : isSent
+                          ? 'bg-emerald-500/20 text-emerald-800 border border-emerald-500/30'
+                          : 'bg-surface border border-border text-text hover:bg-surface2'
+                      }`}
+                    >
+                      {isSent ? '✓' : `${idx + 1}.`}
+                      <span>{stu.name.split(' ')[0]}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-border bg-surface2/30 flex items-center justify-between gap-3">
+        <div className="p-4 border-t border-border bg-surface2/30 flex flex-wrap items-center justify-between gap-2.5">
           <button
             type="button"
             onClick={handleCopy}
-            className="px-4 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface2 text-xs font-bold text-text transition-colors flex items-center gap-2 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl border border-border bg-surface hover:bg-surface2 text-xs font-bold text-text transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-textMuted" />}
+            {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-textMuted" />}
             <span>{copied ? 'Copied!' : 'Copy Text'}</span>
           </button>
 
@@ -416,17 +475,36 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-border hover:bg-surface2 text-xs font-bold text-textMuted hover:text-text transition-colors cursor-pointer"
+              className="px-3.5 py-2 rounded-xl border border-border hover:bg-surface2 text-xs font-bold text-textMuted hover:text-text transition-colors cursor-pointer"
             >
-              Cancel
+              Close
             </button>
+            {studentList.length > 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSentMap(prev => ({ ...prev, [activeStudent.id]: true }));
+                  if (currentIdx < studentList.length - 1) {
+                    setCurrentIdx(prev => prev + 1);
+                  }
+                }}
+                className="px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface2 text-xs font-bold text-text transition-colors cursor-pointer"
+                title="Mark this student as sent and move to next"
+              >
+                Skip / Mark Sent
+              </button>
+            )}
             <button
               type="button"
-              onClick={handleSendWhatsApp}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+              onClick={studentList.length > 1 ? handleSendAndNext : handleSendWhatsApp}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
-              <Send className="w-4 h-4" />
-              <span>Send on WhatsApp</span>
+              <Send className="w-3.5 h-3.5" />
+              <span>
+                {studentList.length > 1
+                  ? (sentMap[activeStudent.id] ? 'Re-send & Next →' : `Send to ${activeStudent.name.split(' ')[0]} & Next →`)
+                  : 'Send on WhatsApp'}
+              </span>
             </button>
           </div>
         </div>

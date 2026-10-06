@@ -80,7 +80,23 @@ function AppContent() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const isAnyModalOpen = !!(isAddStudentOpen || editingStudent || collectFeeStudent || feeDetailStudent || printReceiptData || printResultData || printIdCardsData || isGlobalSearchOpen || isMobileNavOpen || isAddNoticeOpen || viewingNotice);
+    const isAnyModalOpen = !!(
+      isAddStudentOpen ||
+      editingStudent ||
+      viewingStudentProfile ||
+      collectFeeStudent ||
+      feeDetailStudent ||
+      printReceiptData ||
+      printResultData ||
+      printIdCardsData ||
+      isGlobalSearchOpen ||
+      isMobileNavOpen ||
+      isAddNoticeOpen ||
+      editingNotice ||
+      viewingNotice ||
+      isPromoteModalOpen ||
+      whatsAppReminderData
+    );
 
     if (isAnyModalOpen && !prevModalOpenRef.current) {
       window.history.pushState({ modalOpen: true }, '');
@@ -88,6 +104,15 @@ function AppContent() {
     prevModalOpenRef.current = isAnyModalOpen;
 
     const handlePopState = () => {
+      // 1. If any modal or drawer is open, close it first on Back!
+      if (whatsAppReminderData) {
+        setWhatsAppReminderData(null);
+        return;
+      }
+      if (viewingStudentProfile) {
+        setViewingStudentProfile(null);
+        return;
+      }
       if (isPromoteModalOpen) {
         setIsPromoteModalOpen(false);
         return;
@@ -134,6 +159,12 @@ function AppContent() {
         setIsGlobalSearchOpen(false);
         return;
       }
+
+      // 2. If no modal is open, update view route from browser history path!
+      const targetPath = window.location.pathname || '/dashboard';
+      if (targetPath && targetPath !== currentPath) {
+        navigate(targetPath);
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -143,13 +174,20 @@ function AppContent() {
   }, [
     isAddStudentOpen,
     editingStudent,
+    viewingStudentProfile,
     collectFeeStudent,
     feeDetailStudent,
     printReceiptData,
     printResultData,
     printIdCardsData,
     isGlobalSearchOpen,
-    isMobileNavOpen
+    isMobileNavOpen,
+    isAddNoticeOpen,
+    editingNotice,
+    viewingNotice,
+    isPromoteModalOpen,
+    whatsAppReminderData,
+    currentPath
   ]);
 
   // Security route guards

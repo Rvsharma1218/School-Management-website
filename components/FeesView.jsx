@@ -935,7 +935,7 @@ export default function FeesView() {
                                         <div className="flex items-center justify-end gap-1.5">
                                           <button
                                             type="button"
-                                            onClick={() => openWhatsAppReceiptShare(p, s, settings)}
+                                            onClick={() => openWhatsAppReceiptShare(p, s, settings, payments)}
                                             className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer transition-colors"
                                             title="Share this receipt on WhatsApp"
                                           >
@@ -1038,7 +1038,7 @@ export default function FeesView() {
                             <td className="py-3.5 px-4 text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 <button
-                                  onClick={() => openWhatsAppReceiptShare(p, student, settings)}
+                                  onClick={() => openWhatsAppReceiptShare(p, student, settings, payments)}
                                   className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer transition-colors"
                                   title="Share Receipt Voucher on WhatsApp"
                                 >
@@ -1273,13 +1273,6 @@ export default function FeesView() {
           </div>
         </div>
       )}
-
-      {/* WhatsApp Reminder Modal (Hindi & English) */}
-      <WhatsAppReminderModal
-        isOpen={!!whatsAppReminderData}
-        onClose={() => setWhatsAppReminderData(null)}
-        {...(whatsAppReminderData || {})}
-      />
     </div>
   );
 }

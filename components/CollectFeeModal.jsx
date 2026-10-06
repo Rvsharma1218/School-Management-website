@@ -28,14 +28,17 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    if (student) {
-      setSelectedStudentId(student.id);
-      const metrics = calculateStudentFeeMetrics(student, payments);
-      setAmount(metrics.currentDue > 0 ? String(metrics.currentDue) : '');
-    } else if (students.length > 0) {
-      setSelectedStudentId(students[0].id);
-      const metrics = calculateStudentFeeMetrics(students[0], payments);
-      setAmount(metrics.currentDue > 0 ? String(metrics.currentDue) : '');
+    const target = student || (students.length > 0 ? students[0] : null);
+    if (target) {
+      setSelectedStudentId(target.id);
+      const metrics = calculateStudentFeeMetrics(target, payments);
+      const originalFee = Number(target.monthlyFee) > 0
+        ? Number(target.monthlyFee)
+        : (Number(target.feeStructure?.tuitionFee) > 0
+            ? Number(target.feeStructure.tuitionFee)
+            : 0);
+      const defaultAmt = metrics.currentDue > 0 ? metrics.currentDue : (originalFee > 0 ? originalFee : '');
+      setAmount(defaultAmt ? String(defaultAmt) : '');
     }
     const recYear = new Date().getFullYear();
     const nextRecNo = getNextReceiptNumber ? getNextReceiptNumber(payments, recYear) : `REC-${recYear}-001`;
@@ -45,6 +48,12 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
   const currentStudent = students.find(s => s.id === selectedStudentId);
   const metrics = currentStudent ? calculateStudentFeeMetrics(currentStudent, payments) : null;
   const currentMonth = metrics?.currentMonthData;
+
+  const originalMonthlyFee = Number(currentStudent?.monthlyFee) > 0
+    ? Number(currentStudent.monthlyFee)
+    : (Number(currentStudent?.feeStructure?.tuitionFee) > 0
+        ? Number(currentStudent.feeStructure.tuitionFee)
+        : 0);
   
   // Month-specific breakdown vs Overall Session
   const activeMonthName = currentMonth?.monthLabel || currentMonth?.monthName || `${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`;
@@ -88,7 +97,11 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
     const finalMonthKey = currentMonth?.monthKey || `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}`;
 
     const prevDue = currentMonth?.previousDue || 0;
-    const totalMonthCharge = currentMonth?.totalMonthCharge || Number(amount);
+    const resolvedTuition = Number(currentMonth?.tuitionFee) > 0
+      ? Number(currentMonth.tuitionFee)
+      : (originalMonthlyFee > 0 ? originalMonthlyFee : Number(amount));
+
+    const totalMonthCharge = currentMonth?.totalMonthCharge > 0 ? Number(currentMonth.totalMonthCharge) : resolvedTuition;
     const totalDemand = currentMonth?.totalDueThisMonth || (prevDue + totalMonthCharge);
     const alreadyPaidThisMonth = currentMonth?.paidInMonth || 0;
     const totalPaidAfterPayment = alreadyPaidThisMonth + Number(amount);
@@ -96,7 +109,7 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
 
     const particularsSnapshot = {
       admissionFee:   Number(currentMonth?.admissionFee)   || 0,
-      tuitionFee:     Number(currentMonth?.tuitionFee)     || Number(amount),
+      tuitionFee:     resolvedTuition,
       examinationFee: Number(currentMonth?.examinationFee) || 0,
       previousDues:   prevDue,
       gameFee:        Number(currentMonth?.gameFee)        || 0,
@@ -118,7 +131,7 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
         monthName: finalFeeMonth
       }
     };
-    const tFee = Number(currentStudent.feeStructure?.tuitionFee) > 0 ? Number(currentStudent.feeStructure.tuitionFee) : Number(amount);
+    const tFee = originalMonthlyFee > 0 ? originalMonthlyFee : Number(amount);
     const updatedFeeStructure = {
       ...(currentStudent.feeStructure || {}),
       tuitionFee: tFee,
@@ -269,9 +282,16 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
           {/* Amount & Mode */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold text-text mb-1 uppercase tracking-wider">
-                Current Payment (₹) <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-text uppercase tracking-wider">
+                  Current Payment (₹) <span className="text-rose-500">*</span>
+                </label>
+                {originalMonthlyFee > 0 && (
+                  <span className="text-[10px] text-text-secondary font-medium">
+                    Original Fee: <strong className="text-text font-bold">₹{originalMonthlyFee.toLocaleString('en-IN')}</strong>
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <input
                   type="number"
@@ -282,6 +302,27 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
                   onChange={(e) => setAmount(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-surface2 border border-border text-sm font-black text-emerald-600 focus:outline-none focus:border-primary"
                 />
+              </div>
+              {/* Quick Fill Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                {originalMonthlyFee > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setAmount(String(originalMonthlyFee))}
+                    className="px-2 py-0.5 rounded bg-surface2 hover:bg-surface2/80 text-text-secondary hover:text-text text-[10px] font-bold border border-border transition-colors cursor-pointer"
+                  >
+                    Original Fee: ₹{originalMonthlyFee}
+                  </button>
+                )}
+                {metrics?.currentDue > 0 && metrics.currentDue !== originalMonthlyFee && (
+                  <button
+                    type="button"
+                    onClick={() => setAmount(String(metrics.currentDue))}
+                    className="px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 text-[10px] font-bold border border-rose-500/20 transition-colors cursor-pointer"
+                  >
+                    Full Due: ₹{metrics.currentDue}
+                  </button>
+                )}
               </div>
             </div>
 

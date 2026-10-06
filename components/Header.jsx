@@ -5,7 +5,7 @@ import { useSchoolStore } from '../lib/store';
 import {
   Menu, Search, Plus, CreditCard, Clock, Calendar, ShieldCheck,
   UserCheck, Bell, ChevronDown, User, Settings, Key, LogOut, X, ShieldAlert,
-  Wifi, WifiOff, RefreshCw, CheckCircle2, AlertCircle
+  Wifi, WifiOff, RefreshCw, CheckCircle2, AlertCircle, ArrowLeft
 } from 'lucide-react';
 
 export default function Header({ onMenuClick }) {
@@ -131,19 +131,38 @@ export default function Header({ onMenuClick }) {
     <header className="sticky top-0 z-30 flex items-center justify-between px-5 lg:px-8 h-16 w-full bg-white/90 backdrop-blur-md border-b border-border shadow-sm">
       
       {/* Left */}
-      <div className="flex items-center gap-4 min-w-0">
-        <button onClick={onMenuClick} className="lg:hidden p-2 rounded-xl bg-surface2 hover:bg-border text-text transition-colors cursor-pointer">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-2 rounded-xl bg-surface2 hover:bg-border text-text transition-colors cursor-pointer"
+          title="Open Menu"
+        >
           <Menu className="w-5 h-5" />
         </button>
+        {currentPath !== '/dashboard' && (
+          <button
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                window.history.back();
+              } else {
+                navigate('/dashboard');
+              }
+            }}
+            className="p-2 rounded-xl bg-surface2 hover:bg-border text-text transition-colors cursor-pointer flex items-center justify-center"
+            title="Go Back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
         <div className="min-w-0">
-          <h1 className="text-lg font-bold text-text truncate">{viewTitles[currentPath] || 'Dashboard'}</h1>
+          <h1 className="text-base sm:text-lg font-bold text-text truncate">{viewTitles[currentPath] || 'Dashboard'}</h1>
           <p className="text-xs text-text-secondary font-semibold truncate hidden sm:block">
             {settings.instituteName || 'School Management'} &nbsp;·&nbsp; Session {settings.currentSession || '2026-27'}
           </p>
         </div>
       </div>
 
-      {/* Center — Search */}
+      {/* Center — Search (Desktop / Tablet) */}
       <button
         onClick={() => setIsGlobalSearchOpen(true)}
         className="hidden md:flex flex-1 max-w-sm h-10 items-center gap-2.5 px-4 rounded-full bg-[#eff4ff] border border-[#c8c4d5]/50 text-[#777584] text-xs hover:border-[#1f108e]/50 hover:bg-white transition-all cursor-pointer group shadow-2xs"
@@ -154,7 +173,15 @@ export default function Header({ onMenuClick }) {
       </button>
 
       {/* Right */}
-      <div className="flex items-center gap-3.5 flex-shrink-0">
+      <div className="flex items-center gap-2 sm:gap-3.5 flex-shrink-0">
+        {/* Mobile Search Icon Button */}
+        <button
+          onClick={() => setIsGlobalSearchOpen(true)}
+          className="md:hidden p-2 rounded-xl bg-[#eff4ff] hover:bg-[#dce9ff] text-[#464553] hover:text-[#0b1c30] transition-colors cursor-pointer border border-[#c8c4d5]/50 shadow-2xs"
+          title="Search"
+        >
+          <Search className="w-4.5 h-4.5" />
+        </button>
         {/* Date & Time */}
         {mounted && (
           <div className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-surface2 border border-border text-xs font-bold text-text">

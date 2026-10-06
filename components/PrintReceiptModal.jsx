@@ -62,12 +62,12 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
     window.print();
   };
 
-  const handleDownloadPDF = () => {
-    exportReceiptPDF(payment, student, settings, payments);
+  const handleDownloadPDF = async () => {
+    await exportReceiptPDF(payment, student, settings, payments);
   };
 
-  const handleWhatsApp = () => {
-    openWhatsAppReceiptShare(payment, student, settings, payments);
+  const handleWhatsApp = async () => {
+    await openWhatsAppReceiptShare(payment, student, settings, payments);
   };
 
   // Safe date parsing
@@ -79,11 +79,23 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
   const mp = student.monthlyParticulars?.[monthKey] || {};
 
   // Standard 12 itemized heads + 1 late fine
+  const standardTuition = Number(student.feeStructure?.tuitionFee) > 0
+    ? Number(student.feeStructure.tuitionFee)
+    : (Number(student.monthlyFee) > 0 ? Number(student.monthlyFee) : 0);
+
+  const resolvedTuition = (mp.tuitionFee !== undefined && Number(mp.tuitionFee) > 0)
+    ? Number(mp.tuitionFee)
+    : (standardTuition > 0 ? standardTuition : (Number(payment.totalMonthDemand) || Number(payment.amount) || 0));
+
+  const resolvedPrevDue = (mp.previousDues !== undefined && Number(mp.previousDues) > 0)
+    ? Number(mp.previousDues)
+    : (Number(payment.previousDue) || Number(student.previousDue) || 0);
+
   const particularsList = [
     { sn: 1, label: 'Admission Fee', amount: mp.admissionFee || 0 },
-    { sn: 2, label: 'Tuition Fee', amount: mp.tuitionFee !== undefined ? mp.tuitionFee : (payment.amount || 0) },
+    { sn: 2, label: 'Tuition Fee', amount: resolvedTuition },
     { sn: 3, label: 'Examination Fee', amount: mp.examinationFee || 0 },
-    { sn: 4, label: 'Previous Dues', amount: mp.previousDues || 0 },
+    { sn: 4, label: 'Previous Dues', amount: resolvedPrevDue },
     { sn: 5, label: 'Game Fee', amount: mp.gameFee || 0 },
     { sn: 6, label: 'Re-Admission Fee', amount: mp.reAdmissionFee || 0 },
     { sn: 7, label: 'Development Fee', amount: mp.developmentFee || 0 },
@@ -96,7 +108,7 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
   ];
 
   const totalCalculated = particularsList.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
-  const totalAmount = totalCalculated > 0 ? totalCalculated : Number(student.totalFees || payment.amount || 0);
+  const totalAmount = Number(payment.totalMonthDemand) || (totalCalculated > 0 ? totalCalculated : Number(student.totalFees || payment.amount || 0));
   const amountPaid = Number(payment.amount || 0);
 
   // Find previous payment for this student
@@ -123,7 +135,9 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
   }
 
   const totalPaidAfter = payment.totalPaidAfter !== undefined ? Number(payment.totalPaidAfter) : (previousPaid + amountPaid);
-  const balanceDue = Math.max(0, totalAmount - totalPaidAfter);
+  const balanceDue = payment.balanceDue !== undefined && payment.balanceDue !== null
+    ? Number(payment.balanceDue)
+    : Math.max(0, totalAmount - totalPaidAfter);
 
   const paymentDateFormatted = safePayDate.toLocaleDateString('en-GB', {
     day: '2-digit',
@@ -196,6 +210,16 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
             
             {/* Header */}
             <div className="text-center space-y-0.5">
+              {(settings.logoUrl || settings.logoPath || settings.logo) && (
+                <div className="flex justify-center mb-1.5">
+                  <img
+                    src={settings.logoUrl || settings.logoPath || settings.logo}
+                    alt="School Logo"
+                    className="h-12 w-auto max-w-[120px] object-contain"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                </div>
+              )}
               <div className="text-[11px] font-bold tracking-widest text-slate-800 uppercase">OFFICIAL FEE RECEIPT VOUCHER</div>
               <h1 className="text-lg sm:text-xl font-black uppercase tracking-tight text-black">
                 {settings.instituteName || 'MY SCHOOL & COMPUTER INSTITUTE'}
@@ -397,8 +421,20 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
               <div className="font-semibold text-slate-800">
                 Class Teacher Sign.
               </div>
-              <div className="font-bold uppercase text-slate-900 tracking-tight">
-                FOR {settings.instituteName || 'MY SCHOOL & COMPUTER INSTITUTE'}
+              <div className="text-right">
+                {(settings.principalSignature || settings.signatureUrl || settings.signaturePath || settings.signature) && (
+                  <div className="flex justify-end mb-1">
+                    <img
+                      src={settings.principalSignature || settings.signatureUrl || settings.signaturePath || settings.signature}
+                      alt="Authorized Signature"
+                      className="h-9 max-h-9 w-auto object-contain"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  </div>
+                )}
+                <div className="font-bold uppercase text-slate-900 tracking-tight">
+                  FOR {settings.instituteName || 'MY SCHOOL & COMPUTER INSTITUTE'}
+                </div>
               </div>
             </div>
 

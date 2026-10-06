@@ -7,7 +7,7 @@ import {
   CreditCard, AlertCircle, FileSpreadsheet, QrCode,
   Settings, GraduationCap, Award, Contact,
   ShieldCheck, UserCheck, School, Sun, Moon, Zap,
-  ChevronRight, ChevronLeft, Plus, FileText, Megaphone
+  ChevronRight, ChevronLeft, Plus, FileText, Megaphone, X
 } from 'lucide-react';
 
 function NavBtn({ icon: Icon, label, badge, active, onClick, iconColor, collapsed }) {
@@ -101,6 +101,13 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1.5 rounded-lg bg-white/70 hover:bg-white text-[#777584] hover:text-[#0b1c30] transition-all cursor-pointer flex-shrink-0 shadow-2xs border border-[#c8c4d5]/40"
+            title="Close navigation"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
 

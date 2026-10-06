@@ -16,8 +16,6 @@ export default function IdCardView() {
   const [primaryColor, setPrimaryColor] = useState('#1f108e'); // brand colors
   const [showBackSide, setShowBackSide] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLogoCropperOpen, setIsLogoCropperOpen] = useState(false);
-  const [logoToCrop, setLogoToCrop] = useState(null);
 
   // Toggles for fields to display
   const [displayFields, setDisplayFields] = useState({
@@ -155,81 +153,9 @@ export default function IdCardView() {
               </div>
             </div>
 
-            {/* 2. LOGO & SIGNATURE STUDIO */}
+            {/* 2. OFFICIAL SIGNATURE STUDIO */}
             <div className="space-y-4 pt-2">
-              <label className="block text-xs font-bold text-text uppercase tracking-wider">Institute Logo & Official Signature</label>
-
-              {/* Logo Upload Box */}
-              <div className="p-3.5 rounded-xl bg-surface2/50 border border-border space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-text flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" />
-                    <span>Institute Logo</span>
-                  </span>
-                  {settings.logoUrl && (
-                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      Active Logo
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-white border border-border shadow-2xs flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {settings.logoUrl || settings.logoPath || settings.logo ? (
-                      <img
-                        src={settings.logoUrl || settings.logoPath || settings.logo}
-                        alt="Logo"
-                        className="w-full h-full object-contain p-1"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <Layout className="w-5 h-5 text-text-muted" />
-                    )}
-                  </div>
-                  <div className="flex-1 flex items-center gap-2">
-                    <label className="flex-1 cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = (ev) => {
-                            const dataUrl = ev.target?.result;
-                            if (dataUrl) {
-                              setLogoToCrop(dataUrl);
-                              setIsLogoCropperOpen(true);
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                          e.target.value = '';
-                        }}
-                      />
-                      <div className="px-3 py-2 rounded-xl bg-white hover:bg-surface2 text-text font-bold text-xs border border-border text-center shadow-2xs transition-colors">
-                        {settings.logoUrl ? 'Change Logo Photo' : 'Upload School Logo'}
-                      </div>
-                    </label>
-                    {(settings.logoUrl || settings.logoPath || settings.logo) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const currentLogo = settings.logoUrl || settings.logoPath || settings.logo;
-                          if (currentLogo) {
-                            setLogoToCrop(currentLogo);
-                            setIsLogoCropperOpen(true);
-                          }
-                        }}
-                        className="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
-                        title="Crop Logo"
-                      >
-                        <Crop className="w-3.5 h-3.5" />
-                        <span>Crop</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <label className="block text-xs font-bold text-text uppercase tracking-wider">Authorized Official Signature</label>
 
               {/* Signature Upload Box with Auto Background Removal & White/Gold Tint */}
               <div className="p-3.5 rounded-xl bg-surface2/50 border border-border space-y-2.5">
@@ -649,26 +575,6 @@ export default function IdCardView() {
           </table>
         </div>
       </div>
-
-      {/* Interactive Logo Cropper Modal */}
-      <ImageCropperModal
-        isOpen={isLogoCropperOpen}
-        imageSrc={logoToCrop}
-        title="Crop Institute Logo"
-        initialAspect="1:1"
-        onCropComplete={async (croppedDataUrl) => {
-          await updateSettings({
-            logoUrl: croppedDataUrl,
-            logoPath: croppedDataUrl,
-            logo: croppedDataUrl
-          });
-          showToast('Institute Logo cropped & updated across all ID cards!', 'success');
-        }}
-        onClose={() => {
-          setIsLogoCropperOpen(false);
-          setLogoToCrop(null);
-        }}
-      />
     </div>
   );
 }

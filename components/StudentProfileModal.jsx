@@ -21,9 +21,10 @@ import {
   Plus,
   Receipt,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
-import { openWhatsAppFeeReminder } from '../lib/exportUtils';
+import { openWhatsAppFeeReminder, openWhatsAppReceiptShare, exportReceiptPDF } from '../lib/exportUtils';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function StudentProfileModal({ student, onClose }) {
@@ -71,8 +72,8 @@ export default function StudentProfileModal({ student, onClose }) {
   const pendingFees = Math.max(0, (student.totalFees || 0) - (student.paidFees || 0));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200 flex flex-col h-[88vh] max-h-[88vh]">
         {/* Header Hero */}
         <div className="relative bg-gradient-to-r from-primary via-indigo-900 to-indigo-950 p-6 text-white flex-shrink-0">
 
@@ -213,6 +214,91 @@ export default function StudentProfileModal({ student, onClose }) {
                 </div>
               </div>
 
+              {/* Fee Structure & Billing Breakdown */}
+              <div className="p-4 rounded-xl bg-surface2/40 border border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-primary" />
+                    <h4 className="text-xs font-bold text-text uppercase tracking-wider">Fee Structure & Billing Details</h4>
+                  </div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    pendingFees <= 0
+                      ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                      : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                  }`}>
+                    {pendingFees <= 0 ? 'Full Paid' : `₹${pendingFees.toLocaleString('en-IN')} Due`}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                  <div className="p-2.5 rounded-lg bg-surface2 border border-border/50">
+                    <span className="text-[10px] text-text-secondary block">Monthly Tuition Fee</span>
+                    <strong className="text-text font-black text-sm">
+                      ₹{(Number(student.monthlyFee) || Number(student.feeStructure?.tuitionFee) || 0).toLocaleString('en-IN')}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-surface2 border border-border/50">
+                    <span className="text-[10px] text-text-secondary block">Payment Due Date</span>
+                    <strong className="text-text font-bold">
+                      {student.feeStructure?.dueDay ? `${student.feeStructure.dueDay}th of month` : '10th of month'}
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-surface2 border border-border/50">
+                    <span className="text-[10px] text-text-secondary block">Late Fine Policy</span>
+                    <strong className="text-amber-600 font-bold">
+                      ₹{student.feeStructure?.lateFinePerDay || 5}/day post due
+                    </strong>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-surface2 border border-border/50">
+                    <span className="text-[10px] text-text-secondary block">Recorded Receipts</span>
+                    <strong className="text-text font-bold">
+                      {studentPayments.length} Payments
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Quick Fee Actions inside Overview */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50">
+                  <div className="text-xs text-text-secondary">
+                    {studentPayments.length > 0 ? (
+                      <span>Last Paid: <strong className="text-text">₹{studentPayments[0].amount.toLocaleString('en-IN')}</strong> on {new Date(studentPayments[0].paymentDate).toLocaleDateString('en-GB')}</span>
+                    ) : (
+                      <span>No prior payment transactions recorded</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openWhatsAppFeeReminder(student, settings)}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                      title="Send Fee Reminder via WhatsApp"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Reminder</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCollectFeeStudent(student);
+                        onClose();
+                      }}
+                      className="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                      title="Collect Fee Payment"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Collect Fee</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('fees')}
+                      className="px-3 py-1.5 rounded-lg bg-surface2 hover:bg-surface2/80 text-text text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <span>View History →</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Personal & Academic Details Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-surface2/40 border border-border space-y-3">
@@ -335,9 +421,26 @@ export default function StudentProfileModal({ student, onClose }) {
                           ₹{pay.amount.toLocaleString('en-IN')}
                         </span>
                         <button
+                          type="button"
+                          onClick={() => openWhatsAppReceiptShare(pay, student, settings, payments)}
+                          className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer transition-colors"
+                          title="Share Receipt on WhatsApp"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => exportReceiptPDF(pay, student, settings, payments)}
+                          className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 cursor-pointer transition-colors"
+                          title="Download Receipt PDF"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setPrintReceiptData({ payment: pay, student, settings })}
-                          className="p-1.5 rounded-lg bg-surface2 hover:bg-surface2/80 text-text-secondary hover:text-text cursor-pointer"
-                          title="Print Receipt"
+                          className="p-1.5 rounded-lg bg-surface2 hover:bg-surface2/80 text-text-secondary hover:text-text cursor-pointer transition-colors"
+                          title="Print Receipt Slip"
                         >
                           <Printer className="w-4 h-4" />
                         </button>
