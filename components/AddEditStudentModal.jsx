@@ -42,6 +42,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
     gender: 'Male',
     address: '',
     photoPath: '',
+    aadhaarNumber: '',
     admissionNumber: '',
     studentId: '',
     rollNumber: '',
@@ -64,7 +65,26 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
       setStudentType(student.studentType || 'school');
       setFormData({
         ...student,
+        name: student.name || '',
+        fatherName: student.fatherName || '',
+        motherName: student.motherName || '',
+        mobile: student.mobile || '',
+        alternateMobile: student.alternateMobile || '',
+        email: student.email || '',
+        dob: student.dob ? (typeof student.dob === 'string' ? student.dob.split('T')[0] : '2010-01-01') : '2010-01-01',
+        gender: student.gender || 'Male',
+        address: student.address || '',
         photoPath: student.photoPath || student.photoUrl || '',
+        photoUrl: student.photoPath || student.photoUrl || '',
+        aadhaarNumber: student.aadhaarNumber || student.aadharNumber || '',
+        admissionNumber: student.admissionNumber || student.admissionNo || '',
+        studentId: student.studentId || student.id || '',
+        rollNumber: student.rollNumber || '',
+        className: student.className || teacherAssignedClass || settings.schoolClasses?.[0] || '10th',
+        section: student.section || 'A',
+        course: student.course || settings.computerCourses?.[0] || 'ADCA (12 Months)',
+        batch: student.batch || settings.batches?.[0] || '10:00 AM - 12:00 PM',
+        courseDurationMonths: Number(student.courseDurationMonths) || 12,
         totalFees: String(student.totalFees || 0),
         paidFees: String(student.paidFees || 0),
         initialPaymentMode: 'Cash'
@@ -87,6 +107,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
         gender: 'Male',
         address: '',
         photoPath: '',
+        aadhaarNumber: '',
         admissionNumber: nextAdm,
         studentId: nextId,
         rollNumber: '',
@@ -119,6 +140,8 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
       ...formData,
       photoPath: formData.photoPath || '',
       photoUrl: formData.photoPath || '',
+      aadhaarNumber: formData.aadhaarNumber || '',
+      aadharNumber: formData.aadhaarNumber || '',
       studentType,
       totalFees: Number(formData.totalFees) || 0,
       paidFees: Number(formData.paidFees) || 0,
@@ -320,7 +343,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
                   type="text"
                   required
                   placeholder="e.g. Rahul Sharma"
-                  value={formData.name}
+                  value={formData.name || ''}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none focus:border-primary"
                 />
@@ -333,7 +356,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
                 <input
                   type="text"
                   placeholder="e.g. Manoj Sharma"
-                  value={formData.fatherName}
+                  value={formData.fatherName || ''}
                   onChange={(e) => setFormData({ ...formData, fatherName: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none focus:border-primary"
                 />
@@ -360,7 +383,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
                   type="tel"
                   required
                   placeholder="10-digit mobile"
-                  value={formData.mobile}
+                  value={formData.mobile || ''}
                   onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none focus:border-primary"
                 />
@@ -430,7 +453,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
                 <div>
                   <label className="block text-[11px] font-bold text-text mb-1">Class</label>
                   <select
-                    value={formData.className}
+                    value={formData.className || ''}
                     onChange={(e) => setFormData({ ...formData, className: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-card border border-border text-xs text-text focus:outline-none focus:border-primary cursor-pointer"
                   >
@@ -443,11 +466,11 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
                 <div>
                   <label className="block text-[11px] font-bold text-text mb-1">Section</label>
                   <select
-                    value={formData.section}
+                    value={formData.section || ''}
                     onChange={(e) => setFormData({ ...formData, section: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-card border border-border text-xs text-text focus:outline-none focus:border-primary cursor-pointer"
                   >
-                    {settings.sections?.map(s => (
+                    {(settings.sections || ['A', 'B', 'C', 'D']).map(s => (
                       <option key={s} value={s}>Section {s}</option>
                     ))}
                   </select>
@@ -469,7 +492,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
                 <div>
                   <label className="block text-[11px] font-bold text-text mb-1">Course</label>
                   <select
-                    value={formData.course}
+                    value={formData.course || ''}
                     onChange={(e) => setFormData({ ...formData, course: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-card border border-border text-xs text-text focus:outline-none focus:border-primary cursor-pointer"
                   >
@@ -482,7 +505,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
                 <div>
                   <label className="block text-[11px] font-bold text-text mb-1">Batch Time</label>
                   <select
-                    value={formData.batch}
+                    value={formData.batch || ''}
                     onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-card border border-border text-xs text-text focus:outline-none focus:border-primary cursor-pointer"
                   >
@@ -506,12 +529,12 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
           </div>
 
           {/* Personal & Contact Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             <div>
               <label className="block text-[11px] font-bold text-text mb-1">Date of Birth</label>
               <input
                 type="date"
-                value={formData.dob}
+                value={formData.dob || '2010-01-01'}
                 onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none focus:border-primary"
               />
@@ -520,7 +543,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
             <div>
               <label className="block text-[11px] font-bold text-text mb-1">Gender</label>
               <select
-                value={formData.gender}
+                value={formData.gender || 'Male'}
                 onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none focus:border-primary cursor-pointer"
               >
@@ -541,7 +564,19 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
               />
             </div>
 
-            <div className="sm:col-span-3">
+            <div>
+              <label className="block text-[11px] font-bold text-text mb-1">Aadhaar / Document ID</label>
+              <input
+                type="text"
+                maxLength={14}
+                placeholder="12-digit Aadhaar No."
+                value={formData.aadhaarNumber || ''}
+                onChange={(e) => setFormData({ ...formData, aadhaarNumber: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none focus:border-primary font-mono"
+              />
+            </div>
+
+            <div className="sm:col-span-2 lg:col-span-4">
               <label className="block text-[11px] font-bold text-text mb-1">Residential Address</label>
               <input
                 type="text"

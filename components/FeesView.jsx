@@ -29,9 +29,51 @@ export default function FeesView() {
 
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'ledger' | 'defaulters'
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterMode, setFilterMode] = useState('all'); // 'all' | 'date' | 'month'
 
-  // Filter payments ledger
-  const filteredPayments = payments.filter(p => {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [selectedMonth, setSelectedMonth] = useState(todayStr.slice(0, 7)); // 'YYYY-MM'
+
+  const getFilterLabel = () => {
+    if (filterMode === 'all') return 'All-Time Collections';
+    if (filterMode === 'date') {
+      try {
+        const d = new Date(selectedDate + 'T00:00:00');
+        return `Collection on ${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+      } catch {
+        return `Collection on ${selectedDate}`;
+      }
+    }
+    if (filterMode === 'month') {
+      try {
+        const [y, m] = selectedMonth.split('-');
+        const d = new Date(Number(y), Number(m) - 1, 1);
+        return `Collection in ${d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}`;
+      } catch {
+        return `Collection in ${selectedMonth}`;
+      }
+    }
+    return 'Fee Collections';
+  };
+
+  // Filter payments by selected date or month
+  const dateFilteredPayments = payments.filter(p => {
+    if (filterMode === 'all') return true;
+    if (!p.paymentDate) return false;
+    if (filterMode === 'date') {
+      return p.paymentDate.startsWith(selectedDate);
+    }
+    if (filterMode === 'month') {
+      return p.paymentDate.startsWith(selectedMonth);
+    }
+    return true;
+  });
+
+  const selectedDateCollected = dateFilteredPayments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+
+  // Filter payments ledger by date/month and search query
+  const filteredPayments = dateFilteredPayments.filter(p => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     const student = students.find(s => s.id === p.studentId);
@@ -68,7 +110,6 @@ export default function FeesView() {
   const totalExpected = totalCollected + totalPending;
 
   // Today's Real Collections
-  const todayStr = new Date().toISOString().split('T')[0];
   const todayPayments = payments.filter(p => p.paymentDate && p.paymentDate.startsWith(todayStr));
   const todayCollected = todayPayments.reduce((a, p) => a + (Number(p.amount) || 0), 0);
 
@@ -179,13 +220,127 @@ export default function FeesView() {
             </div>
           </div>
 
+          {/* Calendar, Date & Month Filter Bar */}
+          <div className="bg-white border border-border rounded-2xl p-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold flex-shrink-0">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-text">
+                  {filterMode === 'all'
+                    ? 'All-Time Fee Collections'
+                    : filterMode === 'date'
+                    ? 'Date-Wise Fee Collection'
+                    : 'Month-Wise Fee Collection'}
+                </div>
+                <div className="text-[11px] text-text-secondary mt-0.5">
+                  {filterMode === 'all'
+                    ? `Showing all-time recorded collections: ₹${totalCollected.toLocaleString('en-IN')} (${payments.length} receipts)`
+                    : `Showing ${getFilterLabel()}: ₹${selectedDateCollected.toLocaleString('en-IN')} (${dateFilteredPayments.length} receipts)`}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Quick Preset Buttons */}
+              <button
+                type="button"
+                onClick={() => setFilterMode('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  filterMode === 'all'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-surface2 hover:bg-border text-text border border-border'
+                }`}
+              >
+                All
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDate(todayStr);
+                  setFilterMode('date');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  filterMode === 'date' && selectedDate === todayStr
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-surface2 hover:bg-border text-text border border-border'
+                }`}
+              >
+                Today
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMonth(todayStr.slice(0, 7));
+                  setFilterMode('month');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  filterMode === 'month' && selectedMonth === todayStr.slice(0, 7)
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-surface2 hover:bg-border text-text border border-border'
+                }`}
+              >
+                This Month
+              </button>
+
+              {/* Specific Date Picker */}
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border transition-all ${
+                filterMode === 'date' ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-surface2 text-text'
+              }`}>
+                <span className="text-[10px] font-bold uppercase text-text-secondary">Date:</span>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSelectedDate(e.target.value);
+                      setFilterMode('date');
+                    }
+                  }}
+                  className="bg-transparent text-xs font-bold text-text focus:outline-none cursor-pointer"
+                  title="Choose a specific date"
+                />
+              </div>
+
+              {/* Specific Month Picker */}
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border transition-all ${
+                filterMode === 'month' ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-surface2 text-text'
+              }`}>
+                <span className="text-[10px] font-bold uppercase text-text-secondary">Month:</span>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSelectedMonth(e.target.value);
+                      setFilterMode('month');
+                    }
+                  }}
+                  className="bg-transparent text-xs font-bold text-text focus:outline-none cursor-pointer"
+                  title="Choose a specific month"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Stats metrics cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-white border border-border rounded-2xl p-5 shadow-xs flex items-center justify-between">
               <div>
-                <div className="text-[10px] font-bold text-text-secondary uppercase">Total Collections</div>
-                <div className="text-2xl font-black text-text mt-1">₹{totalCollected.toLocaleString('en-IN')}</div>
-                <p className="text-[10px] text-text-muted font-semibold mt-1">{payments.length} receipts issued</p>
+                <div className="text-[10px] font-bold text-text-secondary uppercase">
+                  {getFilterLabel()}
+                </div>
+                <div className="text-2xl font-black text-text mt-1">
+                  ₹{(filterMode === 'all' ? totalCollected : selectedDateCollected).toLocaleString('en-IN')}
+                </div>
+                <p className="text-[10px] text-text-muted font-semibold mt-1">
+                  {filterMode === 'all'
+                    ? `${payments.length} receipts issued`
+                    : `${dateFilteredPayments.length} receipts matching filter`}
+                </p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">₹</div>
             </div>
@@ -206,9 +361,17 @@ export default function FeesView() {
 
             <div className="bg-white border border-border rounded-2xl p-5 shadow-xs flex items-center justify-between">
               <div>
-                <div className="text-[10px] font-bold text-text-secondary uppercase">Today's Collection</div>
-                <div className="text-2xl font-black text-primary mt-1">₹{todayCollected.toLocaleString('en-IN')}</div>
-                <p className="text-[10px] text-text-muted mt-1">{todayPayments.length} transactions today</p>
+                <div className="text-[10px] font-bold text-text-secondary uppercase">
+                  {selectedDate !== 'all' && selectedDate !== todayStr ? `Date: ${selectedDate}` : "Today's Collection"}
+                </div>
+                <div className="text-2xl font-black text-primary mt-1">
+                  ₹{(selectedDate !== 'all' && selectedDate !== todayStr ? selectedDateCollected : todayCollected).toLocaleString('en-IN')}
+                </div>
+                <p className="text-[10px] text-text-muted mt-1">
+                  {selectedDate !== 'all' && selectedDate !== todayStr
+                    ? `${dateFilteredPayments.length} transactions recorded`
+                    : `${todayPayments.length} transactions today`}
+                </p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">✔</div>
             </div>
@@ -219,9 +382,11 @@ export default function FeesView() {
             {/* Left table: Recent Transactions */}
             <div className="lg:col-span-8 bg-white border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
               <div className="px-5 py-4 border-b border-border bg-surface2/40 flex items-center justify-between">
-                <span className="font-bold text-xs text-text uppercase">Recent Transactions ({payments.length})</span>
+                <span className="font-bold text-xs text-text uppercase">
+                  Transactions {selectedDate !== 'all' ? `(${selectedDate})` : ''} ({filteredPayments.length})
+                </span>
                 {payments.length > 0 && (
-                  <span className="text-[10px] font-bold text-primary cursor-pointer hover:underline" onClick={() => setActiveTab('ledger')}>View All</span>
+                  <span className="text-[10px] font-bold text-primary cursor-pointer hover:underline" onClick={() => setActiveTab('ledger')}>View Full Ledger</span>
                 )}
               </div>
               <div className="overflow-x-auto">
@@ -326,8 +491,8 @@ export default function FeesView() {
             </button>
           </div>
 
-          <div className="bg-white border border-border rounded-2xl p-4 shadow-sm">
-            <div className="relative">
+          <div className="bg-white border border-border rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="relative flex-1">
               <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
@@ -336,6 +501,86 @@ export default function FeesView() {
                 placeholder="Search by receipt no, student name, payment mode, or month..."
                 className="w-full pl-10 pr-4 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none focus:border-primary"
               />
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setFilterMode('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  filterMode === 'all'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-surface2 hover:bg-border text-text border border-border'
+                }`}
+              >
+                All
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDate(todayStr);
+                  setFilterMode('date');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  filterMode === 'date' && selectedDate === todayStr
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-surface2 hover:bg-border text-text border border-border'
+                }`}
+              >
+                Today
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMonth(todayStr.slice(0, 7));
+                  setFilterMode('month');
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  filterMode === 'month' && selectedMonth === todayStr.slice(0, 7)
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-surface2 hover:bg-border text-text border border-border'
+                }`}
+              >
+                This Month
+              </button>
+
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border transition-all ${
+                filterMode === 'date' ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-surface2 text-text'
+              }`}>
+                <span className="text-[10px] font-bold uppercase text-text-secondary">Date:</span>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSelectedDate(e.target.value);
+                      setFilterMode('date');
+                    }
+                  }}
+                  className="bg-transparent text-xs font-bold text-text focus:outline-none cursor-pointer"
+                  title="Filter transactions by date"
+                />
+              </div>
+
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border transition-all ${
+                filterMode === 'month' ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-surface2 text-text'
+              }`}>
+                <span className="text-[10px] font-bold uppercase text-text-secondary">Month:</span>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSelectedMonth(e.target.value);
+                      setFilterMode('month');
+                    }
+                  }}
+                  className="bg-transparent text-xs font-bold text-text focus:outline-none cursor-pointer"
+                  title="Filter transactions by month"
+                />
+              </div>
             </div>
           </div>
 

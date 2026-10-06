@@ -4,7 +4,7 @@ import {
   Users, Search, Plus, X, GraduationCap, Monitor, Phone,
   MessageSquare, User, Calendar, Mail, MapPin, CheckCircle, Info, Trash2,
   AlertCircle, ShieldAlert, Award, FileText, Check, Layout, ClipboardList, CreditCard,
-  Camera, Upload, Crop
+  Camera, Upload, Crop, Edit, Eye
 } from 'lucide-react';
 import { openWhatsAppFeeReminder } from '../lib/exportUtils';
 import ImageCropperModal from './ImageCropperModal';
@@ -23,6 +23,12 @@ export default function StudentsView() {
     promoteStudents,
     selectedStudentId,
     setSelectedStudentId,
+    isAddStudentOpen,
+    setIsAddStudentOpen,
+    editingStudent,
+    setEditingStudent,
+    viewingStudentProfile,
+    setViewingStudentProfile,
     setFeeDetailStudent,
     isPromoteModalOpen,
     setIsPromoteModalOpen,
@@ -84,6 +90,8 @@ export default function StudentsView() {
       setProfileForm({
         name: activeStudent.name || '',
         photoPath: activeStudent.photoPath || activeStudent.photoUrl || '',
+        photoUrl: activeStudent.photoPath || activeStudent.photoUrl || '',
+        aadhaarNumber: activeStudent.aadhaarNumber || activeStudent.aadharNumber || '',
         dob: activeStudent.dob || '',
         gender: activeStudent.gender || 'Male',
         mobile: activeStudent.mobile || '',
@@ -135,6 +143,9 @@ export default function StudentsView() {
       gender: 'Male',
       mobile: '',
       email: '',
+      photoPath: '',
+      photoUrl: '',
+      aadhaarNumber: '',
       admissionNumber: '',
       studentId: '',
       admissionDate: new Date().toISOString().split('T')[0],
@@ -155,13 +166,20 @@ export default function StudentsView() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    const payload = {
+      ...profileForm,
+      photoPath: profileForm.photoPath || '',
+      photoUrl: profileForm.photoPath || '',
+      aadhaarNumber: profileForm.aadhaarNumber || '',
+      aadharNumber: profileForm.aadhaarNumber || ''
+    };
     if (panelMode === 'add') {
-      const added = await addStudent(profileForm);
+      const added = await addStudent(payload);
       setPanelMode('quickview');
       if (added) setSelectedStudentId(added.id);
       showToast(`New admission for "${profileForm.name}" added successfully!`, 'success');
     } else if (activeStudent) {
-      await updateStudent(activeStudent.id, profileForm);
+      await updateStudent(activeStudent.id, payload);
       setPanelMode('quickview');
       showToast(`Profile for "${profileForm.name}" updated successfully!`, 'success');
     }
@@ -207,7 +225,10 @@ export default function StudentsView() {
             Export PDF
           </button>
           <button
-            onClick={handleAddNewClick}
+            onClick={() => {
+              setEditingStudent(null);
+              setIsAddStudentOpen(true);
+            }}
             className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
@@ -303,7 +324,14 @@ export default function StudentsView() {
                         <input type="checkbox" className="w-4 h-4 rounded text-primary focus:ring-primary/20 cursor-pointer" />
                       </td>
                       <td className="py-3.5 px-4 font-bold text-text">
-                        <div className="flex items-center gap-2.5">
+                        <div
+                          className="flex items-center gap-2.5 hover:text-primary transition-colors cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingStudentProfile(s);
+                          }}
+                          title="Click to view full profile"
+                        >
                           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0 overflow-hidden shadow-2xs">
                             {s.photoPath ? <img src={s.photoPath} alt={s.name} className="w-full h-full object-cover" /> : s.name?.charAt(0)}
                           </div>
@@ -326,6 +354,13 @@ export default function StudentsView() {
                       </td>
                       <td className="py-3.5 px-4 text-right" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setViewingStudentProfile(s)}
+                            className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 transition-colors cursor-pointer"
+                            title="View Full Profile"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
                           {currentUser?.role === 'principal' && (
                             <button
                               onClick={() => setFeeDetailStudent(s)}
@@ -337,13 +372,13 @@ export default function StudentsView() {
                           )}
                           <button
                             onClick={() => {
-                              setSelectedStudentId(s.id);
-                              setPanelMode('edit');
+                              setEditingStudent(s);
+                              setIsAddStudentOpen(true);
                             }}
                             className="p-1.5 rounded-lg bg-surface2 hover:bg-border text-text-secondary transition-colors cursor-pointer"
                             title="Edit Profile"
                           >
-                            <User className="w-3.5 h-3.5" />
+                            <Edit className="w-3.5 h-3.5" />
                           </button>
                           {currentUser?.role === 'principal' && (
                             <button
@@ -379,14 +414,27 @@ export default function StudentsView() {
             /* ─── STATE 1: STUDENT QUICK VIEW PANEL ─── */
             <div className="p-6 space-y-6 animate-in fade-in duration-200">
               {/* Header */}
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-center">
                 <h3 className="font-bold text-base text-text">Quick View</h3>
-                <button
-                  onClick={() => setSelectedStudentId(null)}
-                  className="p-1 rounded-lg text-text-muted hover:text-text hover:bg-surface2 transition-all cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setEditingStudent(activeStudent);
+                      setIsAddStudentOpen(true);
+                    }}
+                    className="p-1.5 rounded-lg text-text-secondary hover:text-primary hover:bg-primary/10 transition-all cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                    title="Edit Profile"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedStudentId(null)}
+                    className="p-1 rounded-lg text-text-muted hover:text-text hover:bg-surface2 transition-all cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Avatar and name details */}
@@ -401,6 +449,11 @@ export default function StudentsView() {
                 <div>
                   <h4 className="font-black text-lg text-text leading-tight">{activeStudent.name}</h4>
                   <p className="text-xs text-text-secondary font-mono mt-0.5">ID: {activeStudent.studentId} · Roll: {activeStudent.rollNumber || '—'}</p>
+                  {(activeStudent.aadhaarNumber || activeStudent.aadharNumber) && (
+                    <p className="text-[11px] text-text-secondary font-mono mt-0.5">
+                      Aadhaar: <span className="font-bold text-text">{activeStudent.aadhaarNumber || activeStudent.aadharNumber}</span>
+                    </p>
+                  )}
                 </div>
                 <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold">
                   {activeStudent.studentType === 'school' ? `Class ${activeStudent.className || ''} - Sec ${activeStudent.section || 'A'}` : activeStudent.course}
@@ -480,10 +533,11 @@ export default function StudentsView() {
                   <span>WhatsApp</span>
                 </button>
                 <button
-                  onClick={() => setPanelMode('edit')}
-                  className="py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white text-center transition-all cursor-pointer shadow-sm"
+                  onClick={() => setViewingStudentProfile(activeStudent)}
+                  className="py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white text-center transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
                 >
-                  Full Profile
+                  <Eye className="w-4 h-4" />
+                  <span>Full Profile</span>
                 </button>
               </div>
             </div>
@@ -564,8 +618,9 @@ export default function StudentsView() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleInputChange('photoPath', '')}
+                            onClick={() => setProfileForm(prev => ({ ...prev, photoPath: '', photoUrl: '' }))}
                             className="p-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-bold cursor-pointer"
+                            title="Remove Photo"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -621,14 +676,27 @@ export default function StudentsView() {
                   />
                 </div>
 
-                <div>
-                  <label className="block mb-1 text-text">Email Address</label>
-                  <input
-                    type="email"
-                    value={profileForm.email}
-                    onChange={e => handleInputChange('email', e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1 text-text">Email Address</label>
+                    <input
+                      type="email"
+                      value={profileForm.email}
+                      onChange={e => handleInputChange('email', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-text">Aadhaar / Document ID</label>
+                    <input
+                      type="text"
+                      maxLength={14}
+                      placeholder="12-digit Aadhaar No."
+                      value={profileForm.aadhaarNumber || ''}
+                      onChange={e => handleInputChange('aadhaarNumber', e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-mono focus:outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="border-t border-border pt-3 space-y-3">
@@ -672,7 +740,7 @@ export default function StudentsView() {
                       <div>
                         <label className="block mb-1 text-text">Class Grade</label>
                         <select
-                          value={profileForm.className}
+                          value={profileForm.className || ''}
                           onChange={e => handleInputChange('className', e.target.value)}
                           className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none cursor-pointer"
                         >
@@ -682,7 +750,7 @@ export default function StudentsView() {
                       <div>
                         <label className="block mb-1 text-text">Section</label>
                         <select
-                          value={profileForm.section}
+                          value={profileForm.section || ''}
                           onChange={e => handleInputChange('section', e.target.value)}
                           className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none cursor-pointer"
                         >
@@ -696,7 +764,7 @@ export default function StudentsView() {
                     <div>
                       <label className="block mb-1 text-text">Course Details</label>
                       <select
-                        value={profileForm.course}
+                        value={profileForm.course || ''}
                         onChange={e => handleInputChange('course', e.target.value)}
                         className="w-full px-2.5 py-1.5 rounded bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none cursor-pointer"
                       >

@@ -19,6 +19,7 @@ import PrintResultModal from '../components/PrintResultModal';
 import PrintIdCardsModal from '../components/PrintIdCardsModal';
 import GlobalSearchModal from '../components/GlobalSearchModal';
 import AddEditStudentModal from '../components/AddEditStudentModal';
+import StudentProfileModal from '../components/StudentProfileModal';
 import CollectFeeModal from '../components/CollectFeeModal';
 import StudentFeeDetailModal from '../components/StudentFeeDetailModal';
 import PromoteStudentsModal from '../components/PromoteStudentsModal';
@@ -45,6 +46,7 @@ function AppContent() {
     navigate,
     isAddStudentOpen, setIsAddStudentOpen,
     editingStudent, setEditingStudent,
+    viewingStudentProfile, setViewingStudentProfile,
     collectFeeStudent, setCollectFeeStudent,
     feeDetailStudent, setFeeDetailStudent,
     printReceiptData, setPrintReceiptData,
@@ -251,6 +253,12 @@ function AppContent() {
           isOpen={isAddStudentOpen}
           student={editingStudent}
           onClose={() => { setIsAddStudentOpen(false); setEditingStudent(null); }}
+        />
+      )}
+      {viewingStudentProfile && (
+        <StudentProfileModal
+          student={viewingStudentProfile}
+          onClose={() => setViewingStudentProfile(null)}
         />
       )}
       {collectFeeStudent && currentUser?.role === 'principal' && (

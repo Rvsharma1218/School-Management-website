@@ -34,6 +34,7 @@ export default function StudentProfileModal({ student, onClose }) {
     results,
     setCollectFeeStudent,
     setEditingStudent,
+    setIsAddStudentOpen,
     setPrintReceiptData,
     setPrintIdCardsData,
     deleteStudent
@@ -74,12 +75,6 @@ export default function StudentProfileModal({ student, onClose }) {
       <div className="bg-card border border-border rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
         {/* Header Hero */}
         <div className="relative bg-gradient-to-r from-primary via-indigo-900 to-indigo-950 p-6 text-white flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
 
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
             <div className="w-20 h-20 rounded-2xl bg-white/10 border-2 border-white/20 overflow-hidden flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 shadow-lg">
@@ -132,6 +127,7 @@ export default function StudentProfileModal({ student, onClose }) {
               <button
                 onClick={() => {
                   setEditingStudent(student);
+                  setIsAddStudentOpen(true);
                   onClose();
                 }}
                 className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
@@ -142,13 +138,25 @@ export default function StudentProfileModal({ student, onClose }) {
 
               <button
                 onClick={() => {
-                  deleteStudent(student.id);
-                  onClose();
+                  if (window.confirm(`Are you sure you want to delete ${student.name}?`)) {
+                    deleteStudent(student.id);
+                    onClose();
+                  }
                 }}
                 className="p-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white transition-all cursor-pointer"
                 title="Delete Student"
               >
                 <Trash2 className="w-4 h-4" />
+              </button>
+
+              <div className="w-px h-6 bg-white/20 mx-1" />
+
+              <button
+                onClick={onClose}
+                className="p-2.5 rounded-xl bg-white/15 hover:bg-white/30 text-white transition-all cursor-pointer"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -225,6 +233,10 @@ export default function StudentProfileModal({ student, onClose }) {
                     <div className="flex justify-between py-1 border-b border-border/50">
                       <span className="text-text-secondary">Gender</span>
                       <span className="font-semibold text-text">{student.gender || '—'}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-border/50">
+                      <span className="text-text-secondary">Aadhaar / Document ID</span>
+                      <span className="font-semibold text-text font-mono">{student.aadhaarNumber || student.aadharNumber || '—'}</span>
                     </div>
                     <div className="flex justify-between py-1">
                       <span className="text-text-secondary">Address</span>
