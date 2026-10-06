@@ -28,12 +28,9 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
     const now = new Date();
     const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
+    // STRICTLY limit to months up to current month (no future months ever!)
     const allKeys = Object.keys(ledger).sort();
-    const relevantKeys = allKeys.filter(k => {
-      const item = ledger[k];
-      if (k <= currentKey) return true;
-      return ((item.totalMonthCharge || 0) > 0 || (item.paidInMonth || 0) > 0);
-    });
+    const relevantKeys = allKeys.filter(k => k <= currentKey);
 
     const monthItems = relevantKeys.map(k => ledger[k]);
     const pendingMonths = monthItems.filter(m => (m.closingDue || 0) > 0);
