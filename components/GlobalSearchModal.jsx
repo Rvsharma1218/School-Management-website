@@ -27,6 +27,7 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
     setSelectedStudentId,
     setViewingStudentProfile,
     setFeeDetailStudent,
+    setIsFeeDetailSelectorOpen,
     setIsAddStudentOpen,
     setPrintReceiptData,
     calculateStudentFeeMetrics
@@ -86,7 +87,7 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
 
   const quickNav = [
     { label: 'Add New Student Admission', icon: User, action: () => { setIsAddStudentOpen(true); onClose(); } },
-    { label: 'Fee Structure & Collect Pay', icon: CreditCard, action: () => { setFeeDetailStudent(students[0] || null); onClose(); } },
+    { label: 'Fee Structure & Collect Pay', icon: CreditCard, action: () => { setIsFeeDetailSelectorOpen(true); setFeeDetailStudent(students[0] || null); onClose(); } },
     { label: 'Open Daily Attendance Register', icon: CalendarCheck, action: () => { navigate('/attendance'); onClose(); } },
     { label: 'Print Student ID Cards Studio', icon: Contact, action: () => { navigate('/idcards'); onClose(); } },
     { label: 'Examinations & Marksheets', icon: Award, action: () => { navigate('/results'); onClose(); } },
@@ -178,6 +179,7 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
                         <button
                           type="button"
                           onClick={() => {
+                            setIsFeeDetailSelectorOpen(false);
                             setFeeDetailStudent(s);
                             onClose();
                           }}

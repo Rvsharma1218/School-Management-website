@@ -30,6 +30,7 @@ export default function StudentsView() {
     viewingStudentProfile,
     setViewingStudentProfile,
     setFeeDetailStudent,
+    setIsFeeDetailSelectorOpen,
     isPromoteModalOpen,
     setIsPromoteModalOpen,
     whatsAppReminderData,
@@ -363,7 +364,10 @@ export default function StudentsView() {
                           </button>
                           {currentUser?.role === 'principal' && (
                             <button
-                              onClick={() => setFeeDetailStudent(s)}
+                              onClick={() => {
+                                setIsFeeDetailSelectorOpen(false);
+                                setFeeDetailStudent(s);
+                              }}
                               className="p-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors cursor-pointer"
                               title="Manage Fee Structure & Payments"
                             >

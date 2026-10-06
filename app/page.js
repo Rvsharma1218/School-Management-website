@@ -49,6 +49,7 @@ function AppContent() {
     viewingStudentProfile, setViewingStudentProfile,
     collectFeeStudent, setCollectFeeStudent,
     feeDetailStudent, setFeeDetailStudent,
+    isFeeDetailSelectorOpen, setIsFeeDetailSelectorOpen,
     printReceiptData, setPrintReceiptData,
     printResultData,  setPrintResultData,
     printIdCardsData, setPrintIdCardsData,
@@ -141,6 +142,7 @@ function AppContent() {
       }
       if (feeDetailStudent) {
         setFeeDetailStudent(null);
+        setIsFeeDetailSelectorOpen(false);
         return;
       }
       if (printReceiptData) {
@@ -310,7 +312,10 @@ function AppContent() {
         <StudentFeeDetailModal
           isOpen={!!feeDetailStudent}
           student={feeDetailStudent}
-          onClose={() => setFeeDetailStudent(null)}
+          onClose={() => {
+            setFeeDetailStudent(null);
+            setIsFeeDetailSelectorOpen(false);
+          }}
         />
       )}
       {printReceiptData && (

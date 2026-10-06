@@ -21,6 +21,7 @@ export default function FeesView() {
     setCollectFeeStudent,
     feeDetailStudent,
     setFeeDetailStudent,
+    setIsFeeDetailSelectorOpen,
     setPrintReceiptData,
     whatsAppReminderData,
     setWhatsAppReminderData,
@@ -342,7 +343,10 @@ export default function FeesView() {
             <div className="flex items-center gap-2.5">
               {students.length > 0 && (
                 <button
-                  onClick={() => setFeeDetailStudent(students[0])}
+                  onClick={() => {
+                    setIsFeeDetailSelectorOpen(true);
+                    setFeeDetailStudent(students[0] || null);
+                  }}
                   className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
@@ -559,7 +563,12 @@ export default function FeesView() {
                         return (
                           <tr
                             key={p.id ? `${p.id}_${idx}` : `pay_${idx}`}
-                            onClick={() => student && setFeeDetailStudent(student)}
+                            onClick={() => {
+                              if (student) {
+                                setIsFeeDetailSelectorOpen(false);
+                                setFeeDetailStudent(student);
+                              }
+                            }}
                             className="hover:bg-surface2/50 transition-colors cursor-pointer"
                             title="Click to view & manage student fee structure"
                           >
@@ -868,6 +877,7 @@ export default function FeesView() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  setIsFeeDetailSelectorOpen(false);
                                   setFeeDetailStudent(s);
                                 }}
                                 className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
@@ -1255,7 +1265,10 @@ export default function FeesView() {
                                 </button>
                               )}
                               <button
-                                onClick={() => setFeeDetailStudent(s)}
+                                onClick={() => {
+                                  setIsFeeDetailSelectorOpen(false);
+                                  setFeeDetailStudent(s);
+                                }}
                                 className="px-2.5 py-1 rounded-lg bg-primary text-white hover:bg-primary-dark font-bold text-[11px] flex items-center gap-1 cursor-pointer shadow-2xs"
                               >
                                 <CreditCard className="w-3 h-3" />

@@ -23,6 +23,7 @@ export default function Header({ onMenuClick }) {
     setSelectedStudentId,
     setViewingStudentProfile,
     setFeeDetailStudent,
+    setIsFeeDetailSelectorOpen,
     setPrintReceiptData,
     calculateStudentFeeMetrics,
     currentUser,
@@ -404,6 +405,7 @@ export default function Header({ onMenuClick }) {
                             <button
                               type="button"
                               onClick={() => {
+                                setIsFeeDetailSelectorOpen(false);
                                 setFeeDetailStudent(s);
                                 setIsSearchDropdownOpen(false);
                               }}

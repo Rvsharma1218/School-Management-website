@@ -34,7 +34,9 @@ export default function StudentProfileModal({ student, onClose }) {
     attendance,
     results,
     setCollectFeeStudent,
+    feeDetailStudent,
     setFeeDetailStudent,
+    setIsFeeDetailSelectorOpen,
     setEditingStudent,
     setIsAddStudentOpen,
     setPrintReceiptData,
@@ -328,6 +330,7 @@ export default function StudentProfileModal({ student, onClose }) {
                 <button
                   type="button"
                   onClick={() => {
+                    setIsFeeDetailSelectorOpen(false);
                     setFeeDetailStudent(student);
                   }}
                   className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer transition-colors"

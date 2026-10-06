@@ -44,7 +44,7 @@ export default function DashboardView() {
   const {
     students, payments, attendance, results, settings, stats,
     setSelectedStudentId, setIsAddStudentOpen, currentUser, navigate,
-    setFeeDetailStudent, setWhatsAppReminderData,
+    setFeeDetailStudent, setIsFeeDetailSelectorOpen, setWhatsAppReminderData,
     notices, setIsAddNoticeOpen, setViewingNotice, unreadNoticeCount
   } = useSchoolStore();
 
@@ -533,7 +533,10 @@ export default function DashboardView() {
                           )}
                           {isPrincipal && (
                             <button
-                              onClick={() => setFeeDetailStudent(s)}
+                              onClick={() => {
+                                setIsFeeDetailSelectorOpen(false);
+                                setFeeDetailStudent(s);
+                              }}
                               className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 transition-colors cursor-pointer"
                               title="Fee Structure & Pay"
                             >
