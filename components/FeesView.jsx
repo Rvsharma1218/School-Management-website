@@ -5,9 +5,9 @@ import { useSchoolStore, calculateStudentFeeMetrics } from '../lib/store';
 import {
   CreditCard, Plus, Search, Download, Printer, MessageSquare,
   Receipt, FileSpreadsheet, AlertCircle, TrendingUp, CheckCircle2,
-  Trash2, Calendar, X, BarChart3, Info, Sparkles
+  Trash2, Calendar, X, BarChart3, Info, Sparkles, ChevronDown, ChevronUp, Users
 } from 'lucide-react';
-import { exportPaymentsToExcel, exportDefaultersToExcel, openWhatsAppFeeReminder, openWhatsAppReceiptShare, exportReceiptPDF } from '../lib/exportUtils';
+import { exportPaymentsToExcel, exportDefaultersToExcel, openWhatsAppFeeReminder, openWhatsAppReceiptShare, openWhatsAppFeeStatement, exportReceiptPDF } from '../lib/exportUtils';
 import CollectFeeModal from './CollectFeeModal';
 import WhatsAppReminderModal from './WhatsAppReminderModal';
 
@@ -119,6 +119,42 @@ export default function FeesView() {
       p.feeMonth?.toLowerCase().includes(q)
     );
   });
+
+  // Group filtered payments by student with expandable accordion state
+  const [ledgerViewMode, setLedgerViewMode] = useState('grouped'); // 'grouped' | 'flat'
+  const [expandedStudents, setExpandedStudents] = useState({});
+
+  const toggleStudentExpand = (key) => {
+    setExpandedStudents(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const studentPaymentGroups = React.useMemo(() => {
+    const map = new Map();
+    filteredPayments.forEach(p => {
+      const student = students.find(s => s.id === p.studentId || (s.studentId && s.studentId === p.studentId));
+      const key = student ? student.id : (p.studentId || p.studentName || 'unknown');
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          student: student || { name: p.studentName, studentId: p.studentId, className: p.className, session: settings.currentSession },
+          payments: [],
+          totalPaid: 0,
+        });
+      }
+      const entry = map.get(key);
+      entry.payments.push(p);
+      entry.totalPaid += Number(p.amount) || 0;
+    });
+
+    return Array.from(map.values()).sort((a, b) => {
+      const dateA = a.payments[0]?.paymentDate ? new Date(a.payments[0].paymentDate).getTime() : 0;
+      const dateB = b.payments[0]?.paymentDate ? new Date(b.payments[0].paymentDate).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [filteredPayments, students, settings.currentSession]);
 
   // Filter Defaulters using live auto-accrued dues, class filter, and pending date filter
   const defaultersList = students.map(s => ({
@@ -592,13 +628,45 @@ export default function FeesView() {
               <h2 className="text-xl lg:text-2xl font-bold text-text tracking-tight">Transactions Register</h2>
               <p className="text-xs text-text-secondary mt-0.5">Spreadsheet ledger of all recorded student fee receipts.</p>
             </div>
-            <button
-              onClick={() => exportPaymentsToExcel(filteredPayments, settings.instituteName)}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>Export Ledger (.xlsx)</span>
-            </button>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {/* View Mode Toggle: By Student (Accordion Dropdown) vs All Receipts (Flat) */}
+              <div className="flex items-center bg-white p-1 rounded-xl border border-border shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setLedgerViewMode('grouped')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    ledgerViewMode === 'grouped'
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'text-text-secondary hover:text-text hover:bg-surface2'
+                  }`}
+                  title="Group payments by student with expandable dropdown of receipts"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>By Student ({studentPaymentGroups.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLedgerViewMode('flat')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    ledgerViewMode === 'flat'
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'text-text-secondary hover:text-text hover:bg-surface2'
+                  }`}
+                  title="Show all individual receipts in spreadsheet view"
+                >
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span>All Receipts ({filteredPayments.length})</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => exportPaymentsToExcel(filteredPayments, settings.instituteName)}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>Export Ledger (.xlsx)</span>
+              </button>
+            </div>
           </div>
 
           <div className="bg-white border border-border rounded-2xl p-4 shadow-sm space-y-3">
@@ -701,101 +769,310 @@ export default function FeesView() {
             </div>
           </div>
 
-          <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-surface2/60 border-b border-border text-text-secondary font-bold text-[10px] uppercase">
-                    <th className="py-3 px-4">Receipt</th>
-                    <th className="py-3 px-4">Date</th>
-                    <th className="py-3 px-4">Student</th>
-                    <th className="py-3 px-4">Class</th>
-                    <th className="py-3 px-4">Fee Month</th>
-                    <th className="py-3 px-4 text-right">Paid</th>
-                    <th className="py-3 px-4 text-right text-rose-600">Remaining Due</th>
-                    <th className="py-3 px-4 text-center">Mode</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border text-text font-medium">
-                  {filteredPayments.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" className="py-12 text-center text-text-muted text-xs">
-                        No transactions found.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredPayments.map((p, idx) => {
-                      const student = students.find(s => s.id === p.studentId);
-                      return (
-                        <tr key={p.id ? `${p.id}_${idx}` : `ledger_${idx}`} className="hover:bg-surface2/30 transition-colors">
-                          <td className="py-3.5 px-4 font-mono font-bold text-primary">{p.receiptNumber}</td>
-                          <td className="py-3.5 px-4 font-mono text-text-secondary">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : '-'}</td>
-                          <td className="py-3.5 px-4 font-bold text-text">{p.studentName || student?.name}</td>
-                          <td className="py-3.5 px-4 text-text-secondary">{student ? (student.studentType === 'school' ? `Class ${student.className}` : student.course) : '-'}</td>
-                          <td className="py-3.5 px-4">{p.feeMonth}</td>
-                          <td className="py-3.5 px-4 text-right font-black text-emerald-600">₹{(Number(p.amount) || 0).toLocaleString('en-IN')}</td>
-                          <td className="py-3.5 px-4 text-right">
-                            {(() => {
-                              let rem = 0;
-                              if (p.balanceDue !== undefined && p.balanceDue !== null && !isNaN(Number(p.balanceDue))) {
-                                rem = Number(p.balanceDue);
-                              } else if (p.remainingFees !== undefined && p.remainingFees !== null && !isNaN(Number(p.remainingFees))) {
-                                rem = Number(p.remainingFees);
-                              } else if (p.totalPending !== undefined && p.totalPending !== null && !isNaN(Number(p.totalPending))) {
-                                rem = Number(p.totalPending);
-                              } else {
-                                const st = students.find(s => s.id === p.studentId || (s.studentId && s.studentId === p.studentId));
-                                if (st) {
-                                  const m = calculateStudentFeeMetrics(st, payments);
-                                  rem = m.currentDue;
-                                }
-                              }
-                              return (
-                                <span className={`font-black font-mono text-xs ${rem > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                  ₹{rem.toLocaleString('en-IN')}
+          {/* Register Content: Either Student-Grouped Accordion or Flat Spreadsheet Table */}
+          {ledgerViewMode === 'grouped' ? (
+            <div className="space-y-3.5">
+              {studentPaymentGroups.length === 0 ? (
+                <div className="bg-white border border-border rounded-2xl p-12 text-center text-text-muted text-xs shadow-sm">
+                  <Receipt className="w-10 h-10 text-text-muted/40 mx-auto mb-2" />
+                  <p className="font-bold text-text">No student payment records found</p>
+                  <p className="text-[11px] text-text-secondary mt-1">Try changing your search query, date filter, or class filter.</p>
+                </div>
+              ) : (
+                studentPaymentGroups.map((group) => {
+                  const s = group.student;
+                  const isExpanded = !!expandedStudents[group.key];
+                  const studentClass = s.studentType === 'school' ? `Class ${s.className || '-'}` : (s.course || '-');
+
+                  return (
+                    <div
+                      key={group.key}
+                      className="bg-white border border-border rounded-2xl shadow-xs overflow-hidden transition-all duration-200 hover:border-primary/40"
+                    >
+                      {/* Student Card Accordion Header */}
+                      <div
+                        onClick={() => toggleStudentExpand(group.key)}
+                        className="p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer hover:bg-surface2/30 transition-colors select-none"
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm shrink-0 border border-emerald-100">
+                            {s.name ? s.name.charAt(0).toUpperCase() : 'S'}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-sm text-text hover:text-primary transition-colors">
+                                {s.name || 'Student'}
+                              </span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface2 text-text-secondary border border-border">
+                                {studentClass}
+                              </span>
+                              {s.admissionNumber && (
+                                <span className="text-[10px] font-mono text-text-muted">
+                                  Adm: {s.admissionNumber}
                                 </span>
-                              );
-                            })()}
-                          </td>
-                          <td className="py-3.5 px-4 text-center"><span className="px-2 py-0.5 rounded bg-surface2 border border-border text-[9px] font-bold font-mono">{p.paymentMode}</span></td>
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
+                              )}
+                            </div>
+                            <div className="text-[11px] text-text-muted mt-0.5 flex items-center gap-2 sm:gap-3 flex-wrap">
+                              <span className="font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                                {group.payments.length} {group.payments.length === 1 ? 'Receipt' : 'Receipts'}
+                              </span>
+                              <span>•</span>
+                              <span>Latest: {group.payments[0]?.paymentDate ? new Date(group.payments[0].paymentDate).toLocaleDateString('en-IN') : '-'}</span>
+                              {s.mobile && (
+                                <>
+                                  <span>•</span>
+                                  <span>Mob: {s.mobile}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <div className="text-[10px] uppercase font-bold text-text-secondary">Total Collected</div>
+                            <div className="text-base sm:text-lg font-black text-emerald-600 font-mono">
+                              ₹{group.totalPaid.toLocaleString('en-IN')}
+                            </div>
+                          </div>
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 border ${
+                            isExpanded ? 'bg-primary text-white border-primary shadow-xs' : 'bg-surface2 text-text-secondary border-border hover:bg-border'
+                          }`}>
+                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Dropdown / Accordion Body (Revealed on click) */}
+                      {isExpanded && (
+                        <div className="border-t border-border bg-surface2/25 p-4 sm:p-5 space-y-4 animate-in slide-in-from-top-2 duration-150">
+                          {/* Inner Bar: Summary & WhatsApp / Structure Buttons */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-border shadow-2xs">
+                            <div className="text-xs text-text-secondary">
+                              Showing all <strong className="text-text">{group.payments.length} receipts</strong> recorded for <strong className="text-primary">{s.name}</strong>.
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
                               <button
-                                onClick={() => openWhatsAppReceiptShare(p, student, settings)}
-                                className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer transition-colors"
-                                title="Share Receipt Voucher on WhatsApp"
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openWhatsAppFeeStatement(s, group.payments, settings);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                                title="Send complete fee statement on WhatsApp"
                               >
                                 <MessageSquare className="w-3.5 h-3.5" />
+                                <span>WhatsApp All Receipts</span>
                               </button>
                               <button
-                                onClick={() => setPrintReceiptData({
-                                  payment: p,
-                                  student: student || { name: p.studentName, studentId: p.studentId, session: settings.currentSession },
-                                  settings
-                                })}
-                                className="p-1.5 rounded-lg bg-surface2 hover:bg-primary/10 text-primary border border-border cursor-pointer transition-colors"
-                                title="Print Receipt Slip"
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFeeDetailStudent(s);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-primary hover:bg-primary-dark text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                                title="Manage fee structure and collect new payment"
                               >
-                                <Printer className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => deletePayment(p.id)}
-                                className="p-1.5 rounded-lg bg-surface2 hover:bg-rose-100 text-rose-600 border border-border cursor-pointer transition-colors"
-                                title="Delete Transaction"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <CreditCard className="w-3.5 h-3.5" />
+                                <span>Fee Profile / Pay</span>
                               </button>
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                          </div>
+
+                          {/* Receipts Table for this Student */}
+                          <div className="bg-white rounded-xl border border-border overflow-hidden shadow-2xs">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                  <tr className="bg-surface2/60 border-b border-border text-text-secondary font-bold text-[10px] uppercase">
+                                    <th className="py-2.5 px-3.5">Receipt #</th>
+                                    <th className="py-2.5 px-3.5">Payment Date</th>
+                                    <th className="py-2.5 px-3.5">Fee Month</th>
+                                    <th className="py-2.5 px-3.5 text-right">Amount Paid</th>
+                                    <th className="py-2.5 px-3.5 text-center">Payment Mode</th>
+                                    <th className="py-2.5 px-3.5 text-right">Remaining Due</th>
+                                    <th className="py-2.5 px-3.5 text-right">Receipt Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border text-text font-medium">
+                                  {group.payments.map((p, pIdx) => (
+                                    <tr key={p.id ? `${p.id}_${pIdx}` : `subpay_${pIdx}`} className="hover:bg-surface2/40 transition-colors">
+                                      <td className="py-3 px-3.5 font-mono font-bold text-primary">{p.receiptNumber || 'REC'}</td>
+                                      <td className="py-3 px-3.5 font-mono text-text-secondary">
+                                        {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                                      </td>
+                                      <td className="py-3 px-3.5 text-text-secondary">{p.feeMonth || 'Monthly Fee'}</td>
+                                      <td className="py-3 px-3.5 text-right font-black text-emerald-600 font-mono text-sm">
+                                        ₹{(Number(p.amount) || 0).toLocaleString('en-IN')}
+                                      </td>
+                                      <td className="py-3 px-3.5 text-center">
+                                        <span className="px-2 py-0.5 rounded bg-surface2 border border-border text-[9px] font-bold font-mono uppercase">
+                                          {p.paymentMode || 'Cash'}
+                                        </span>
+                                      </td>
+                                      <td className="py-3 px-3.5 text-right font-mono">
+                                        {(() => {
+                                          let rem = 0;
+                                          if (p.balanceDue !== undefined && p.balanceDue !== null && !isNaN(Number(p.balanceDue))) {
+                                            rem = Number(p.balanceDue);
+                                          } else if (p.remainingFees !== undefined && p.remainingFees !== null && !isNaN(Number(p.remainingFees))) {
+                                            rem = Number(p.remainingFees);
+                                          } else {
+                                            const st = students.find(stud => stud.id === p.studentId || (stud.studentId && stud.studentId === p.studentId));
+                                            if (st) {
+                                              const m = calculateStudentFeeMetrics(st, payments);
+                                              rem = m.currentDue;
+                                            }
+                                          }
+                                          return (
+                                            <span className={`font-bold text-xs ${rem > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                              ₹{rem.toLocaleString('en-IN')}
+                                            </span>
+                                          );
+                                        })()}
+                                      </td>
+                                      <td className="py-3 px-3.5 text-right">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          <button
+                                            type="button"
+                                            onClick={() => openWhatsAppReceiptShare(p, s, settings)}
+                                            className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer transition-colors"
+                                            title="Share this receipt on WhatsApp"
+                                          >
+                                            <MessageSquare className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => setPrintReceiptData({
+                                              payment: p,
+                                              student: s || { name: p.studentName, studentId: p.studentId, session: settings.currentSession },
+                                              settings
+                                            })}
+                                            className="p-1.5 rounded-lg bg-surface2 hover:bg-primary/10 text-primary border border-border cursor-pointer transition-colors"
+                                            title="Print Receipt Slip"
+                                          >
+                                            <Printer className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => deletePayment(p.id)}
+                                            className="p-1.5 rounded-lg bg-surface2 hover:bg-rose-100 text-rose-600 border border-border cursor-pointer transition-colors"
+                                            title="Delete Transaction"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-surface2/60 border-b border-border text-text-secondary font-bold text-[10px] uppercase">
+                      <th className="py-3 px-4">Receipt</th>
+                      <th className="py-3 px-4">Date</th>
+                      <th className="py-3 px-4">Student</th>
+                      <th className="py-3 px-4">Class</th>
+                      <th className="py-3 px-4">Fee Month</th>
+                      <th className="py-3 px-4 text-right">Paid</th>
+                      <th className="py-3 px-4 text-right text-rose-600">Remaining Due</th>
+                      <th className="py-3 px-4 text-center">Mode</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border text-text font-medium">
+                    {filteredPayments.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" className="py-12 text-center text-text-muted text-xs">
+                          No transactions found.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredPayments.map((p, idx) => {
+                        const student = students.find(s => s.id === p.studentId);
+                        return (
+                          <tr key={p.id ? `${p.id}_${idx}` : `ledger_${idx}`} className="hover:bg-surface2/30 transition-colors">
+                            <td className="py-3.5 px-4 font-mono font-bold text-primary">{p.receiptNumber}</td>
+                            <td className="py-3.5 px-4 font-mono text-text-secondary">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : '-'}</td>
+                            <td className="py-3.5 px-4 font-bold text-text">{p.studentName || student?.name}</td>
+                            <td className="py-3.5 px-4 text-text-secondary">{student ? (student.studentType === 'school' ? `Class ${student.className}` : student.course) : '-'}</td>
+                            <td className="py-3.5 px-4">{p.feeMonth}</td>
+                            <td className="py-3.5 px-4 text-right font-black text-emerald-600">₹{(Number(p.amount) || 0).toLocaleString('en-IN')}</td>
+                            <td className="py-3.5 px-4 text-right">
+                              {(() => {
+                                let rem = 0;
+                                if (p.balanceDue !== undefined && p.balanceDue !== null && !isNaN(Number(p.balanceDue))) {
+                                  rem = Number(p.balanceDue);
+                                } else if (p.remainingFees !== undefined && p.remainingFees !== null && !isNaN(Number(p.remainingFees))) {
+                                  rem = Number(p.remainingFees);
+                                } else if (p.totalPending !== undefined && p.totalPending !== null && !isNaN(Number(p.totalPending))) {
+                                  rem = Number(p.totalPending);
+                                } else {
+                                  const st = students.find(s => s.id === p.studentId || (s.studentId && s.studentId === p.studentId));
+                                  if (st) {
+                                    const m = calculateStudentFeeMetrics(st, payments);
+                                    rem = m.currentDue;
+                                  }
+                                }
+                                return (
+                                  <span className={`font-black font-mono text-xs ${rem > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                    ₹{rem.toLocaleString('en-IN')}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                            <td className="py-3.5 px-4 text-center"><span className="px-2 py-0.5 rounded bg-surface2 border border-border text-[9px] font-bold font-mono">{p.paymentMode}</span></td>
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => openWhatsAppReceiptShare(p, student, settings)}
+                                  className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer transition-colors"
+                                  title="Share Receipt Voucher on WhatsApp"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setPrintReceiptData({
+                                    payment: p,
+                                    student: student || { name: p.studentName, studentId: p.studentId, session: settings.currentSession },
+                                    settings
+                                  })}
+                                  className="p-1.5 rounded-lg bg-surface2 hover:bg-primary/10 text-primary border border-border cursor-pointer transition-colors"
+                                  title="Print Receipt Slip"
+                                >
+                                  <Printer className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => deletePayment(p.id)}
+                                  className="p-1.5 rounded-lg bg-surface2 hover:bg-rose-100 text-rose-600 border border-border cursor-pointer transition-colors"
+                                  title="Delete Transaction"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         /* ─── OUTSTANDING DEFAULTERS ─── */
