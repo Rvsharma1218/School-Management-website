@@ -44,7 +44,7 @@ export default function DashboardView() {
   const {
     students, payments, attendance, results, settings, stats,
     setSelectedStudentId, setIsAddStudentOpen, currentUser, navigate,
-    setCollectFeeStudent, setWhatsAppReminderData,
+    setFeeDetailStudent, setWhatsAppReminderData,
     notices, setIsAddNoticeOpen, setViewingNotice, unreadNoticeCount
   } = useSchoolStore();
 
@@ -533,9 +533,9 @@ export default function DashboardView() {
                           )}
                           {isPrincipal && (
                             <button
-                              onClick={() => setCollectFeeStudent(s)}
+                              onClick={() => setFeeDetailStudent(s)}
                               className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 transition-colors cursor-pointer"
-                              title="Collect Fee"
+                              title="Fee Structure & Pay"
                             >
                               <CreditCard className="w-3.5 h-3.5" />
                             </button>

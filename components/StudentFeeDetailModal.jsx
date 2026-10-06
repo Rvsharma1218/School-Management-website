@@ -55,8 +55,32 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
   const monthYearLabel = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
   const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
 
-  // Always use the latest student record from store to prevent stale props
-  const currentStudent = (students && student) ? (students.find(s => s.id === student.id) || student) : student;
+  const [selectedStudentId, setSelectedStudentId] = useState(student?.id || (students[0]?.id || ''));
+  const [classFilter, setClassFilter] = useState('all');
+  const [sectionFilter, setSectionFilter] = useState('all');
+
+  useEffect(() => {
+    if (student?.id) {
+      setSelectedStudentId(student.id);
+      if (student.className) setClassFilter(student.className);
+      if (student.section) setSectionFilter(student.section);
+    } else if (students.length > 0 && !selectedStudentId) {
+      setSelectedStudentId(students[0].id);
+    }
+  }, [student, isOpen]);
+
+  // Always use the latest selected student record from store
+  const currentStudent = students.find(s => s.id === selectedStudentId) || (student ? (students.find(s => s.id === student.id) || student) : students[0]);
+
+  // Extract unique classes and sections
+  const uniqueClasses = Array.from(new Set(students.map(s => s.className).filter(Boolean))).sort();
+  const uniqueSections = Array.from(new Set(students.map(s => s.section).filter(Boolean))).sort();
+
+  const filteredStudents = students.filter(s => {
+    if (classFilter !== 'all' && s.className !== classFilter) return false;
+    if (sectionFilter !== 'all' && s.section !== sectionFilter) return false;
+    return true;
+  });
 
   // Get dynamic chronological month-by-month auto-rollover ledger
   const monthLedger = currentStudent ? getStudentMonthLedger(currentStudent, payments) : {};
@@ -392,6 +416,72 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
+        </div>
+
+        {/* ── Student Selector & Filter Bar ── */}
+        <div className="px-6 py-2.5 bg-[#0e1726] border-b border-[#1e293b] flex flex-wrap items-center gap-2.5">
+          {/* Class Filter */}
+          <div className="flex items-center gap-1.5 flex-1 min-w-[130px]">
+            <span className="text-[10px] text-indigo-300 font-bold uppercase whitespace-nowrap">Class:</span>
+            <select
+              value={classFilter}
+              onChange={(e) => {
+                const newClass = e.target.value;
+                setClassFilter(newClass);
+                const match = students.find(s => (newClass === 'all' || s.className === newClass) && (sectionFilter === 'all' || s.section === sectionFilter));
+                if (match) setSelectedStudentId(match.id);
+              }}
+              className="w-full px-2.5 py-1.5 rounded-lg bg-[#1e293b] border border-indigo-500/30 text-xs text-white font-bold focus:outline-none focus:border-indigo-400 cursor-pointer"
+            >
+              <option value="all">All Classes</option>
+              {uniqueClasses.map(c => (
+                <option key={c} value={c}>Class {c}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Section Filter */}
+          {uniqueSections.length > 0 && (
+            <div className="flex items-center gap-1.5 min-w-[100px]">
+              <span className="text-[10px] text-indigo-300 font-bold uppercase whitespace-nowrap">Sec:</span>
+              <select
+                value={sectionFilter}
+                onChange={(e) => {
+                  const newSec = e.target.value;
+                  setSectionFilter(newSec);
+                  const match = students.find(s => (classFilter === 'all' || s.className === classFilter) && (newSec === 'all' || s.section === newSec));
+                  if (match) setSelectedStudentId(match.id);
+                }}
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[#1e293b] border border-indigo-500/30 text-xs text-white font-bold focus:outline-none focus:border-indigo-400 cursor-pointer"
+              >
+                <option value="all">All</option>
+                {uniqueSections.map(sec => (
+                  <option key={sec} value={sec}>{sec}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Student Selector Dropdown */}
+          <div className="flex items-center gap-1.5 flex-2 min-w-[210px]">
+            <span className="text-[10px] text-indigo-300 font-bold uppercase whitespace-nowrap">Student:</span>
+            <select
+              value={selectedStudentId}
+              onChange={(e) => setSelectedStudentId(e.target.value)}
+              className="w-full px-2.5 py-1.5 rounded-lg bg-[#1e293b] border border-indigo-500/30 text-xs text-white font-bold focus:outline-none focus:border-indigo-400 cursor-pointer"
+            >
+              {filteredStudents.map(s => {
+                const sLedger = getStudentMonthLedger(s, payments);
+                const sMonthData = sLedger[monthKey] || {};
+                const sDue = sMonthData.closingDue !== undefined ? sMonthData.closingDue : Math.max(0, (s.totalFees || 0) - (s.paidFees || 0));
+                return (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.studentType === 'school' ? `Class ${s.className || ''}` : s.course}) — Due: ₹{sDue.toLocaleString('en-IN')}
+                  </option>
+                );
+              })}
+            </select>
           </div>
         </div>
 
