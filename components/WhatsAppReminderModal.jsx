@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSchoolStore } from '../lib/store';
+import { useSchoolStore, getStudentMonthLedger } from '../lib/store';
 import {
   MessageSquare, X, Send, Copy, Check, Globe,
   Phone, AlertCircle, Sparkles, CheckCircle2, ChevronRight
 } from 'lucide-react';
 
 export default function WhatsAppReminderModal({ isOpen, onClose, student, students = [], dueAmount = null }) {
-  const { settings, showToast } = useSchoolStore();
+  const { settings, payments = [], showToast } = useSchoolStore();
   const [language, setLanguage] = useState('hi'); // 'hi' | 'en'
   const [customMessage, setCustomMessage] = useState('');
   const [copied, setCopied] = useState(false);
@@ -21,45 +21,154 @@ export default function WhatsAppReminderModal({ isOpen, onClose, student, studen
   const instituteName = settings?.instituteName || settings?.schoolName || 'Smart School';
   const institutePhone = settings?.phone || settings?.mobile || '';
 
-  // Generate Message Template
+  // Compute month-by-month breakdown for a student
+  const getMonthlyBreakdown = (stu) => {
+    if (!stu) return { pendingCount: 0, pendingMonths: [], monthItems: [] };
+    const ledger = getStudentMonthLedger(stu, payments);
+    const now = new Date();
+    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const allKeys = Object.keys(ledger).sort();
+    const relevantKeys = allKeys.filter(k => {
+      const item = ledger[k];
+      if (k <= currentKey) return true;
+      return ((item.totalMonthCharge || 0) > 0 || (item.paidInMonth || 0) > 0);
+    });
+
+    const monthItems = relevantKeys.map(k => ledger[k]);
+    const pendingMonths = monthItems.filter(m => (m.closingDue || 0) > 0);
+
+    return {
+      pendingCount: pendingMonths.length,
+      pendingMonths: pendingMonths.map(m => m.monthLabel || m.monthKey),
+      monthItems,
+    };
+  };
+
+  // Generate Message Template with Father Name & Month-wise Details
   const generateMessage = (stu, lang) => {
     if (!stu) return '';
     const pendingDue = dueAmount !== null ? dueAmount : (stu.feeMetrics?.currentDue ?? stu.remainingFees ?? Math.max(0, (stu.totalFees || 0) - (stu.paidFees || 0)));
-    const totalFee = stu.totalFees || stu.feeMetrics?.setTotalFees || 0;
+    const totalFee = stu.totalFees || stu.feeMetrics?.setTotalFees || (stu.paidFees || 0) + pendingDue;
     const paidFee = stu.paidFees || stu.feeMetrics?.totalPaid || 0;
     const className = stu.studentType === 'school' ? `Class ${stu.className || ''} ${stu.section ? `(${stu.section})` : ''}` : (stu.course || 'Student');
     const dueDateStr = stu.dueDate ? (stu.dueDate.includes('T') ? stu.dueDate.split('T')[0] : stu.dueDate) : '';
+    const fatherName = (stu.fatherName || '').trim();
+
+    const breakdown = getMonthlyBreakdown(stu);
 
     if (lang === 'hi') {
-      return `नमस्ते! *${instituteName}* से सादर अभिवादन।
+      let msg = `नमस्ते! *${instituteName}* से सादर अभिवादन।\n\n`;
+      msg += `प्रिय अभिभावक,\n`;
+      if (fatherName) {
+        msg += `👨‍👦 *पिता/अभिभावक का नाम:* श्री ${fatherName}\n`;
+      }
+      msg += `👤 *छात्र/छात्रा:* *${stu.name}* (${className})\n\n`;
+      msg += `यह संदेश बकाया स्कूल फीस के संबंध में है:\n\n`;
 
-प्रिय अभिभावक, यह संदेश *${stu.name}* (${className}) की बकाया स्कूल फीस के संबंध में है:
+      // Pending Months Count and List
+      if (stu.studentType !== 'computer' && breakdown.monthItems.length > 0) {
+        if (breakdown.pendingCount > 0) {
+          msg += `📌 *बकाया महीने (Pending Months):* ${breakdown.pendingCount} महीने\n`;
+          msg += `⚠️ *बकाया महीने की सूची:* ${breakdown.pendingMonths.join(', ')}\n\n`;
+        } else {
+          msg += `📌 *बकाया महीने:* कोई बकाया महीना नहीं\n\n`;
+        }
 
-💰 *कुल फीस:* ₹${Number(totalFee).toLocaleString('en-IN')}
-✅ *जमा फीस:* ₹${Number(paidFee).toLocaleString('en-IN')}
-⚠️ *बकाया राशि (Due):* ₹${Number(pendingDue).toLocaleString('en-IN')}${dueDateStr ? `\n📅 *अंतिम तिथि:* ${dueDateStr}` : ''}
+        // Month-wise Paid & Due Breakdown (show up to recent 12 active months)
+        const activeMonths = breakdown.monthItems.filter(m => (m.closingDue || 0) > 0 || (m.paidInMonth || 0) > 0).slice(-12);
+        if (activeMonths.length > 0) {
+          msg += `📊 *महीनेवार फीस व भुगतान विवरण:*\n`;
+          activeMonths.forEach(m => {
+            const charge = Number(m.totalMonthCharge || m.totalDueThisMonth || 0).toLocaleString('en-IN');
+            const paid = Number(m.paidInMonth || 0).toLocaleString('en-IN');
+            const due = Number(m.closingDue || 0).toLocaleString('en-IN');
+            const status = (m.closingDue || 0) <= 0 ? '✅ (चुकता)' : '⚠️';
+            msg += `• *${m.monthLabel}*: कुल शुल्क ₹${charge} | जमा ₹${paid} | बकाया ₹${due} ${status}\n`;
+          });
+          msg += `\n`;
+        }
+      } else if (stu.studentType === 'computer') {
+        const stuPayments = (payments || []).filter(p => p.studentId === stu.id || (stu.studentId && p.studentId === stu.studentId));
+        if (stuPayments.length > 0) {
+          msg += `📊 *जमा की गई किश्तों/रसीदों का विवरण:*\n`;
+          stuPayments.forEach((p, idx) => {
+            const dateStr = p.paymentDate ? p.paymentDate.split('T')[0] : '';
+            msg += `• रसीद #${p.receiptNumber || idx + 1} (${dateStr}): ₹${Number(p.amount).toLocaleString('en-IN')} [${(p.paymentMode || 'CASH').toUpperCase()}]\n`;
+          });
+          msg += `\n`;
+        }
+      }
 
-कृपया अंतिम तिथि से पहले बकाया फीस विद्यालय कार्यालय में जमा कराने का कष्ट करें।
-
-📞 सहायता / संपर्क: ${institutePhone}
-धन्यवाद,
-*${instituteName}*`;
+      msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+      msg += `💰 *कुल बकाया राशि (Due Balance):* ₹${Number(pendingDue).toLocaleString('en-IN')}\n`;
+      msg += `✅ *कुल जमा फीस (Total Paid):* ₹${Number(paidFee).toLocaleString('en-IN')}\n`;
+      msg += `💳 *कुल देय फीस (Total Fees):* ₹${Number(totalFee).toLocaleString('en-IN')}\n`;
+      if (dueDateStr) {
+        msg += `📅 *अंतिम तिथि (Due Date):* ${dueDateStr}\n`;
+      }
+      msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+      msg += `कृपया अंतिम तिथि से पहले बकाया फीस विद्यालय कार्यालय में जमा कराने का कष्ट करें।\n\n`;
+      if (institutePhone) {
+        msg += `📞 सहायता / संपर्क: ${institutePhone}\n`;
+      }
+      msg += `धन्यवाद,\n*${instituteName}*`;
+      return msg;
     } else {
-      return `Dear Parent / Guardian,
+      let msg = `Dear Parent / Guardian,\n\n`;
+      msg += `Greetings from *${instituteName}*!\n\n`;
+      if (fatherName) {
+        msg += `👨‍👦 *Father's / Guardian Name:* Mr. ${fatherName}\n`;
+      }
+      msg += `👤 *Student Name:* *${stu.name}* (${className})\n\n`;
+      msg += `This is an official reminder regarding the pending fee dues:\n\n`;
 
-Greetings from *${instituteName}*!
+      if (stu.studentType !== 'computer' && breakdown.monthItems.length > 0) {
+        if (breakdown.pendingCount > 0) {
+          msg += `📌 *Pending Months Count:* ${breakdown.pendingCount} ${breakdown.pendingCount === 1 ? 'Month' : 'Months'}\n`;
+          msg += `⚠️ *Pending Months List:* ${breakdown.pendingMonths.join(', ')}\n\n`;
+        } else {
+          msg += `📌 *Pending Months:* No pending months\n\n`;
+        }
 
-This is a gentle reminder regarding the pending fee balance for *${stu.name}* (${className}):
+        const activeMonths = breakdown.monthItems.filter(m => (m.closingDue || 0) > 0 || (m.paidInMonth || 0) > 0).slice(-12);
+        if (activeMonths.length > 0) {
+          msg += `📊 *Month-wise Fee & Payment Breakdown:*\n`;
+          activeMonths.forEach(m => {
+            const charge = Number(m.totalMonthCharge || m.totalDueThisMonth || 0).toLocaleString('en-IN');
+            const paid = Number(m.paidInMonth || 0).toLocaleString('en-IN');
+            const due = Number(m.closingDue || 0).toLocaleString('en-IN');
+            const status = (m.closingDue || 0) <= 0 ? '✅ (Paid)' : '⚠️';
+            msg += `• *${m.monthLabel}*: Total ₹${charge} | Paid ₹${paid} | Due ₹${due} ${status}\n`;
+          });
+          msg += `\n`;
+        }
+      } else if (stu.studentType === 'computer') {
+        const stuPayments = (payments || []).filter(p => p.studentId === stu.id || (stu.studentId && p.studentId === stu.studentId));
+        if (stuPayments.length > 0) {
+          msg += `📊 *Payments & Receipts Record:*\n`;
+          stuPayments.forEach((p, idx) => {
+            const dateStr = p.paymentDate ? p.paymentDate.split('T')[0] : '';
+            msg += `• Receipt #${p.receiptNumber || idx + 1} (${dateStr}): ₹${Number(p.amount).toLocaleString('en-IN')} [${(p.paymentMode || 'CASH').toUpperCase()}]\n`;
+          });
+          msg += `\n`;
+        }
+      }
 
-💰 *Total Fee:* ₹${Number(totalFee).toLocaleString('en-IN')}
-✅ *Fee Paid:* ₹${Number(paidFee).toLocaleString('en-IN')}
-⚠️ *Outstanding Due:* ₹${Number(pendingDue).toLocaleString('en-IN')}${dueDateStr ? `\n📅 *Due Date:* ${dueDateStr}` : ''}
-
-Kindly clear the pending dues at the earliest to ensure uninterrupted academic records.
-
-📞 Helpline / Contact: ${institutePhone}
-Thank you,
-*${instituteName}*`;
+      msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+      msg += `💰 *Total Outstanding Due:* ₹${Number(pendingDue).toLocaleString('en-IN')}\n`;
+      msg += `✅ *Total Fee Paid:* ₹${Number(paidFee).toLocaleString('en-IN')}\n`;
+      msg += `💳 *Overall Total Fee:* ₹${Number(totalFee).toLocaleString('en-IN')}\n`;
+      if (dueDateStr) {
+        msg += `📅 *Due Date:* ${dueDateStr}\n`;
+      }
+      msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+      msg += `Kindly clear the outstanding dues at the earliest to ensure uninterrupted academic records.\n\n`;
+      if (institutePhone) {
+        msg += `📞 Helpline / Contact: ${institutePhone}\n`;
+      }
+      msg += `Thank you,\n*${instituteName}*`;
+      return msg;
     }
   };
 
@@ -132,10 +241,21 @@ Thank you,
                   {activeStudent.studentType === 'school' ? `Class ${activeStudent.className || ''}` : activeStudent.course}
                 </span>
               </div>
-              <p className="text-xs text-textMuted mt-0.5 flex items-center gap-1.5">
-                <Phone className="w-3 h-3 text-emerald-500" />
-                <span>{mobile || 'No Mobile Number'}</span>
-                {activeStudent.fatherName && <span>• F: {activeStudent.fatherName}</span>}
+              <p className="text-xs text-textMuted mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="flex items-center gap-1">
+                  <Phone className="w-3 h-3 text-emerald-500" />
+                  <span>{mobile || 'No Mobile Number'}</span>
+                </span>
+                {activeStudent.fatherName && (
+                  <span className="font-semibold text-text">
+                    • Father: {activeStudent.fatherName}
+                  </span>
+                )}
+                {getMonthlyBreakdown(activeStudent).pendingCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                    {getMonthlyBreakdown(activeStudent).pendingCount} Months Due
+                  </span>
+                )}
               </p>
             </div>
             <div className="text-right flex-shrink-0">
