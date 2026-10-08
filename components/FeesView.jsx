@@ -135,7 +135,12 @@ export default function FeesView() {
   const studentPaymentGroups = React.useMemo(() => {
     const map = new Map();
     filteredPayments.forEach(p => {
-      const student = students.find(s => s.id === p.studentId || (s.studentId && s.studentId === p.studentId));
+      const student = students.find(s =>
+        s.id === p.studentId ||
+        (s.studentId && s.studentId === p.studentId) ||
+        (s.admissionNumber && (s.admissionNumber === p.admissionNumber || s.admissionNumber === p.admissionNo)) ||
+        (s.name && p.studentName && s.name.trim().toLowerCase() === p.studentName.trim().toLowerCase())
+      );
       const key = student ? student.id : (p.studentId || p.studentName || 'unknown');
       if (!map.has(key)) {
         map.set(key, {

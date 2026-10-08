@@ -58,29 +58,46 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
   const [selectedStudentId, setSelectedStudentId] = useState(student?.id || (students[0]?.id || ''));
   const [classFilter, setClassFilter] = useState('all');
   const [sectionFilter, setSectionFilter] = useState('all');
+  const [studentSearch, setStudentSearch] = useState('');
 
   useEffect(() => {
     if (student?.id) {
       setSelectedStudentId(student.id);
-      if (student.className) setClassFilter(student.className);
-      if (student.section) setSectionFilter(student.section);
+      if (!isFeeDetailSelectorOpen) {
+        if (student.className) setClassFilter(student.className);
+        if (student.section) setSectionFilter(student.section);
+      } else {
+        // When opening global Fee Collection, show All Classes by default so ALL students are accessible!
+        setClassFilter('all');
+        setSectionFilter('all');
+      }
     } else if (students.length > 0 && !selectedStudentId) {
       setSelectedStudentId(students[0].id);
+      setClassFilter('all');
+      setSectionFilter('all');
     }
-  }, [student, isOpen]);
+  }, [student, isOpen, isFeeDetailSelectorOpen]);
 
   // Always use the latest selected student record from store
   const currentStudent = (!isFeeDetailSelectorOpen && student)
     ? (students.find(s => s.id === student.id) || student)
     : (students.find(s => s.id === selectedStudentId) || (student ? (students.find(s => s.id === student.id) || student) : students[0]));
 
-  // Extract unique classes and sections
-  const uniqueClasses = Array.from(new Set(students.map(s => s.className).filter(Boolean))).sort();
+  // Extract unique classes and courses
+  const uniqueClasses = Array.from(new Set(students.map(s => s.studentType === 'school' ? s.className : s.course).filter(Boolean))).sort();
   const uniqueSections = Array.from(new Set(students.map(s => s.section).filter(Boolean))).sort();
 
   const filteredStudents = students.filter(s => {
-    if (classFilter !== 'all' && s.className !== classFilter) return false;
+    const sClass = s.studentType === 'school' ? s.className : s.course;
+    if (classFilter !== 'all' && sClass !== classFilter && s.className !== classFilter && s.course !== classFilter) return false;
     if (sectionFilter !== 'all' && s.section !== sectionFilter) return false;
+    if (studentSearch.trim()) {
+      const q = studentSearch.trim().toLowerCase();
+      const matchName = s.name?.toLowerCase().includes(q);
+      const matchAdm = s.admissionNumber?.toLowerCase().includes(q) || s.studentId?.toLowerCase().includes(q);
+      const matchPhone = s.mobile?.includes(q);
+      if (!matchName && !matchAdm && !matchPhone) return false;
+    }
     return true;
   });
 
@@ -424,8 +441,19 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
         {/* ── Student Selector & Filter Bar (Only visible from top "Student Fee Structure & Pay" button) ── */}
         {isFeeDetailSelectorOpen && (
           <div className="px-6 py-2.5 bg-[#0e1726] border-b border-[#1e293b] flex flex-wrap items-center gap-2.5">
+            {/* Instant Search Box */}
+            <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
+              <input
+                type="text"
+                placeholder="Search Name / ID..."
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[#1e293b] border border-indigo-500/30 text-xs text-white placeholder-indigo-300/40 focus:outline-none focus:border-indigo-400"
+              />
+            </div>
+
             {/* Class Filter */}
-            <div className="flex items-center gap-1.5 flex-1 min-w-[130px]">
+            <div className="flex items-center gap-1.5 flex-1 min-w-[120px]">
               <span className="text-[10px] text-indigo-300 font-bold uppercase whitespace-nowrap">Class:</span>
               <select
                 value={classFilter}
