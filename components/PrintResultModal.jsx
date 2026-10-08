@@ -25,12 +25,6 @@ export default function PrintResultModal({ result: propResult, student: propStud
   const grade = Number(pct) >= 90 ? 'A+' : Number(pct) >= 80 ? 'A' : Number(pct) >= 70 ? 'B+' : Number(pct) >= 60 ? 'B' : Number(pct) >= 50 ? 'C' : Number(pct) >= 40 ? 'D' : 'F';
   const isPass = Number(pct) >= 40;
 
-  const totalFees = Number(student?.totalFees) || Number(student?.feeAmount) || 0;
-  const paidFees = Number(student?.paidFees) || 0;
-  const remainingDue = student?.remainingFees !== undefined 
-    ? Number(student?.remainingFees) 
-    : Math.max(0, totalFees - paidFees);
-
   const handlePrint = () => {
     window.print();
   };
@@ -181,24 +175,7 @@ export default function PrintResultModal({ result: propResult, student: propStud
               </div>
             </div>
 
-            {/* Student Overall Fee Standing Box */}
-            <div className="p-3 rounded-lg border border-indigo-950 bg-indigo-50/50 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div>
-                <span className="font-bold text-indigo-950 block text-[10px] uppercase tracking-wider">Official Fee Status & Summary</span>
-                <span className="text-slate-600 font-medium">
-                  Total Fees: <strong className="text-slate-900 font-bold">₹{totalFees.toLocaleString('en-IN')}</strong> • 
-                  Paid Fees: <strong className="text-emerald-700 font-bold">₹{paidFees.toLocaleString('en-IN')}</strong> • 
-                  Balance Due: <strong className={remainingDue > 0 ? "text-rose-700 font-bold" : "text-emerald-700 font-bold"}>₹{remainingDue.toLocaleString('en-IN')}</strong>
-                </span>
-              </div>
-              <div>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${
-                  remainingDue <= 0 && totalFees > 0 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : (remainingDue > 0 ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-slate-100 text-slate-700')
-                }`}>
-                  {remainingDue <= 0 && totalFees > 0 ? 'STATUS: FULLY PAID' : (remainingDue > 0 ? `DUE: ₹${remainingDue.toLocaleString('en-IN')}` : 'STATUS: NO DUES')}
-                </span>
-              </div>
-            </div>
+
 
             {/* Signatures & Stamp */}
             <div className="flex items-end justify-between pt-6">
