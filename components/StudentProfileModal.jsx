@@ -33,6 +33,10 @@ export default function StudentProfileModal({ student, onClose }) {
     payments,
     attendance,
     results,
+    saveResult,
+    deleteResult,
+    setPrintResultData,
+    showToast,
     setCollectFeeStudent,
     feeDetailStudent,
     setFeeDetailStudent,
@@ -45,8 +49,103 @@ export default function StudentProfileModal({ student, onClose }) {
   } = useSchoolStore();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'fees' | 'attendance' | 'results' | 'idcard'
+  const [isAddResultOpen, setIsAddResultOpen] = useState(false);
+  const [editingResultItem, setEditingResultItem] = useState(null);
+  const [resultExamName, setResultExamName] = useState('Term Examination');
+  const [resultSubjects, setResultSubjects] = useState([
+    { subjectName: 'Mathematics', marks: '', totalMarks: 100 },
+    { subjectName: 'Science', marks: '', totalMarks: 100 },
+    { subjectName: 'English', marks: '', totalMarks: 100 }
+  ]);
 
   if (!student) return null;
+
+  const handleOpenAddResult = () => {
+    setEditingResultItem(null);
+    setResultExamName('Term Examination');
+    setResultSubjects([
+      { subjectName: 'Mathematics', marks: '', totalMarks: 100 },
+      { subjectName: 'Science', marks: '', totalMarks: 100 },
+      { subjectName: 'English', marks: '', totalMarks: 100 }
+    ]);
+    setIsAddResultOpen(true);
+  };
+
+  const handleOpenEditResult = (res) => {
+    setEditingResultItem(res);
+    setResultExamName(res.examName || 'Term Examination');
+    setResultSubjects(
+      res.subjects && res.subjects.length > 0
+        ? res.subjects.map(s => ({
+            subjectName: s.subjectName || '',
+            marks: s.marks ?? '',
+            totalMarks: s.totalMarks || 100
+          }))
+        : [{ subjectName: 'General', marks: '', totalMarks: 100 }]
+    );
+    setIsAddResultOpen(true);
+  };
+
+  const handleAddResultSubjectRow = () => {
+    setResultSubjects(prev => [...prev, { subjectName: '', marks: '', totalMarks: 100 }]);
+  };
+
+  const handleRemoveResultSubjectRow = (idx) => {
+    setResultSubjects(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleResultSubjectChange = (idx, field, val) => {
+    setResultSubjects(prev => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], [field]: val };
+      return copy;
+    });
+  };
+
+  const handleSaveResultSubmit = async (e) => {
+    e.preventDefault();
+    if (!student?.id) return;
+    const cleanedSubjects = resultSubjects
+      .filter(s => s.subjectName?.trim())
+      .map(s => ({
+        subjectName: s.subjectName.trim(),
+        marks: Number(s.marks) || 0,
+        totalMarks: Number(s.totalMarks) || 100
+      }));
+
+    if (cleanedSubjects.length === 0) {
+      if (showToast) showToast('Please enter at least one subject with valid marks.', 'warning');
+      return;
+    }
+
+    try {
+      if (saveResult) {
+        await saveResult({
+          id: editingResultItem?.id,
+          studentId: student.id,
+          examName: resultExamName.trim() || 'Term Examination',
+          subjects: cleanedSubjects
+        });
+      }
+      if (showToast) showToast('Exam result saved successfully!', 'success');
+      setIsAddResultOpen(false);
+      setEditingResultItem(null);
+    } catch (err) {
+      if (showToast) showToast('Failed to save exam result.', 'error');
+    }
+  };
+
+  const handleDeleteResult = async (resId) => {
+    if (!confirm('Are you sure you want to delete this exam result?')) return;
+    try {
+      if (deleteResult) {
+        await deleteResult(resId);
+      }
+      if (showToast) showToast('Exam result deleted successfully.', 'info');
+    } catch (err) {
+      if (showToast) showToast('Failed to delete result.', 'error');
+    }
+  };
 
   const studentPayments = payments.filter(p =>
     p.studentId === student.id ||
@@ -449,33 +548,99 @@ export default function StudentProfileModal({ student, onClose }) {
           {/* TAB 4: RESULTS */}
           {activeTab === 'results' && (
             <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border">
+                <div>
+                  <h4 className="font-extrabold text-xs text-text uppercase tracking-wider flex items-center gap-1.5">
+                    <Award className="w-4 h-4 text-primary" />
+                    <span>Academic Exam Results ({studentResults.length})</span>
+                  </h4>
+                  <p className="text-[10px] text-text-secondary">View, record, and print report cards for {student.name}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddResult}
+                  className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95 self-start sm:self-auto"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Result</span>
+                </button>
+              </div>
+
               {studentResults.length === 0 ? (
-                <div className="p-8 text-center bg-surface2/30 rounded-xl border border-dashed border-border text-text-muted text-xs">
-                  No exam results registered for this student yet. Go to Exam Results tab to create one.
+                <div className="p-8 text-center bg-surface2/30 rounded-2xl border border-dashed border-border space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
+                    <Award className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-xs text-text">No Exam Results Registered Yet</h5>
+                    <p className="text-[11px] text-text-muted mt-0.5">Click the button below to add the first exam score for this student.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddResult}
+                    className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add First Result</span>
+                  </button>
                 </div>
               ) : (
                 studentResults.map(res => {
-                  const total = res.subjects.reduce((sum, s) => sum + Number(s.totalMarks), 0);
-                  const obt = res.subjects.reduce((sum, s) => sum + Number(s.marks), 0);
+                  const total = res.subjects.reduce((sum, s) => sum + Number(s.totalMarks || 100), 0);
+                  const obt = res.subjects.reduce((sum, s) => sum + Number(s.marks || 0), 0);
                   const pct = total > 0 ? Math.round((obt / total) * 100) : 0;
+                  const isPassed = pct >= 33;
+                  const grade = pct >= 90 ? 'A+' : pct >= 75 ? 'A' : pct >= 60 ? 'B' : pct >= 45 ? 'C' : pct >= 33 ? 'D' : 'F';
                   return (
-                    <div key={res.id} className="p-4 rounded-xl bg-surface2/40 border border-border space-y-3">
-                      <div className="flex items-center justify-between border-b border-border pb-2">
+                    <div key={res.id} className="p-4 rounded-xl bg-surface2/40 border border-border space-y-3 hover:border-primary/40 transition-all">
+                      <div className="flex items-center justify-between border-b border-border pb-2.5">
                         <div>
                           <h5 className="font-bold text-xs text-text">{res.examName}</h5>
-                          <span className="text-[10px] text-text-secondary">{new Date(res.createdAt).toLocaleDateString()}</span>
+                          <span className="text-[10px] text-text-secondary">
+                            {new Date(res.createdAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
                         </div>
-                        <div className="text-right">
-                          <span className="text-xs font-black text-primary">{pct}%</span>
-                          <div className="text-[10px] font-bold text-emerald-600">Passed</div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <span className="text-xs font-black text-primary">{pct}% ({grade})</span>
+                            <div className={`text-[10px] font-bold ${isPassed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {isPassed ? 'Passed' : 'Needs Improvement'}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 pl-2 border-l border-border">
+                            <button
+                              type="button"
+                              onClick={() => setPrintResultData({ result: res, student, settings })}
+                              className="p-1.5 rounded-lg bg-surface2 hover:bg-surface2/80 text-text-secondary hover:text-text cursor-pointer transition-colors"
+                              title="Print Result Slip"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditResult(res)}
+                              className="p-1.5 rounded-lg bg-surface2 hover:bg-surface2/80 text-text-secondary hover:text-text cursor-pointer transition-colors"
+                              title="Edit Result"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteResult(res.id)}
+                              className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer transition-colors"
+                              title="Delete Result"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {res.subjects.map((sub, i) => (
-                          <div key={i} className="p-2 rounded-lg bg-card border border-border text-xs flex justify-between">
+                          <div key={i} className="p-2 rounded-lg bg-card border border-border text-xs flex justify-between items-center">
                             <span className="text-text-secondary truncate">{sub.subjectName}</span>
-                            <span className="font-bold text-text">{sub.marks}/{sub.totalMarks}</span>
+                            <span className="font-bold text-text">{sub.marks}/{sub.totalMarks || 100}</span>
                           </div>
                         ))}
                       </div>
@@ -539,6 +704,160 @@ export default function StudentProfileModal({ student, onClose }) {
           )}
         </div>
       </div>
+
+      {/* Add / Edit Exam Result Modal for this student */}
+      {isAddResultOpen && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-card border border-border w-full max-w-lg rounded-2xl p-5 sm:p-6 shadow-2xl space-y-4 my-auto animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="font-extrabold text-sm sm:text-base text-text flex items-center gap-2">
+                  <Award className="w-4 h-4 text-primary" />
+                  <span>{editingResultItem ? 'Edit Exam Result' : 'Add Exam Result'}</span>
+                </h3>
+                <p className="text-[11px] text-text-muted mt-0.5">
+                  Recording score for <strong className="text-text font-bold">{student.name}</strong> ({student.studentType === 'school' ? `Class ${student.className}` : student.course})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setIsAddResultOpen(false); setEditingResultItem(null); }}
+                className="p-1.5 rounded-lg hover:bg-surface2 text-text-secondary hover:text-text cursor-pointer transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveResultSubmit} className="space-y-4 text-xs font-semibold">
+              <div>
+                <label className="block text-text-secondary mb-1">Exam Name</label>
+                <input
+                  type="text"
+                  value={resultExamName}
+                  onChange={e => setResultExamName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-text font-bold text-xs focus:ring-2 focus:ring-primary/20"
+                  placeholder="e.g. 1st Unit Test, Mid-Term Exam, Annual Exam"
+                  required
+                />
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {['1st Unit Test', 'Mid-Term Exam', 'Term Examination', 'Annual Exam'].map(examTag => (
+                    <button
+                      key={examTag}
+                      type="button"
+                      onClick={() => setResultExamName(examTag)}
+                      className="px-2 py-0.5 rounded-md text-[10px] bg-surface2 hover:bg-surface2/80 text-text-secondary hover:text-text border border-border cursor-pointer transition-colors"
+                    >
+                      {examTag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-text-secondary font-bold">Subjects & Marks</label>
+                  <button
+                    type="button"
+                    onClick={handleAddResultSubjectRow}
+                    className="text-[11px] text-primary font-bold hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Subject</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+                  {resultSubjects.map((sub, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-surface2/40 p-2 rounded-xl border border-border">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={sub.subjectName}
+                          onChange={e => handleResultSubjectChange(idx, 'subjectName', e.target.value)}
+                          placeholder="Subject Name"
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-border text-text font-bold text-xs"
+                          required
+                        />
+                      </div>
+                      <div className="w-20">
+                        <input
+                          type="number"
+                          min="0"
+                          value={sub.marks}
+                          onChange={e => handleResultSubjectChange(idx, 'marks', e.target.value)}
+                          placeholder="Marks"
+                          className="w-full px-2 py-1.5 rounded-lg bg-white border border-border text-center font-mono font-bold text-text text-xs"
+                          required
+                        />
+                      </div>
+                      <span className="text-text-muted font-bold">/</span>
+                      <div className="w-20">
+                        <input
+                          type="number"
+                          min="1"
+                          value={sub.totalMarks || 100}
+                          onChange={e => handleResultSubjectChange(idx, 'totalMarks', Number(e.target.value) || 100)}
+                          placeholder="Total"
+                          className="w-full px-2 py-1.5 rounded-lg bg-white border border-border text-center font-mono font-bold text-text text-xs"
+                          required
+                        />
+                      </div>
+                      {resultSubjects.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveResultSubjectRow(idx)}
+                          className="p-1 text-rose-500 hover:bg-rose-50 rounded cursor-pointer"
+                          title="Remove Subject"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Total & Percentage Live Preview */}
+              {(() => {
+                const totalMax = resultSubjects.reduce((acc, s) => acc + (Number(s.totalMarks) || 100), 0);
+                const totalObt = resultSubjects.reduce((acc, s) => acc + (Number(s.marks) || 0), 0);
+                const pct = totalMax > 0 ? Math.round((totalObt / totalMax) * 100) : 0;
+                const isPassed = pct >= 33;
+                return (
+                  <div className="p-3 rounded-xl bg-surface2/60 border border-border flex items-center justify-between text-xs">
+                    <div>
+                      <span className="text-text-muted block text-[10px]">Score Summary</span>
+                      <span className="font-extrabold text-text">{totalObt} / {totalMax} Marks</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-base font-black text-primary">{pct}%</span>
+                      <span className={`block text-[10px] font-bold ${isPassed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {isPassed ? 'Passed' : 'Needs Improvement'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="pt-3 border-t border-border flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setIsAddResultOpen(false); setEditingResultItem(null); }}
+                  className="px-4 py-2 rounded-xl bg-surface2 hover:bg-border text-text font-bold cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold cursor-pointer shadow-sm transition-all active:scale-95"
+                >
+                  Save Result
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

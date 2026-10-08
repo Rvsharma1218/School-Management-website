@@ -5,7 +5,8 @@ import { useSchoolStore } from '../lib/store';
 import {
   Award, Plus, Search, Printer, Trash2, Edit,
   GraduationCap, Calendar, Percent, CheckCircle2,
-  FileSpreadsheet, X, Save, Share2, ClipboardList, TrendingUp, Sparkles, ChevronRight, BarChart, Download, FileText
+  FileSpreadsheet, X, Save, Share2, ClipboardList, TrendingUp, Sparkles, ChevronRight, BarChart, Download, FileText,
+  Users
 } from 'lucide-react';
 import { exportExamResultsToExcel, exportExamResultsPDF, exportSingleResultPDF } from '../lib/exportUtils';
 
@@ -31,6 +32,9 @@ export default function ResultsView() {
 
   // New/Edit Result Form State (for single modal entry)
   const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [modalStudentType, setModalStudentType] = useState('all'); // 'all' | 'school' | 'computer'
+  const [modalClassFilter, setModalClassFilter] = useState('all'); // 'all' | class/course
+  const [modalStudentSearch, setModalStudentSearch] = useState('');
   const [examName, setExamName] = useState('Term Examination');
   const [subjects, setSubjects] = useState([
     { subjectName: 'Mathematics', marks: '', totalMarks: 100 },
@@ -60,17 +64,51 @@ export default function ResultsView() {
     }
   }, [assignedClass, isPrincipal]);
 
-  // Set initial selected student in modal
-  useEffect(() => {
-    if (students.length > 0 && !selectedStudentId) {
-      setSelectedStudentId(students[0].id);
+  // Available classes for modal filter
+  const availableModalClasses = React.useMemo(() => {
+    const set = new Set();
+    if (settings?.schoolClasses && Array.isArray(settings.schoolClasses)) {
+      settings.schoolClasses.forEach(c => c && set.add(String(c).trim()));
     }
-  }, [students, selectedStudentId]);
+    if (settings?.computerCourses && Array.isArray(settings.computerCourses)) {
+      settings.computerCourses.forEach(c => c && set.add(String(c).trim()));
+    }
+    students.forEach(s => {
+      const c = s.studentType === 'school' ? s.className : s.course;
+      if (c && String(c).trim()) set.add(String(c).trim());
+    });
+    return Array.from(set).filter(Boolean).sort();
+  }, [students, settings]);
+
+  // Filtered students for single result modal
+  const modalFilteredStudents = React.useMemo(() => {
+    return students.filter(s => {
+      if (modalStudentType !== 'all' && s.studentType !== modalStudentType) return false;
+      if (modalClassFilter !== 'all') {
+        const c = s.studentType === 'school' ? s.className : s.course;
+        if (String(c || '').trim().toLowerCase() !== modalClassFilter.toLowerCase()) return false;
+      }
+      if (modalStudentSearch.trim()) {
+        const q = modalStudentSearch.toLowerCase().trim();
+        const matchName = s.name?.toLowerCase().includes(q);
+        const matchId = s.studentId?.toLowerCase().includes(q);
+        const matchAdm = (s.admissionNumber || s.admissionNo)?.toLowerCase().includes(q);
+        const matchRoll = s.rollNumber?.toLowerCase().includes(q);
+        if (!matchName && !matchId && !matchAdm && !matchRoll) return false;
+      }
+      return true;
+    });
+  }, [students, modalStudentType, modalClassFilter, modalStudentSearch]);
+
+  const selectedStudentObj = students.find(s => s.id === selectedStudentId);
 
   // Handle single modal entry
   const handleOpenAdd = () => {
     setEditingResult(null);
-    setSelectedStudentId(students[0]?.id || '');
+    setModalStudentType('all');
+    setModalClassFilter('all');
+    setModalStudentSearch('');
+    setSelectedStudentId('');
     setExamName('Term Examination');
     setSubjects([
       { subjectName: 'Mathematics', marks: '', totalMarks: 100 },
@@ -83,8 +121,18 @@ export default function ResultsView() {
   const handleOpenEdit = (res) => {
     setEditingResult(res);
     setSelectedStudentId(res.studentId);
-    setExamName(res.examName);
-    setSubjects([...res.subjects]);
+    const targetStudent = students.find(s => s.id === res.studentId);
+    if (targetStudent) {
+      if (targetStudent.studentType) setModalStudentType(targetStudent.studentType);
+      const c = targetStudent.studentType === 'school' ? targetStudent.className : targetStudent.course;
+      if (c) setModalClassFilter(c);
+    }
+    setExamName(res.examName || 'Term Examination');
+    setSubjects(res.subjects && res.subjects.length > 0 ? [...res.subjects] : [
+      { subjectName: 'Mathematics', marks: '', totalMarks: 100 },
+      { subjectName: 'Science', marks: '', totalMarks: 100 },
+      { subjectName: 'English', marks: '', totalMarks: 100 }
+    ]);
     setIsModalOpen(true);
   };
 
@@ -683,110 +731,253 @@ export default function ResultsView() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs font-semibold">
-              <div>
-                <label className="block text-text-secondary mb-1">Student</label>
-                <select
-                  value={selectedStudentId}
-                  onChange={e => setSelectedStudentId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-text font-bold"
-                  required
-                >
-                  <option value="">-- Select Student --</option>
-                  {students.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.studentType === 'school' ? `Class ${s.className}` : s.course}) - {s.studentId}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-text-secondary mb-1">Exam Name</label>
-                <input
-                  type="text"
-                  value={examName}
-                  onChange={e => setExamName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-text font-bold"
-                  placeholder="e.g. Mid-Term Examination"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
+              {/* STEP 1: Filter and Select Student First */}
+              <div className="p-4 rounded-2xl bg-surface2/60 border border-border space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-text-secondary">Subjects & Total Marks</label>
-                  <button
-                    type="button"
-                    onClick={handleAddSubjectRow}
-                    className="text-[11px] text-primary font-bold hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Subject</span>
-                  </button>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-text flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-primary" />
+                    <span>Step 1: Filter & Choose Student</span>
+                  </span>
+                  {selectedStudentObj ? (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      ✓ Student Selected
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                      Choose Student Below
+                    </span>
+                  )}
                 </div>
 
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
-                  {subjects.map((sub, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-surface2/40 p-2 rounded-xl border border-border">
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={sub.subjectName}
-                          onChange={e => handleSubjectChange(idx, 'subjectName', e.target.value)}
-                          placeholder="Subject Name"
-                          className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-border text-text font-bold"
-                          required
-                        />
-                      </div>
-                      <div className="w-20">
-                        <input
-                          type="number"
-                          min="0"
-                          value={sub.marks}
-                          onChange={e => handleSubjectChange(idx, 'marks', e.target.value)}
-                          placeholder="Marks"
-                          className="w-full px-2 py-1.5 rounded-lg bg-white border border-border text-center font-mono font-bold text-text"
-                          required
-                        />
-                      </div>
-                      <span className="text-text-muted font-bold">/</span>
-                      <div className="w-20">
-                        <input
-                          type="number"
-                          min="1"
-                          value={sub.totalMarks || 100}
-                          onChange={e => handleSubjectChange(idx, 'totalMarks', Number(e.target.value) || 100)}
-                          placeholder="Total"
-                          className="w-full px-2 py-1.5 rounded-lg bg-white border border-border text-center font-mono font-bold text-text"
-                          title="Manually Editable Total Marks"
-                          required
-                        />
-                      </div>
-                      {subjects.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveSubjectRow(idx)}
-                          className="p-1 text-rose-500 hover:bg-rose-50 rounded cursor-pointer"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
+                {/* Filter Controls: Student Type + Class/Course + Search */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[10px] text-text-muted mb-1 font-bold">Filter Type</label>
+                    <select
+                      value={modalStudentType}
+                      onChange={e => {
+                        setModalStudentType(e.target.value);
+                        setSelectedStudentId('');
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-card border border-border text-text font-bold text-xs"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="school">School Students</option>
+                      <option value="computer">Computer Students</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-text-muted mb-1 font-bold">Filter Class / Course</label>
+                    <select
+                      value={modalClassFilter}
+                      onChange={e => {
+                        setModalClassFilter(e.target.value);
+                        setSelectedStudentId('');
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-card border border-border text-text font-bold text-xs"
+                    >
+                      <option value="all">All Classes & Courses</option>
+                      {availableModalClasses.map(cls => (
+                        <option key={cls} value={cls}>{cls}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-text-muted mb-1 font-bold">Search Student</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={modalStudentSearch}
+                        onChange={e => setModalStudentSearch(e.target.value)}
+                        placeholder="Name, ID, Roll..."
+                        className="w-full pl-7 pr-2 py-1.5 rounded-xl bg-card border border-border text-text font-bold text-xs"
+                      />
+                      <Search className="w-3.5 h-3.5 text-text-muted absolute left-2 top-2" />
                     </div>
-                  ))}
+                  </div>
                 </div>
+
+                {/* Filtered Student Dropdown */}
+                <div>
+                  <label className="block text-[11px] text-text mb-1 font-bold flex items-center justify-between">
+                    <span>Select Student ({modalFilteredStudents.length} available)</span>
+                    {modalClassFilter !== 'all' && (
+                      <span className="text-[10px] text-primary font-bold">Filtered: {modalClassFilter}</span>
+                    )}
+                  </label>
+                  <select
+                    value={selectedStudentId}
+                    onChange={e => setSelectedStudentId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-card border-2 border-primary/30 hover:border-primary text-text font-bold text-xs focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                    required
+                  >
+                    <option value="">-- Choose Student from Filtered List --</option>
+                    {modalFilteredStudents.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} • {s.studentType === 'school' ? `Class ${s.className}` : s.course} • ID: {s.studentId}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Selected Student Information Highlight Card */}
+                {selectedStudentObj && (
+                  <div className="p-3 rounded-xl bg-white border border-border flex items-center justify-between gap-3 shadow-xs animate-in fade-in duration-200">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary font-black flex items-center justify-center text-sm flex-shrink-0">
+                        {selectedStudentObj.photoPath || selectedStudentObj.photoUrl ? (
+                          <img src={selectedStudentObj.photoPath || selectedStudentObj.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
+                        ) : (
+                          selectedStudentObj.name?.charAt(0) || 'S'
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-extrabold text-text text-xs sm:text-sm truncate">{selectedStudentObj.name}</div>
+                        <div className="text-[11px] text-text-muted flex items-center gap-2 flex-wrap">
+                          <span className="text-primary font-bold">
+                            {selectedStudentObj.studentType === 'school' ? `Class ${selectedStudentObj.className}` : selectedStudentObj.course}
+                          </span>
+                          {selectedStudentObj.rollNumber && <span>• Roll: {selectedStudentObj.rollNumber}</span>}
+                          {selectedStudentObj.admissionNumber && <span>• Adm: {selectedStudentObj.admissionNumber}</span>}
+                          <span>• ID: {selectedStudentObj.studentId}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* STEP 2: Exam & Subjects */}
+              <div className="space-y-4 pt-1">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-text-secondary font-bold">Step 2: Exam Name</label>
+                    <span className="text-[10px] text-text-muted font-bold">Select quick tag or type</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={examName}
+                    onChange={e => setExamName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-text font-bold text-xs"
+                    placeholder="e.g. Mid-Term Examination"
+                    required
+                  />
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    {['1st Unit Test', 'Mid-Term Examination', 'Term Examination', 'Annual Examination'].map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setExamName(tag)}
+                        className="px-2 py-0.5 rounded-md text-[10px] bg-surface2 hover:bg-surface2/80 text-text-secondary hover:text-text border border-border cursor-pointer transition-colors"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-text-secondary font-bold">Step 3: Subjects & Marks</label>
+                    <button
+                      type="button"
+                      onClick={handleAddSubjectRow}
+                      className="text-[11px] text-primary font-bold hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Subject</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+                    {subjects.map((sub, idx) => (
+                      <div key={idx} className="flex items-center gap-2 bg-surface2/40 p-2 rounded-xl border border-border">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={sub.subjectName}
+                            onChange={e => handleSubjectChange(idx, 'subjectName', e.target.value)}
+                            placeholder="Subject Name"
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-border text-text font-bold text-xs"
+                            required
+                          />
+                        </div>
+                        <div className="w-20">
+                          <input
+                            type="number"
+                            min="0"
+                            value={sub.marks}
+                            onChange={e => handleSubjectChange(idx, 'marks', e.target.value)}
+                            placeholder="Marks"
+                            className="w-full px-2 py-1.5 rounded-lg bg-white border border-border text-center font-mono font-bold text-text text-xs"
+                            required
+                          />
+                        </div>
+                        <span className="text-text-muted font-bold">/</span>
+                        <div className="w-20">
+                          <input
+                            type="number"
+                            min="1"
+                            value={sub.totalMarks || 100}
+                            onChange={e => handleSubjectChange(idx, 'totalMarks', Number(e.target.value) || 100)}
+                            placeholder="Total"
+                            className="w-full px-2 py-1.5 rounded-lg bg-white border border-border text-center font-mono font-bold text-text text-xs"
+                            title="Manually Editable Total Marks"
+                            required
+                          />
+                        </div>
+                        {subjects.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSubjectRow(idx)}
+                            className="p-1 text-rose-500 hover:bg-rose-50 rounded cursor-pointer"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Score Summary Live Card */}
+                {(() => {
+                  const totalMax = subjects.reduce((a, s) => a + (Number(s.totalMarks) || 100), 0);
+                  const totalObt = subjects.reduce((a, s) => a + (Number(s.marks) || 0), 0);
+                  const pct = totalMax > 0 ? Math.round((totalObt / totalMax) * 100) : 0;
+                  const isPassed = pct >= 33;
+                  const grade = pct >= 90 ? 'A+' : pct >= 75 ? 'A' : pct >= 60 ? 'B' : pct >= 45 ? 'C' : pct >= 33 ? 'D' : 'F';
+                  return (
+                    <div className="p-3 rounded-xl bg-surface2/60 border border-border flex items-center justify-between text-xs">
+                      <div>
+                        <span className="text-[10px] text-text-muted block">Score Preview</span>
+                        <span className="font-extrabold text-text">{totalObt} / {totalMax} Marks</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-base font-black text-primary">{pct}% ({grade})</span>
+                        <span className={`block text-[10px] font-bold ${isPassed ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {isPassed ? 'Passed' : 'Needs Improvement'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="pt-4 border-t border-border flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-surface2 hover:bg-border text-text font-bold cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-surface2 hover:bg-border text-text font-bold cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold cursor-pointer shadow-sm transition-all active:scale-95"
+                  disabled={!selectedStudentId}
+                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-dark disabled:opacity-50 text-white font-bold cursor-pointer shadow-sm transition-all active:scale-95"
                 >
                   Save Result
                 </button>
