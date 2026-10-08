@@ -22,9 +22,22 @@ import {
   Receipt,
   CheckCircle2,
   AlertCircle,
-  Download
+  Download,
+  FileText,
+  FileSpreadsheet,
+  Share2,
+  Filter
 } from 'lucide-react';
-import { openWhatsAppFeeReminder, openWhatsAppReceiptShare, exportReceiptPDF } from '../lib/exportUtils';
+import { 
+  openWhatsAppFeeReminder, 
+  openWhatsAppReceiptShare, 
+  exportReceiptPDF,
+  exportStudentFullReportPDF,
+  printStudentFullReportPDF,
+  exportStudentFullReportExcel,
+  openWhatsAppStudentFullReport,
+  shareStudentFullReportNative
+} from '../lib/exportUtils';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function StudentProfileModal({ student, onClose }) {
@@ -48,7 +61,8 @@ export default function StudentProfileModal({ student, onClose }) {
     deleteStudent
   } = useSchoolStore();
 
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'fees' | 'attendance' | 'results' | 'idcard'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'fees' | 'attendance' | 'results' | 'reports' | 'idcard'
+  const [reportMonthFilter, setReportMonthFilter] = useState('all'); // 'all' or 'YYYY-MM'
   const [isAddResultOpen, setIsAddResultOpen] = useState(false);
   const [editingResultItem, setEditingResultItem] = useState(null);
   const [resultExamName, setResultExamName] = useState('Term Examination');
@@ -233,6 +247,15 @@ export default function StudentProfileModal({ student, onClose }) {
             {/* Top Quick Actions */}
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
+                onClick={() => setActiveTab('reports')}
+                className="px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                title="Download / Share Full Student Statement & Reports"
+              >
+                <FileText className="w-4 h-4 text-slate-950" />
+                <span className="inline">Full Report</span>
+              </button>
+
+              <button
                 onClick={() => openWhatsAppFeeReminder(student, settings)}
                 className="p-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-md transition-all cursor-pointer"
                 title="Send WhatsApp Message"
@@ -284,6 +307,7 @@ export default function StudentProfileModal({ student, onClose }) {
               { id: 'fees', label: `Fees (₹${realPendingDue.toLocaleString('en-IN')} Due)`, icon: CreditCard },
               { id: 'attendance', label: `Attendance (${attendancePercent}%)`, icon: Calendar },
               { id: 'results', label: `Exam Results (${studentResults.length})`, icon: Award },
+              { id: 'reports', label: 'Full Report & Statement', icon: FileText },
               { id: 'idcard', label: 'ID Card', icon: Contact },
             ].map(tab => {
               const Icon = tab.icon;
@@ -651,7 +675,255 @@ export default function StudentProfileModal({ student, onClose }) {
             </div>
           )}
 
-          {/* TAB 5: ID CARD */}
+          {/* TAB 5: COMPREHENSIVE FULL REPORTS & STATEMENTS */}
+          {activeTab === 'reports' && (() => {
+            const now = new Date();
+            const thisMonthStr = now.toISOString().slice(0, 7);
+            const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastMonthStr = prevMonthDate.toISOString().slice(0, 7);
+
+            // Compute filtered metrics for live preview
+            const filteredPaymentsList = reportMonthFilter === 'all'
+              ? studentPayments
+              : studentPayments.filter(p => String(p.date || p.paymentDate || p.createdAt || '').startsWith(reportMonthFilter));
+
+            const filteredAttEntries = Object.entries(attendance).filter(([dateStr]) => 
+              reportMonthFilter === 'all' ? true : dateStr.startsWith(reportMonthFilter)
+            );
+
+            let periodMarked = 0, periodPresent = 0, periodAbsent = 0, periodLeave = 0;
+            filteredAttEntries.forEach(([_, rec]) => {
+              const st = typeof rec === 'object' ? rec[student.id] : rec;
+              if (st) {
+                periodMarked++;
+                if (st === 'present') periodPresent++;
+                if (st === 'absent') periodAbsent++;
+                if (st === 'leave') periodLeave++;
+              }
+            });
+            const periodAttPct = periodMarked > 0 ? ((periodPresent / periodMarked) * 100).toFixed(1) : '0.0';
+
+            const filteredResultsList = reportMonthFilter === 'all'
+              ? studentResults
+              : studentResults.filter(r => {
+                  const d = r.date || r.examDate || r.createdAt || '';
+                  return d ? String(d).startsWith(reportMonthFilter) : true;
+                });
+
+            const periodPaidAmt = filteredPaymentsList.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+
+            return (
+              <div className="space-y-6">
+                {/* Header Banner */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-indigo-900/90 via-primary/85 to-indigo-950 text-white shadow-lg space-y-2 border border-white/10">
+                  <div className="flex items-center gap-2">
+                    <span className="p-2 rounded-xl bg-amber-400 text-slate-950">
+                      <FileText className="w-5 h-5" />
+                    </span>
+                    <div>
+                      <h4 className="font-black text-sm sm:text-base text-white">Comprehensive Student Master Report & Statement</h4>
+                      <p className="text-[11px] text-indigo-200">
+                        Generate official paper PDF statements, structured multi-sheet Excel files, or send via WhatsApp.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter Controls Card */}
+                <div className="p-4 rounded-xl bg-surface2/50 border border-border space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Filter className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-bold text-text">Statement Period Filter:</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-text-secondary font-medium">Custom Month:</span>
+                      <input
+                        type="month"
+                        value={reportMonthFilter === 'all' ? '' : reportMonthFilter}
+                        onChange={(e) => setReportMonthFilter(e.target.value || 'all')}
+                        className="px-2.5 py-1 rounded-lg bg-surface border border-border text-xs font-bold text-text cursor-pointer focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Filter Buttons */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setReportMonthFilter('all')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        reportMonthFilter === 'all'
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-surface2 hover:bg-border text-text'
+                      }`}
+                    >
+                      All Time (Till Date)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReportMonthFilter(thisMonthStr)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        reportMonthFilter === thisMonthStr
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-surface2 hover:bg-border text-text'
+                      }`}
+                    >
+                      This Month ({now.toLocaleDateString('en-US', { month: 'short' })})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReportMonthFilter(lastMonthStr)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        reportMonthFilter === lastMonthStr
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-surface2 hover:bg-border text-text'
+                      }`}
+                    >
+                      Last Month ({prevMonthDate.toLocaleDateString('en-US', { month: 'short' })})
+                    </button>
+
+                    <span className="text-xs text-primary font-bold ml-auto px-2 py-1 rounded bg-primary/10">
+                      {reportMonthFilter === 'all'
+                        ? 'Showing: Lifetime Full Record'
+                        : `Showing: Month ${reportMonthFilter}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Primary Action Buttons */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <button
+                    onClick={async () => {
+                      await exportStudentFullReportPDF(student, studentPayments, attendance, studentResults, settings, reportMonthFilter);
+                      showToast(`Downloaded full report PDF for ${student.name}!`, 'success');
+                    }}
+                    className="p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95 text-center"
+                    title="Download Official A4 Statement as PDF"
+                  >
+                    <Download className="w-5 h-5" />
+                    <span>Download PDF</span>
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      await printStudentFullReportPDF(student, studentPayments, attendance, studentResults, settings, reportMonthFilter);
+                    }}
+                    className="p-3.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95 text-center"
+                    title="Print Statement Preview"
+                  >
+                    <Printer className="w-5 h-5" />
+                    <span>Print Statement</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      exportStudentFullReportExcel(student, studentPayments, attendance, studentResults, settings, reportMonthFilter);
+                      showToast(`Exported full report Excel (.xlsx) for ${student.name}!`, 'success');
+                    }}
+                    className="p-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95 text-center"
+                    title="Export Multi-Sheet Excel Workbook"
+                  >
+                    <FileSpreadsheet className="w-5 h-5" />
+                    <span>Export Excel (.xlsx)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      openWhatsAppStudentFullReport(student, studentPayments, attendance, studentResults, settings, reportMonthFilter);
+                    }}
+                    className="p-3.5 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-xs flex flex-col items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95 text-center"
+                    title="Send Formatted Summary via WhatsApp"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                    <span>Share WhatsApp</span>
+                  </button>
+                </div>
+
+                {/* Live Data Summary Cards for the Selected Period */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  {/* Fee Metric */}
+                  <div className="p-3.5 rounded-xl bg-surface2/40 border border-border space-y-1.5">
+                    <div className="flex items-center justify-between text-text-secondary">
+                      <span className="font-bold uppercase tracking-wider text-[10px]">Fee Standing</span>
+                      <CreditCard className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div className="text-base font-black text-text">
+                      ₹{periodPaidAmt.toLocaleString('en-IN')}
+                      <span className="text-[10px] text-text-secondary font-medium ml-1">Paid in Period</span>
+                    </div>
+                    <div className="flex justify-between text-[11px] pt-1 border-t border-border/50 text-text-muted">
+                      <span>Total Due: <strong className="text-rose-600">₹{realPendingDue.toLocaleString('en-IN')}</strong></span>
+                      <span>Receipts: <strong>{filteredPaymentsList.length}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* Attendance Metric */}
+                  <div className="p-3.5 rounded-xl bg-surface2/40 border border-border space-y-1.5">
+                    <div className="flex items-center justify-between text-text-secondary">
+                      <span className="font-bold uppercase tracking-wider text-[10px]">Attendance Rate</span>
+                      <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                    </div>
+                    <div className="text-base font-black text-emerald-600">
+                      {periodAttPct}%
+                      <span className="text-[10px] text-text-secondary font-medium ml-1">Present Rate</span>
+                    </div>
+                    <div className="flex justify-between text-[11px] pt-1 border-t border-border/50 text-text-muted">
+                      <span>Marked: <strong>{periodMarked} Days</strong></span>
+                      <span>Present: <strong className="text-emerald-700">{periodPresent}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* Academic Results Metric */}
+                  <div className="p-3.5 rounded-xl bg-surface2/40 border border-border space-y-1.5">
+                    <div className="flex items-center justify-between text-text-secondary">
+                      <span className="font-bold uppercase tracking-wider text-[10px]">Exams Record</span>
+                      <Award className="w-3.5 h-3.5 text-amber-500" />
+                    </div>
+                    <div className="text-base font-black text-text">
+                      {filteredResultsList.length}
+                      <span className="text-[10px] text-text-secondary font-medium ml-1">Examinations</span>
+                    </div>
+                    <div className="flex justify-between text-[11px] pt-1 border-t border-border/50 text-text-muted">
+                      <span>Status: <strong className="text-primary font-bold">Recorded</strong></span>
+                      <span>Latest: <strong>{filteredResultsList[filteredResultsList.length - 1]?.examName || '—'}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Transactions in Period */}
+                <div className="border border-border rounded-xl overflow-hidden bg-surface">
+                  <div className="px-4 py-2.5 bg-surface2/60 text-xs font-bold text-text uppercase flex items-center justify-between">
+                    <span>Period Fee Payment Transactions ({filteredPaymentsList.length})</span>
+                    <span className="text-[10px] text-text-muted font-normal">Shows in official statement</span>
+                  </div>
+                  <div className="divide-y divide-border max-h-60 overflow-y-auto">
+                    {filteredPaymentsList.length === 0 ? (
+                      <div className="p-6 text-center text-text-muted text-xs">
+                        No payments recorded for the selected filter period.
+                      </div>
+                    ) : (
+                      filteredPaymentsList.map((p, idx) => (
+                        <div key={idx} className="px-4 py-2.5 flex items-center justify-between text-xs hover:bg-surface2/20">
+                          <div>
+                            <span className="font-bold text-text block">{p.receiptNumber || 'REC-' + (p.id || '').slice(0, 6)}</span>
+                            <span className="text-[10px] text-text-secondary">{p.date || p.paymentDate || '—'} • {p.mode || 'Cash'}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-black text-emerald-600 block">₹{Number(p.amount || 0).toLocaleString('en-IN')}</span>
+                            <span className="text-[10px] text-text-muted">{p.remarks || p.forMonth || 'Fee Payment'}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* TAB 6: ID CARD */}
           {activeTab === 'idcard' && (
             <div className="flex flex-col items-center justify-center p-6 space-y-4">
               {/* Card Preview */}

@@ -476,8 +476,8 @@ export default function ResultsView() {
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <button
-                                onClick={() => {
-                                  exportSingleResultPDF(r, student, settings);
+                                onClick={async () => {
+                                  await exportSingleResultPDF(r, student, settings);
                                   showToast(`Downloaded marksheet PDF for ${student?.name || 'student'}!`, 'success');
                                 }}
                                 className="p-1.5 rounded-lg bg-surface2 hover:bg-emerald-100 text-emerald-600 border border-border cursor-pointer transition-colors"

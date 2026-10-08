@@ -25,14 +25,23 @@ export default function PrintResultModal({ result: propResult, student: propStud
   const grade = Number(pct) >= 90 ? 'A+' : Number(pct) >= 80 ? 'A' : Number(pct) >= 70 ? 'B+' : Number(pct) >= 60 ? 'B' : Number(pct) >= 50 ? 'C' : Number(pct) >= 40 ? 'D' : 'F';
   const isPass = Number(pct) >= 40;
 
+  const totalFees = Number(student?.totalFees) || Number(student?.feeAmount) || 0;
+  const paidFees = Number(student?.paidFees) || 0;
+  const remainingDue = student?.remainingFees !== undefined 
+    ? Number(student?.remainingFees) 
+    : Math.max(0, totalFees - paidFees);
+
   const handlePrint = () => {
     window.print();
   };
 
-  const handleDownloadPDF = () => {
-    exportSingleResultPDF(result, student, settings);
+  const handleDownloadPDF = async () => {
+    await exportSingleResultPDF(result, student, settings);
     showToast(`Downloaded marksheet PDF for ${student?.name || 'student'}!`, 'success');
   };
+
+  const logoSrc = settings.logoUrl || settings.logoPath || settings.logo;
+  const sigSrc = settings.principalSignature || settings.signatureUrl || settings.signaturePath || settings.signature;
 
   return (
     <div
@@ -85,14 +94,20 @@ export default function PrintResultModal({ result: propResult, student: propStud
 
         {/* MARKSHEET BODY */}
         <div className="p-6 sm:p-8 print:p-6 font-sans overflow-y-auto">
-          <div className="border-4 border-double border-indigo-950 p-6 rounded-xl space-y-6 bg-white">
+          <div className="border-4 border-double border-indigo-950 p-6 rounded-xl space-y-5 bg-white">
             {/* Header */}
             <div className="text-center border-b-2 border-indigo-950 pb-4 space-y-1">
+              {logoSrc && (
+                <div className="flex justify-center mb-1">
+                  <img src={logoSrc} alt="Logo" className="w-14 h-14 object-contain" />
+                </div>
+              )}
               <h1 className="text-2xl font-black uppercase tracking-wider text-indigo-950">
                 {settings.instituteName || 'Smart School & Computer Institute'}
               </h1>
               <p className="text-xs text-slate-600 font-medium">
                 {settings.address || 'Main Campus'} • Affiliation: {settings.affiliationNumber || 'Recognized'}
+                {settings.mobile ? ` • Helpline: ${settings.mobile}` : ''}
               </p>
               <div className="inline-block mt-2 px-4 py-1 rounded-full bg-indigo-950 text-amber-300 text-xs font-black uppercase tracking-widest shadow-xs">
                 OFFICIAL REPORT CARD & STATEMENT OF MARKS
@@ -166,20 +181,44 @@ export default function PrintResultModal({ result: propResult, student: propStud
               </div>
             </div>
 
+            {/* Student Overall Fee Standing Box */}
+            <div className="p-3 rounded-lg border border-indigo-950 bg-indigo-50/50 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div>
+                <span className="font-bold text-indigo-950 block text-[10px] uppercase tracking-wider">Official Fee Status & Summary</span>
+                <span className="text-slate-600 font-medium">
+                  Total Fees: <strong className="text-slate-900 font-bold">₹{totalFees.toLocaleString('en-IN')}</strong> • 
+                  Paid Fees: <strong className="text-emerald-700 font-bold">₹{paidFees.toLocaleString('en-IN')}</strong> • 
+                  Balance Due: <strong className={remainingDue > 0 ? "text-rose-700 font-bold" : "text-emerald-700 font-bold"}>₹{remainingDue.toLocaleString('en-IN')}</strong>
+                </span>
+              </div>
+              <div>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${
+                  remainingDue <= 0 && totalFees > 0 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : (remainingDue > 0 ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-slate-100 text-slate-700')
+                }`}>
+                  {remainingDue <= 0 && totalFees > 0 ? 'STATUS: FULLY PAID' : (remainingDue > 0 ? `DUE: ₹${remainingDue.toLocaleString('en-IN')}` : 'STATUS: NO DUES')}
+                </span>
+              </div>
+            </div>
+
             {/* Signatures & Stamp */}
-            <div className="flex items-end justify-between pt-8">
+            <div className="flex items-end justify-between pt-6">
               <div className="text-center space-y-1">
                 <div className="w-36 border-b border-indigo-950" />
-                <div className="text-[10px] font-bold uppercase text-slate-700">Class Teacher</div>
+                <div className="text-[10px] font-bold uppercase text-slate-700">Class Teacher's Sign</div>
               </div>
 
               <div className="p-1 border border-slate-300 rounded-md">
                 <QRCodeSVG value={`RESULT:${result.examName || 'Exam'}|STUDENT:${student?.studentId || result?.studentId}|PCT:${pct}%|GRADE:${grade}`} size={52} />
               </div>
 
-              <div className="text-center space-y-1">
+              <div className="text-center space-y-1 flex flex-col items-center">
+                {sigSrc ? (
+                  <img src={sigSrc} alt="Principal Signature" className="h-8 max-w-[120px] object-contain mb-0.5" />
+                ) : (
+                  <div className="h-8" />
+                )}
                 <div className="w-36 border-b border-indigo-950" />
-                <div className="text-[10px] font-bold uppercase text-slate-700">Principal Signature</div>
+                <div className="text-[10px] font-bold uppercase text-slate-700">Principal's Sign & Seal</div>
               </div>
             </div>
           </div>
