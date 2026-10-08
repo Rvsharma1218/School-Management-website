@@ -87,7 +87,18 @@ export default function FeesView() {
   // Filter payments by class
   const classFilteredPayments = payments.filter(p => {
     if (collectedClass === 'all') return true;
-    const student = students.find(s => s.id === p.studentId || (s.studentId && s.studentId === p.studentId));
+    let student = null;
+    if (p.studentId) {
+      student = students.find(s => s.id === p.studentId || (s.studentId && s.studentId === p.studentId));
+    }
+    if (!student && (p.admissionNumber || p.admissionNo)) {
+      const adm = String(p.admissionNumber || p.admissionNo).trim();
+      student = students.find(s => (s.admissionNumber && String(s.admissionNumber).trim() === adm) || (s.admissionNo && String(s.admissionNo).trim() === adm));
+    }
+    if (!student && p.studentName && p.studentName.trim()) {
+      const pName = p.studentName.trim().toLowerCase();
+      student = students.find(s => s.name && s.name.trim().toLowerCase() === pName);
+    }
     const cls = student ? (student.studentType === 'school' ? student.className : student.course) : (p.className || '');
     return String(cls).trim().toLowerCase() === String(collectedClass).trim().toLowerCase();
   });
@@ -135,17 +146,37 @@ export default function FeesView() {
   const studentPaymentGroups = React.useMemo(() => {
     const map = new Map();
     filteredPayments.forEach(p => {
-      const student = students.find(s =>
-        s.id === p.studentId ||
-        (s.studentId && s.studentId === p.studentId) ||
-        (s.admissionNumber && (s.admissionNumber === p.admissionNumber || s.admissionNumber === p.admissionNo)) ||
-        (s.name && p.studentName && s.name.trim().toLowerCase() === p.studentName.trim().toLowerCase())
-      );
-      const key = student ? student.id : (p.studentId || p.studentName || 'unknown');
+      // 1. Exact match by student ID (s.id or s.studentId)
+      let student = null;
+      if (p.studentId) {
+        student = students.find(s => s.id === p.studentId || (s.studentId && s.studentId === p.studentId));
+      }
+      // 2. Fallback match by admission number if no studentId match
+      if (!student && (p.admissionNumber || p.admissionNo)) {
+        const adm = String(p.admissionNumber || p.admissionNo).trim();
+        student = students.find(s => (s.admissionNumber && String(s.admissionNumber).trim() === adm) || (s.admissionNo && String(s.admissionNo).trim() === adm));
+      }
+      // 3. Fallback match by trimmed lowercase student name
+      if (!student && p.studentName && p.studentName.trim()) {
+        const pName = p.studentName.trim().toLowerCase();
+        student = students.find(s => s.name && s.name.trim().toLowerCase() === pName);
+      }
+
+      // Unique key: prefer student.id, then p.studentId, then studentName, then receiptNumber
+      const key = (student && student.id)
+        ? student.id
+        : (p.studentId || (p.studentName ? `name_${p.studentName.trim()}` : (p.receiptNumber || `rcpt_${Math.random()}`)));
+
       if (!map.has(key)) {
         map.set(key, {
           key,
-          student: student || { name: p.studentName, studentId: p.studentId, className: p.className, session: settings.currentSession },
+          student: student || {
+            id: key,
+            name: p.studentName || 'Student',
+            studentId: p.studentId || '',
+            className: p.className || '',
+            session: settings.currentSession
+          },
           payments: [],
           totalPaid: 0,
         });

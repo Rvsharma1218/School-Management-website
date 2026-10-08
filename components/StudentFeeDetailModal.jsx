@@ -194,10 +194,14 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
   const totalDueForMonth = particularValues.reduce((acc, v) => acc + v, 0);
 
   const studentMonthPayments = (payments || []).filter(p => {
-    const isStudent = p.studentId === currentStudent.id ||
-      (currentStudent.studentId && p.studentId === currentStudent.studentId) ||
-      (currentStudent.admissionNumber && (p.admissionNumber === currentStudent.admissionNumber || p.admissionNo === currentStudent.admissionNumber)) ||
-      (p.studentName && currentStudent.name && p.studentName.trim().toLowerCase() === currentStudent.name.trim().toLowerCase());
+    let isStudent = false;
+    if (p.studentId) {
+      isStudent = p.studentId === currentStudent.id || (currentStudent.studentId && p.studentId === currentStudent.studentId);
+    } else if (currentStudent.admissionNumber && (p.admissionNumber || p.admissionNo)) {
+      isStudent = p.admissionNumber === currentStudent.admissionNumber || p.admissionNo === currentStudent.admissionNumber;
+    } else if (p.studentName && currentStudent.name) {
+      isStudent = p.studentName.trim().toLowerCase() === currentStudent.name.trim().toLowerCase();
+    }
     if (!isStudent) return false;
 
     // 1. Exact monthKey match ('2026-08')
