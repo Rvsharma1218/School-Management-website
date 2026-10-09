@@ -24,6 +24,7 @@ import {
   AlertCircle,
   Download,
   FileText,
+  FileCheck,
   FileSpreadsheet,
   Share2,
   Filter
@@ -309,6 +310,7 @@ export default function StudentProfileModal({ student, onClose }) {
               { id: 'results', label: `Exam Results (${studentResults.length})`, icon: Award },
               { id: 'reports', label: 'Full Report & Statement', icon: FileText },
               { id: 'idcard', label: 'ID Card', icon: Contact },
+              { id: 'admitcard', label: 'Admit Card', icon: FileCheck },
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -972,6 +974,80 @@ export default function StudentProfileModal({ student, onClose }) {
                 <Printer className="w-4 h-4" />
                 <span>Print Official ID Card</span>
               </button>
+            </div>
+          )}
+
+          {/* TAB 7: ADMIT CARD */}
+          {activeTab === 'admitcard' && (
+            <div className="flex flex-col items-center justify-center p-4 space-y-4">
+              <div className="w-full max-w-xl bg-card border-2 border-primary/40 rounded-2xl p-5 shadow-xl text-text-primary">
+                {/* Header */}
+                <div className="text-center border-b border-border pb-3 mb-3">
+                  <h4 className="font-black text-sm uppercase text-primary tracking-wide">{settings.instituteName}</h4>
+                  <p className="text-[11px] text-text-muted">{settings.address || 'Examination Hall Ticket'}</p>
+                  <span className="inline-block mt-1 px-3 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+                    ANNUAL EXAMINATION ADMIT CARD • {settings.currentSession || '2026-27'}
+                  </span>
+                </div>
+
+                {/* Student Info Grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs bg-muted/40 p-3 rounded-xl mb-3 border border-border">
+                  <div><span className="font-semibold text-text-muted">Student Name:</span> <span className="font-bold">{student.name}</span></div>
+                  <div><span className="font-semibold text-text-muted">Roll No:</span> <span className="font-bold">{student.rollNumber || 'N/A'}</span></div>
+                  <div><span className="font-semibold text-text-muted">Class & Sec:</span> <span className="font-bold">{student.className} {student.section || ''}</span></div>
+                  <div><span className="font-semibold text-text-muted">Father's Name:</span> <span className="font-bold">{student.fatherName || 'N/A'}</span></div>
+                  <div><span className="font-semibold text-text-muted">Admission No:</span> <span className="font-mono">{student.admissionNumber || student.studentId}</span></div>
+                  <div><span className="font-semibold text-text-muted">Contact:</span> <span>{student.mobile || 'N/A'}</span></div>
+                </div>
+
+                {/* Timetable Snippet */}
+                <div className="mb-4">
+                  <h5 className="font-bold text-xs text-text-muted uppercase mb-1.5">Exam Timetable</h5>
+                  <div className="border border-border rounded-xl overflow-hidden text-xs">
+                    <table className="w-full text-left">
+                      <thead className="bg-muted text-[11px] font-bold text-text-muted border-b border-border">
+                        <tr>
+                          <th className="p-2">Subject</th>
+                          <th className="p-2">Date</th>
+                          <th className="p-2">Timing</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        <tr><td className="p-2 font-medium">Hindi</td><td className="p-2 text-text-muted">15-Oct-2026</td><td className="p-2 text-text-muted">09:00 AM - 12:00 PM</td></tr>
+                        <tr><td className="p-2 font-medium">English</td><td className="p-2 text-text-muted">17-Oct-2026</td><td className="p-2 text-text-muted">09:00 AM - 12:00 PM</td></tr>
+                        <tr><td className="p-2 font-medium">Mathematics</td><td className="p-2 text-text-muted">19-Oct-2026</td><td className="p-2 text-text-muted">09:00 AM - 12:00 PM</td></tr>
+                        <tr><td className="p-2 font-medium">Science</td><td className="p-2 text-text-muted">22-Oct-2026</td><td className="p-2 text-text-muted">09:00 AM - 12:00 PM</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Signatures */}
+                <div className="flex justify-between items-end pt-4 border-t border-dashed border-border text-[10px] text-text-muted">
+                  <div className="text-center">
+                    <div className="w-24 border-b border-border mb-1"></div>
+                    <span>Candidate Sign</span>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-24 border-b border-border mb-1"></div>
+                    <span>Class Teacher Sign</span>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-24 border-b border-border mb-1"></div>
+                    <span className="font-bold text-text-primary">Principal Sign</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print This Student Admit Card</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
