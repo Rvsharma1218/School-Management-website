@@ -140,12 +140,78 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ─── Print Optimizations ───────────────────────────────────── */
+/*  Print Optimizations & Multi-Page Fix  */
 @media print {
-  body {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 8mm 10mm 8mm;
+  }
+
+  *, *::before, *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html, body {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     background: #ffffff !important;
     color: #000000 !important;
+    font-size: 11pt !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
-  header, aside, .no-print {
+
+  /* Reset all scrolling & flex containers so browser prints ALL pages */
+  #__next, main, div, section, article {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    position: static !important;
+  }
+
+  /* Remove flex constraints on print */
+  .min-h-screen, .flex, .flex-1, .flex-col {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  /* Hide app chrome, headers, sidebars */
+  header, aside, nav, [aria-hidden="true"], .print\:hidden, .no-print {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Admit Card multi-page printing */
+  .admit-cards-container {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .admit-card-item {
+    display: block !important;
+    width: 100% !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    margin-bottom: 25mm !important;
+    border: 2px solid #0A1128 !important;
+    background: #ffffff !important;
+  }
+
+  .admit-card-item:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+    margin-bottom: 0 !important;
   }
 }

@@ -6,6 +6,7 @@ import {
   Printer, Download, Plus, Trash2, Calendar,
   GraduationCap, FileText, CheckCircle2, User, Search, Share2, Shield, QrCode
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 export default function AdmitCardView() {
   const { students, settings, showToast } = useSchoolStore();
@@ -13,6 +14,7 @@ export default function AdmitCardView() {
   const [selectedClass, setSelectedClass] = useState('all');
   const [examTitle, setExamTitle] = useState('Annual Board & Final Examination 2026-27');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // Editable Timetable
   const [timetable, setTimetable] = useState([
@@ -59,8 +61,213 @@ export default function AdmitCardView() {
     setTimetable(timetable.filter((_, i) => i !== index));
   };
 
-  const handlePrint = () => {
+  // Browser Print All with multi-page support
+  const handlePrintAll = () => {
     window.print();
+  };
+
+  // Direct jsPDF Multi-Page PDF Download for All or Single Student
+  const handleDownloadPdf = async (singleStudent = null) => {
+    const targetList = singleStudent ? [singleStudent] : filteredStudents;
+    if (targetList.length === 0) {
+      showToast('No students to export', 'error');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    showToast(`Generating official PDF for ${targetList.length} student(s)...`, 'info');
+
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const schoolName = (settings.instituteName || 'MISSION NAVODAYA PUBLIC SCHOOL').toUpperCase();
+      const session = settings.currentSession || '2026-27';
+      const address = settings.address || 'Mora Mairi, Bhagwaanpur, Siwan, Bihar';
+      const phone = settings.mobile || '';
+
+      targetList.forEach((s, index) => {
+        if (index > 0) {
+          doc.addPage();
+        }
+
+        const W = 210;
+        const M = 12;
+        const cardW = W - 2 * M;
+        const cardH = 265;
+
+        // Outer Dark Navy Border
+        doc.setDrawColor(10, 17, 40); // #0A1128
+        doc.setLineWidth(1.2);
+        doc.roundedRect(M, M, cardW, cardH, 3, 3);
+
+        // Header Background Banner
+        doc.setFillColor(10, 17, 40);
+        doc.rect(M, M, cardW, 28, 'F');
+
+        // Header Title
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(14);
+        doc.text(schoolName, W / 2, M + 10, { align: 'center' });
+
+        doc.setTextColor(255, 215, 0); // Gold
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'normal');
+        doc.text(address, W / 2, M + 17, { align: 'center' });
+
+        doc.setTextColor(200, 220, 255);
+        doc.setFontSize(8);
+        doc.text(`SESSION: ${session} | HELPLINE: ${phone}`, W / 2, M + 23, { align: 'center' });
+
+        // Official Hall Ticket Ribbon
+        doc.setFillColor(238, 242, 255);
+        doc.rect(M, M + 28, cardW, 11, 'F');
+        doc.setDrawColor(10, 17, 40);
+        doc.setLineWidth(0.4);
+        doc.line(M, M + 39, M + cardW, M + 39);
+
+        doc.setTextColor(10, 17, 40);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text(`OFFICIAL ADMIT CARD / HALL TICKET - ${examTitle.toUpperCase()}`, W / 2, M + 35, { align: 'center' });
+
+        // Student Info & Aadhaar Box
+        const infoTop = M + 44;
+        const infoH = 46;
+        doc.setFillColor(248, 249, 250);
+        doc.setDrawColor(200, 200, 210);
+        doc.roundedRect(M + 4, infoTop, cardW - 8, infoH, 2, 2, 'FD');
+
+        // Text details
+        doc.setFontSize(9);
+        doc.setTextColor(50, 50, 60);
+
+        const leftX = M + 8;
+        doc.setFont('helvetica', 'bold');
+        doc.text('Student Name:', leftX, infoTop + 8);
+        doc.setTextColor(10, 17, 40);
+        doc.text((s.name || '').toUpperCase(), leftX + 28, infoTop + 8);
+
+        doc.setTextColor(50, 50, 60);
+        doc.text('Father Name:', leftX, infoTop + 16);
+        doc.setTextColor(20, 20, 20);
+        doc.text((s.fatherName || '-').toUpperCase(), leftX + 28, infoTop + 16);
+
+        doc.setTextColor(50, 50, 60);
+        doc.text('Class & Sec:', leftX, infoTop + 24);
+        doc.setTextColor(20, 20, 20);
+        doc.text(`${s.className || ''} ${s.section ? '(' + s.section + ')' : ''}`, leftX + 28, infoTop + 24);
+
+        doc.setTextColor(50, 50, 60);
+        doc.text('Roll Number:', leftX, infoTop + 32);
+        doc.setTextColor(10, 17, 40);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(s.rollNumber || s.id || '-'), leftX + 28, infoTop + 32);
+
+        // Aadhaar ID Badge (Highlighted in Deep Blue Box)
+        const aadhaar = s.aadhaarNumber || s.aadharNumber || s.aadhaar || 'NA-NOT-LINKED';
+        doc.setFillColor(224, 231, 255);
+        doc.setDrawColor(99, 102, 241);
+        doc.roundedRect(leftX, infoTop + 36, 110, 7.5, 1.5, 1.5, 'FD');
+        doc.setTextColor(30, 27, 75);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Official Aadhaar ID: ${aadhaar}`, leftX + 3, infoTop + 41);
+
+        // Right side: Photo Frame
+        const photoX = M + cardW - 36;
+        const photoY = infoTop + 4;
+        doc.setDrawColor(180, 180, 180);
+        doc.setFillColor(255, 255, 255);
+        doc.rect(photoX, photoY, 28, 36, 'FD');
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        doc.text('AFFIX PHOTO', photoX + 14, photoY + 18, { align: 'center' });
+
+        // Timetable Section
+        const tableTop = infoTop + infoH + 8;
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(10, 17, 40);
+        doc.text('EXAMINATION TIMETABLE & VERIFICATION SCHEDULE', M + 4, tableTop);
+
+        // Table Header
+        const thY = tableTop + 4;
+        doc.setFillColor(10, 17, 40);
+        doc.rect(M + 4, thY, cardW - 8, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.text('Date', M + 8, thY + 5.5);
+        doc.text('Subject', M + 45, thY + 5.5);
+        doc.text('Exam Timing', M + 105, thY + 5.5);
+        doc.text('Invigilator Sign', M + 155, thY + 5.5);
+
+        // Table Rows
+        let rowY = thY + 8;
+        timetable.forEach((t, i) => {
+          doc.setFillColor(i % 2 === 0 ? 255 : 248, i % 2 === 0 ? 255 : 249, i % 2 === 0 ? 255 : 252);
+          doc.rect(M + 4, rowY, cardW - 8, 7, 'F');
+          doc.setDrawColor(220, 220, 230);
+          doc.line(M + 4, rowY + 7, M + cardW - 4, rowY + 7);
+
+          doc.setTextColor(40, 40, 40);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7.5);
+          doc.text(t.date || '', M + 8, rowY + 5);
+          doc.setFont('helvetica', 'bold');
+          doc.text(t.subject || '', M + 45, rowY + 5);
+          doc.setFont('helvetica', 'normal');
+          doc.text(t.time || '', M + 105, rowY + 5);
+          doc.setTextColor(180, 180, 180);
+          doc.text('___________________', M + 150, rowY + 5);
+
+          rowY += 7;
+        });
+
+        // Instructions
+        const instY = rowY + 8;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(10, 17, 40);
+        doc.text('CANDIDATE INSTRUCTIONS:', M + 4, instY);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(80, 80, 90);
+        doc.text('1. Candidates must carry this physical Admit Card along with valid Aadhaar identification to all exams.', M + 4, instY + 5);
+        doc.text('2. Entry to the examination hall closes exactly 15 minutes prior to the scheduled exam commencement.', M + 4, instY + 9.5);
+        doc.text('3. Mobile phones, smart watches, bags and study materials are strictly prohibited inside examination room.', M + 4, instY + 14);
+
+        // Bold Signature Section with High Contrast Plaque
+        const sigY = cardH - 14;
+        doc.setDrawColor(10, 17, 40);
+        doc.setLineWidth(0.8);
+        doc.line(M + 12, sigY, M + 65, sigY);
+        doc.line(M + cardW - 65, sigY, M + cardW - 12, sigY);
+
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(10, 17, 40); // Deep Dark Navy for maximum clarity
+        doc.text('Class Teacher Signature', M + 38, sigY + 5, { align: 'center' });
+        doc.text('Authorized Principal Signature', M + cardW - 38, sigY + 5, { align: 'center' });
+      });
+
+      const filename = singleStudent
+        ? `Admit_Card_${(singleStudent.name || 'Student').replace(/\s+/g, '_')}_${singleStudent.className || 'Class'}.pdf`
+        : `All_Admit_Cards_${selectedClass}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+      doc.save(filename);
+      showToast(`Admit card PDF downloaded successfully! (${targetList.length} cards)`, 'success');
+    } catch (err) {
+      console.error('PDF error:', err);
+      showToast('Error generating PDF document', 'error');
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const handleShare = async () => {
@@ -94,7 +301,7 @@ export default function AdmitCardView() {
             Admit Card & Hall Ticket Studio
           </h1>
           <p className="text-xs text-text-secondary mt-1">
-            Generate official Admit Cards with Aadhaar ID, QR Code verification, and bulk PDF printing.
+            Official Admit Cards with Aadhaar ID, QR Code verification, and full multi-page PDF export.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -106,12 +313,20 @@ export default function AdmitCardView() {
             <span>Share</span>
           </button>
           <button
-            onClick={handlePrint}
+            onClick={() => handleDownloadPdf()}
+            disabled={filteredStudents.length === 0 || isExportingPdf}
+            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
+          >
+            <Download className="w-4 h-4" />
+            <span>{isExportingPdf ? 'Exporting...' : `Save All as PDF (${filteredStudents.length})`}</span>
+          </button>
+          <button
+            onClick={handlePrintAll}
             disabled={filteredStudents.length === 0}
             className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
           >
             <Printer className="w-4 h-4" />
-            <span>Print / Save PDF ({filteredStudents.length})</span>
+            <span>Print All ({filteredStudents.length})</span>
           </button>
         </div>
       </div>
@@ -154,7 +369,7 @@ export default function AdmitCardView() {
           </div>
 
           <div>
-            <label className="text-[11px] font-bold text-text-secondary uppercase">Exam Title</label>
+            <label className="text-[11px] font-bold text-text-secondary uppercase">Exam Title (Editable)</label>
             <input
               type="text"
               value={examTitle}
@@ -259,7 +474,7 @@ export default function AdmitCardView() {
             Previewing Admit Cards ({filteredStudents.length} Students)
           </h2>
           <span className="text-xs text-text-secondary">
-            Aadhaar ID & QR Verification Included
+            Aadhaar ID & QR Verification Included  Each student card prints on full page
           </span>
         </div>
 
@@ -268,7 +483,7 @@ export default function AdmitCardView() {
             No students found matching the selected class/search filter.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-1 print:gap-10">
+          <div className="admit-cards-container grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-1 print:gap-0">
             {filteredStudents.map((s) => {
               const aadhaar = s.aadhaarNumber || s.aadharNumber || s.aadhaar || 'NA-NOT-LINKED';
               const qrData = encodeURIComponent(`STUDENT ADMIT CARD | Name: ${s.name} | Roll: ${s.rollNumber || s.id} | Class: ${s.className} | Aadhaar: ${aadhaar} | Session: ${settings.currentSession || '2026-27'}`);
@@ -277,8 +492,22 @@ export default function AdmitCardView() {
               return (
                 <div
                   key={s.id}
-                  className="bg-white border-2 border-indigo-950 rounded-xl p-5 shadow-sm print:shadow-none print:break-after-page text-black font-sans relative"
+                  className="admit-card-item bg-white border-2 border-indigo-950 rounded-xl p-5 shadow-sm print:shadow-none print:break-after-page text-black font-sans relative"
                 >
+                  {/* Individual Action Bar (Hidden on Print) */}
+                  <div className="print:hidden flex items-center justify-between pb-3 mb-3 border-b border-gray-200">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase">Roll: {s.rollNumber || s.id}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDownloadPdf(s)}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1 transition-all"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Download Single PDF</span>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Header */}
                   <div className="flex items-center gap-3 border-b-2 border-indigo-950 pb-3">
                     {settings.logoUrl || settings.logoPath || settings.logo ? (
@@ -296,7 +525,7 @@ export default function AdmitCardView() {
                       <h2 className="font-black text-base uppercase text-indigo-950 leading-tight">
                         {settings.instituteName || 'Mission Navodaya Public School'}
                       </h2>
-                      <p className="text-[10px] text-gray-700 font-semibold">{settings.address || 'School Campus'}</p>
+                      <p className="text-[10px] text-gray-700 font-semibold">{settings.address || 'Mora Mairi, Bhagwaanpur, Siwan, Bihar'}</p>
                       <p className="text-[10px] text-indigo-900 font-black">
                         Session: {settings.currentSession || '2026-27'} | Mobile: {settings.mobile || ''}
                       </p>
@@ -386,24 +615,24 @@ export default function AdmitCardView() {
                     <p>3. Electronic gadgets and unauthorized materials are strictly forbidden inside the hall.</p>
                   </div>
 
-                  {/* Signatures */}
-                  <div className="flex justify-between items-end border-t border-gray-400 pt-3 mt-4 text-[10px] font-bold">
+                  {/* Signatures with Bold Deep Dark Navy Highlight */}
+                  <div className="flex justify-between items-end border-t-2 border-indigo-950 pt-3 mt-4 text-[10px] font-black text-indigo-950">
                     <div className="text-center">
-                      <div className="w-28 border-b border-gray-400 mb-1" />
-                      <span>Class Teacher Sign</span>
+                      <div className="w-32 border-b-2 border-indigo-950 mb-1" />
+                      <span className="uppercase tracking-wider">Class Teacher Sign</span>
                     </div>
                     <div className="text-center flex flex-col items-center">
                       {settings.principalSignature || settings.signatureUrl ? (
                         <img
                           src={settings.principalSignature || settings.signatureUrl}
                           alt="Signature"
-                          className="h-8 object-contain mb-1"
+                          className="h-9 object-contain mb-1 filter drop-shadow-sm"
                         />
                       ) : (
-                        <div className="h-8" />
+                        <div className="h-9" />
                       )}
-                      <div className="w-28 border-b border-gray-400 mb-1" />
-                      <span>Principal Signature</span>
+                      <div className="w-36 border-b-2 border-indigo-950 mb-1" />
+                      <span className="uppercase tracking-wider">Authorized Principal Sign</span>
                     </div>
                   </div>
                 </div>
