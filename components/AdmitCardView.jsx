@@ -263,6 +263,7 @@ export default function AdmitCardView() {
                     <p><span className="font-bold text-gray-600">Father's Name:</span> {s.fatherName || '-'}</p>
                     <p><span className="font-bold text-gray-600">Class & Section:</span> <strong>{s.className} {s.section || ''}</strong></p>
                     <p><span className="font-bold text-gray-600">Roll No:</span> <strong>{s.rollNumber || s.id}</strong> | <span className="font-bold text-gray-600">Admission No:</span> {s.admissionNumber || s.id}</p>
+                    <p><span className="font-bold text-gray-600">Aadhaar Card No:</span> <strong className="text-indigo-950 font-bold">{s.aadhaarNumber || s.aadharNumber || s.aadhaar || 'N/A'}</strong></p>
                   </div>
                   <div className="w-20 h-24 border border-gray-400 bg-white flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase text-center overflow-hidden">
                     {s.photoUrl || s.photoPath ? (

@@ -998,6 +998,7 @@ export default function StudentProfileModal({ student, onClose }) {
                   <div><span className="font-semibold text-text-muted">Father's Name:</span> <span className="font-bold">{student.fatherName || 'N/A'}</span></div>
                   <div><span className="font-semibold text-text-muted">Admission No:</span> <span className="font-mono">{student.admissionNumber || student.studentId}</span></div>
                   <div><span className="font-semibold text-text-muted">Contact:</span> <span>{student.mobile || 'N/A'}</span></div>
+                  <div><span className="font-semibold text-text-muted">Aadhaar No:</span> <span className="font-bold text-primary">{student.aadhaarNumber || student.aadharNumber || student.aadhaar || 'N/A'}</span></div>
                 </div>
 
                 {/* Timetable Snippet */}
