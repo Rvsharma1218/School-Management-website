@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏫 School Management & Institution OS (Web Portal)
 
-## Getting Started
+> **Live Website URL:** [https://school-management-website-coral.vercel.app](https://school-management-website-coral.vercel.app)
 
-First, run the development server:
+A modern, institutional School ERP and SaaS Management Web Platform built with **Next.js 16**, **React 19**, **Tailwind CSS**, and **Firebase**.
+
+---
+
+## 🚀 Live Demo & Access
+
+Open the live deployed application on Vercel:
+👉 **[https://school-management-website-coral.vercel.app](https://school-management-website-coral.vercel.app)**
+
+### Quick 1-Click Demo Login
+On the Sign In page, use the **Instant 1-Click Demo Login** buttons:
+* **Principal (Admin):** Complete administrative controls, fees, faculty, student directory, notices, admit card studio, and reports.
+* **Class Teacher:** Dedicated attendance register, marks entry, and student profiles.
+
+---
+
+## ✨ Features & Modules
+
+1. **Admit Card & Hall Ticket Studio (`/admitcards`):**
+   * Student **Aadhaar Card No (Official ID)** print on all cards.
+   * Scannable **QR Code** verification with student details.
+   * Class schedule timetable table.
+   * Single Student search by Name, Roll No, or Aadhaar.
+   * Full Class Booklet bulk PDF print & Share.
+
+2. **Routine & Timetable Studio (`/timetable`):**
+   * Class-wise schedules saved per class.
+   * Real generation date/time stamped on booklets.
+   * Print and Share options.
+
+3. **Classes & Sections Management (`/classes`):**
+   * Student demographics (Boys, Girls, Total).
+   * 1-Click **Take Attendance** link that directly filters Daily Attendance to that class.
+
+4. **Student ID Cards Studio (`/idcards`):**
+   * Dual-sided (Front + Back) gold accent layout.
+   * Scannable QR code and Aadhaar identification.
+   * Bulk print and individual PDF cards.
+
+5. **Faculty Management & Payroll (`/teachers`):**
+   * Teacher base salary and class allocation.
+   * **Salary History Register** popup with payment records and individual Payslip download/print.
+
+6. **Institutional Reports Hub (`/reports`):**
+   * Student Master Database with Excel Import/Export.
+   * Staff Payroll & Teacher Salary Register.
+   * Weekly School Routine & Timetables report.
+   * Date-range attendance analytics.
+
+---
+
+## 🛠 Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
