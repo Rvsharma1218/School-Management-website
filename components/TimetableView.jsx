@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSchoolStore } from '../lib/store';
 import {
-  Calendar, Clock, Plus, Trash2, Printer, Download, BookOpen, User, Building, CheckCircle2, Share2, Save
+  Calendar, Clock, Plus, Trash2, Printer, Download, BookOpen, User, Building, CheckCircle2, Share2, Save, Sparkles
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import { getImageDataUrl } from '../lib/exportUtils';
 
 const defaultClassSchedule = {
   Monday: [
@@ -13,27 +15,37 @@ const defaultClassSchedule = {
     { id: 3, period: 3, time: '10:45 AM - 11:30 AM', subject: 'Mathematics', teacher: 'Vikram Sir', room: '101' },
     { id: 4, period: 4, time: '11:30 AM - 12:15 PM', subject: 'Science', teacher: 'Anjali Ma\'am', room: '101' },
     { id: 5, period: 5, time: '12:45 PM - 01:30 PM', subject: 'Social Studies', teacher: 'Sanjay Sir', room: '101' },
+    { id: 6, period: 6, time: '01:30 PM - 02:15 PM', subject: 'Computer', teacher: 'Amit Sir', room: 'Lab 1' },
   ],
   Tuesday: [
-    { id: 6, period: 1, time: '09:00 AM - 09:45 AM', subject: 'Mathematics', teacher: 'Vikram Sir', room: '101' },
-    { id: 7, period: 2, time: '09:45 AM - 10:30 AM', subject: 'Science', teacher: 'Anjali Ma\'am', room: '101' },
-    { id: 8, period: 3, time: '10:45 AM - 11:30 AM', subject: 'Hindi', teacher: 'Ramesh Sir', room: '101' },
+    { id: 7, period: 1, time: '09:00 AM - 09:45 AM', subject: 'Mathematics', teacher: 'Vikram Sir', room: '101' },
+    { id: 8, period: 2, time: '09:45 AM - 10:30 AM', subject: 'Science', teacher: 'Anjali Ma\'am', room: '101' },
+    { id: 9, period: 3, time: '10:45 AM - 11:30 AM', subject: 'Hindi', teacher: 'Ramesh Sir', room: '101' },
+    { id: 10, period: 4, time: '11:30 AM - 12:15 PM', subject: 'English', teacher: 'Pooja Ma\'am', room: '101' },
+    { id: 11, period: 5, time: '12:45 PM - 01:30 PM', subject: 'Drawing & Art', teacher: 'Sunita Ma\'am', room: 'Art Room' },
   ],
   Wednesday: [
-    { id: 9, period: 1, time: '09:00 AM - 09:45 AM', subject: 'English', teacher: 'Pooja Ma\'am', room: '101' },
-    { id: 10, period: 2, time: '09:45 AM - 10:30 AM', subject: 'Computer Lab', teacher: 'Amit Sir', room: 'Lab 1' },
+    { id: 12, period: 1, time: '09:00 AM - 09:45 AM', subject: 'English', teacher: 'Pooja Ma\'am', room: '101' },
+    { id: 13, period: 2, time: '09:45 AM - 10:30 AM', subject: 'Computer Lab', teacher: 'Amit Sir', room: 'Lab 1' },
+    { id: 14, period: 3, time: '10:45 AM - 11:30 AM', subject: 'Mathematics', teacher: 'Vikram Sir', room: '101' },
+    { id: 15, period: 4, time: '11:30 AM - 12:15 PM', subject: 'Science', teacher: 'Anjali Ma\'am', room: '101' },
   ],
   Thursday: [
-    { id: 11, period: 1, time: '09:00 AM - 09:45 AM', subject: 'Science', teacher: 'Anjali Ma\'am', room: '101' },
-    { id: 12, period: 2, time: '09:45 AM - 10:30 AM', subject: 'Maths', teacher: 'Vikram Sir', room: '101' },
+    { id: 16, period: 1, time: '09:00 AM - 09:45 AM', subject: 'Science', teacher: 'Anjali Ma\'am', room: '101' },
+    { id: 17, period: 2, time: '09:45 AM - 10:30 AM', subject: 'Maths', teacher: 'Vikram Sir', room: '101' },
+    { id: 18, period: 3, time: '10:45 AM - 11:30 AM', subject: 'Social Studies', teacher: 'Sanjay Sir', room: '101' },
+    { id: 19, period: 4, time: '11:30 AM - 12:15 PM', subject: 'Hindi', teacher: 'Ramesh Sir', room: '101' },
   ],
   Friday: [
-    { id: 13, period: 1, time: '09:00 AM - 09:45 AM', subject: 'Social Studies', teacher: 'Sanjay Sir', room: '101' },
-    { id: 14, period: 2, time: '09:45 AM - 10:30 AM', subject: 'Drawing & Art', teacher: 'Sunita Ma\'am', room: 'Art Room' },
+    { id: 20, period: 1, time: '09:00 AM - 09:45 AM', subject: 'Social Studies', teacher: 'Sanjay Sir', room: '101' },
+    { id: 21, period: 2, time: '09:45 AM - 10:30 AM', subject: 'Drawing & Art', teacher: 'Sunita Ma\'am', room: 'Art Room' },
+    { id: 22, period: 3, time: '10:45 AM - 11:30 AM', subject: 'Mathematics', teacher: 'Vikram Sir', room: '101' },
+    { id: 23, period: 4, time: '11:30 AM - 12:15 PM', subject: 'English', teacher: 'Pooja Ma\'am', room: '101' },
   ],
   Saturday: [
-    { id: 15, period: 1, time: '09:00 AM - 09:45 AM', subject: 'Physical Education', teacher: 'Rana Sir', room: 'Playground' },
-    { id: 16, period: 2, time: '09:45 AM - 10:30 AM', subject: 'Moral Science', teacher: 'Principal Ma\'am', room: '101' },
+    { id: 24, period: 1, time: '09:00 AM - 09:45 AM', subject: 'Physical Education', teacher: 'Rana Sir', room: 'Playground' },
+    { id: 25, period: 2, time: '09:45 AM - 10:30 AM', subject: 'Moral Science', teacher: 'Principal Ma\'am', room: '101' },
+    { id: 26, period: 3, time: '10:45 AM - 11:30 AM', subject: 'General Knowledge', teacher: 'Pooja Ma\'am', room: '101' },
   ],
 };
 
@@ -54,67 +66,254 @@ export default function TimetableView() {
   const [newTime, setNewTime] = useState('09:00 AM - 09:45 AM');
   const [newRoom, setNewRoom] = useState('101');
   const [currentTimeStr, setCurrentTimeStr] = useState('');
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
-  // Load schedule for selected class from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(`school_timetable_${selectedClass}`);
-      if (stored) {
-        setTimetable(JSON.parse(stored));
+      const saved = localStorage.getItem(`timetable_${selectedClass}`);
+      if (saved) {
+        setTimetable(JSON.parse(saved));
       } else {
         setTimetable(defaultClassSchedule);
       }
     } catch (e) {
       setTimetable(defaultClassSchedule);
     }
-    setCurrentTimeStr(new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }));
+    setCurrentTimeStr(new Date().toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }));
   }, [selectedClass]);
 
-  const handleSaveCurrentClass = (updatedData) => {
-    const dataToSave = updatedData || timetable;
-    setTimetable(dataToSave);
+  const saveTimetable = (updated) => {
+    setTimetable(updated);
     try {
-      localStorage.setItem(`school_timetable_${selectedClass}`, JSON.stringify(dataToSave));
-      showToast(`Timetable for Class ${selectedClass} saved!`, 'success');
-    } catch (e) {
-      showToast('Error saving timetable', 'error');
-    }
+      localStorage.setItem(`timetable_${selectedClass}`, JSON.stringify(updated));
+    } catch (e) { }
   };
 
   const handleAddPeriod = (e) => {
     e.preventDefault();
     if (!newSubject.trim()) {
-      showToast('Subject name is required', 'error');
+      showToast('Please enter subject name', 'error');
       return;
     }
+
     const currentList = timetable[activeDay] || [];
-    const newEntry = {
+    const newPeriod = {
       id: Date.now(),
       period: currentList.length + 1,
-      time: newTime.trim(),
+      time: newTime.trim() || '09:00 AM - 09:45 AM',
       subject: newSubject.trim(),
-      teacher: newTeacher.trim() || 'Staff Faculty',
-      room: newRoom.trim() || '101'
+      teacher: newTeacher.trim() || 'Faculty',
+      room: newRoom.trim() || '101',
     };
-    const updated = { ...timetable, [activeDay]: [...currentList, newEntry] };
-    handleSaveCurrentClass(updated);
+
+    const updated = {
+      ...timetable,
+      [activeDay]: [...currentList, newPeriod]
+    };
+
+    saveTimetable(updated);
     setNewSubject('');
     setNewTeacher('');
     setIsAdding(false);
+    showToast(`Period added to ${activeDay} successfully!`, 'success');
   };
 
   const handleDeletePeriod = (id) => {
     const currentList = timetable[activeDay] || [];
     const updated = {
       ...timetable,
-      [activeDay]: currentList.filter(item => item.id !== id)
+      [activeDay]: currentList.filter(p => p.id !== id).map((p, idx) => ({ ...p, period: idx + 1 }))
     };
-    handleSaveCurrentClass(updated);
+    saveTimetable(updated);
     showToast('Period removed', 'info');
   };
 
-  const handlePrint = () => {
-    window.print();
+  // Dedicated jsPDF Routine Document Generator with School Logo & Principal Signature
+  const handleDownloadPdf = async () => {
+    setIsExportingPdf(true);
+    showToast(`Generating official timetable PDF for Class ${selectedClass}...`, 'info');
+
+    try {
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const schoolName = (settings.instituteName || settings.schoolName || 'MISSION NAVODAYA PUBLIC SCHOOL').toUpperCase();
+      const session = settings.currentSession || settings.academicYear || '2026-27';
+      const address = settings.address || 'Mora Mairi, BagwaanPur hat ,Siwan,Bihar 841507';
+      const phone = settings.mobile || settings.phone || '8568643490';
+
+      const logoData = await getImageDataUrl(settings.logoUrl || settings.logoPath || settings.logo);
+      const sigData = await getImageDataUrl(settings.principalSignature || settings.signatureUrl || settings.signature);
+
+      const W = 297;
+      const H = 210;
+      const M = 12;
+
+      // Header Banner
+      doc.setFillColor(30, 58, 138); // #1E3A8A
+      doc.roundedRect(M, M, W - 2 * M, 24, 3, 3, 'F');
+
+      if (logoData) {
+        try {
+          doc.setFillColor(255, 255, 255);
+          doc.roundedRect(M + 3, M + 3, 18, 18, 2, 2, 'F');
+          doc.addImage(logoData, 'PNG', M + 4, M + 4, 16, 16);
+        } catch (e) { }
+      }
+
+      const textX = logoData ? M + 25 : M + 8;
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(schoolName, textX, M + 10);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.text(`${address} | Helpline: ${phone}`, textX, M + 17);
+
+      // Right Side Header Badge
+      doc.setTextColor(255, 215, 0); // Gold
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text(`CLASS: ${selectedClass.toUpperCase()}`, W - M - 6, M + 10, { align: 'right' });
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8.5);
+      doc.text(`Academic Session: ${session}`, W - M - 6, M + 17, { align: 'right' });
+
+      // Title
+      const titleY = M + 32;
+      doc.setTextColor(30, 58, 138);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text(`WEEKLY ACADEMIC ROUTINE & PERIOD SCHEDULE - CLASS ${selectedClass.toUpperCase()}`, M + 2, titleY);
+
+      // Timetable Matrix (Table)
+      const tableTop = titleY + 4;
+      const tableW = W - 2 * M;
+      const dayColW = 32;
+      const numPeriods = 6;
+      const periodColW = (tableW - dayColW) / numPeriods;
+
+      // Header Row (Periods)
+      doc.setFillColor(243, 244, 246);
+      doc.rect(M, tableTop, tableW, 10, 'F');
+      doc.setDrawColor(209, 213, 219);
+      doc.rect(M, tableTop, tableW, 10);
+
+      doc.setTextColor(17, 24, 39);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.text('DAY', M + dayColW / 2, tableTop + 6.5, { align: 'center' });
+
+      const periodTimes = [
+        '09:00-09:45', '09:45-10:30', '10:45-11:30',
+        '11:30-12:15', '12:45-01:30', '01:30-02:15'
+      ];
+
+      for (let p = 1; p <= numPeriods; p++) {
+        const pX = M + dayColW + (p - 1) * periodColW;
+        doc.line(pX, tableTop, pX, tableTop + 10);
+        doc.text(`PERIOD ${p}`, pX + periodColW / 2, tableTop + 5, { align: 'center' });
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(75, 85, 99);
+        doc.text(periodTimes[p - 1] || '', pX + periodColW / 2, tableTop + 8.5, { align: 'center' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(17, 24, 39);
+      }
+
+      // Day Rows
+      let rowY = tableTop + 10;
+      const rowH = 17;
+
+      days.forEach((day, dIdx) => {
+        doc.setFillColor(dIdx % 2 === 0 ? 255 : 249, dIdx % 2 === 0 ? 255 : 250, dIdx % 2 === 0 ? 255 : 251);
+        doc.rect(M, rowY, tableW, rowH, 'F');
+        doc.setDrawColor(229, 231, 235);
+        doc.rect(M, rowY, tableW, rowH);
+
+        // Day Name Cell
+        doc.setFillColor(243, 244, 246);
+        doc.rect(M, rowY, dayColW, rowH, 'F');
+        doc.setDrawColor(209, 213, 219);
+        doc.line(M + dayColW, rowY, M + dayColW, rowY + rowH);
+
+        doc.setTextColor(30, 58, 138);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.text(day.toUpperCase(), M + dayColW / 2, rowY + rowH / 2 + 1.5, { align: 'center' });
+
+        // Period Cells
+        const dayPeriods = timetable[day] || [];
+        for (let p = 1; p <= numPeriods; p++) {
+          const pX = M + dayColW + (p - 1) * periodColW;
+          doc.line(pX, rowY, pX, rowY + rowH);
+
+          const matched = dayPeriods.find(item => item.period === p);
+          if (matched) {
+            doc.setTextColor(17, 24, 39);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9.5);
+            doc.text(matched.subject || '', pX + periodColW / 2, rowY + 6, { align: 'center' });
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(55, 65, 81);
+            doc.text(matched.teacher || '', pX + periodColW / 2, rowY + 11, { align: 'center' });
+
+            doc.setTextColor(107, 114, 128);
+            doc.setFontSize(7);
+            doc.text(matched.room ? `Room ${matched.room}` : (matched.time || ''), pX + periodColW / 2, rowY + 15, { align: 'center' });
+          } else {
+            doc.setTextColor(180, 180, 180);
+            doc.text('-', pX + periodColW / 2, rowY + rowH / 2, { align: 'center' });
+          }
+        }
+
+        rowY += rowH;
+      });
+
+      // Footer Signatures
+      const footerY = H - 18;
+      doc.setDrawColor(156, 163, 175);
+      doc.setLineWidth(0.8);
+      doc.line(M + 10, footerY, M + 70, footerY);
+      doc.setTextColor(55, 65, 81);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Class Teacher Signature', M + 40, footerY + 5, { align: 'center' });
+
+      // Right: Principal Signature
+      const rightSigX = W - M - 75;
+      if (sigData) {
+        try {
+          doc.addImage(sigData, 'PNG', rightSigX + 12, footerY - 14, 38, 12);
+        } catch (e) { }
+      }
+      doc.setDrawColor(30, 58, 138);
+      doc.setLineWidth(1.0);
+      doc.line(rightSigX, footerY, rightSigX + 65, footerY);
+
+      doc.setTextColor(30, 58, 138);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Principal Signature & Seal', rightSigX + 32, footerY + 5, { align: 'center' });
+
+      doc.save(`Class_${selectedClass}_Routine_Timetable.pdf`);
+      showToast(`Timetable PDF downloaded successfully for Class ${selectedClass}!`, 'success');
+    } catch (err) {
+      console.error('Timetable PDF error:', err);
+      showToast('Error generating timetable PDF', 'error');
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const handleShare = async () => {
@@ -122,7 +321,7 @@ export default function TimetableView() {
       try {
         await navigator.share({
           title: `Class ${selectedClass} Timetable - ${settings.instituteName || 'School'}`,
-          text: `Official Routine & Weekly Timetable for Class ${selectedClass}. Generated on ${currentTimeStr}`,
+          text: `Official Routine & Weekly Timetable for Class ${selectedClass}.`,
           url: window.location.href,
         });
       } catch (e) { }
@@ -134,21 +333,21 @@ export default function TimetableView() {
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
-      {/* Top Controls (Hidden on Print) */}
+      {/* Top Controls */}
       <div className="print:hidden flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-border shadow-xs">
         <div>
           <h1 className="text-xl font-black text-text flex items-center gap-2">
             <Calendar className="w-6 h-6 text-primary" />
-            Class Routine & Weekly Timetable
+            Class Routine & Weekly Timetable Studio
           </h1>
           <p className="text-xs text-text-secondary mt-1">
-            Configure periods, assign subject teachers, and export class schedules.
+            Complete routine management with period timings, faculty allocation, and high-res PDF generation.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-surface2 px-3 py-1.5 rounded-xl border border-border">
-            <span className="text-xs font-bold text-text-secondary">Class:</span>
+          <div className="flex items-center gap-2 bg-surface2 px-3.5 py-2 rounded-xl border border-border">
+            <span className="text-xs font-bold text-text-secondary uppercase">Class:</span>
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
@@ -162,23 +361,24 @@ export default function TimetableView() {
 
           <button
             onClick={handleShare}
-            className="px-4 py-2 rounded-xl bg-surface2 hover:bg-surface2/80 text-text font-bold text-xs border border-border transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+            className="px-4 py-2.5 rounded-xl bg-surface2 hover:bg-surface2/80 text-text font-bold text-xs border border-border transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
             <Share2 className="w-4 h-4 text-primary" />
             <span>Share</span>
           </button>
 
           <button
-            onClick={handlePrint}
-            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+            onClick={handleDownloadPdf}
+            disabled={isExportingPdf}
+            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
           >
-            <Printer className="w-4 h-4" />
-            <span>Print Routine (PDF)</span>
+            <Download className="w-4 h-4" />
+            <span>{isExportingPdf ? 'Exporting...' : 'Export Timetable PDF'}</span>
           </button>
         </div>
       </div>
 
-      {/* Weekday Switcher (Hidden on Print) */}
+      {/* Weekday Switcher */}
       <div className="print:hidden flex items-center gap-2 overflow-x-auto pb-1">
         {days.map(day => {
           const isActive = activeDay === day;
@@ -194,81 +394,86 @@ export default function TimetableView() {
               }`}
             >
               <span>{day}</span>
-              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${isActive ? 'bg-white/20 text-white' : 'bg-surface2 text-text-secondary'}`}>
-                {count}
+              <span className={`px-2 py-0.5 rounded-md text-[10px] font-black ${isActive ? 'bg-white/20 text-white' : 'bg-surface2 text-text-secondary'}`}>
+                {count} Periods
               </span>
             </button>
           );
         })}
       </div>
 
-      {/* Routine Table Container (Printable) */}
+      {/* Routine Cards Grid (Matching Modern App Layout) */}
       <div className="bg-white border-2 border-indigo-950/20 rounded-2xl p-6 shadow-sm text-black">
-        {/* Printable Official Header */}
-        <div className="border-b-2 border-indigo-950 pb-4 mb-4 flex items-center justify-between">
+        {/* Header inside container */}
+        <div className="border-b-2 border-indigo-950 pb-4 mb-5 flex items-center justify-between">
           <div>
             <h2 className="font-black text-lg uppercase text-indigo-950">
               {settings.instituteName || 'Mission Navodaya Public School'}
             </h2>
-            <p className="text-xs text-gray-700 font-semibold">
-              Weekly Academic Schedule & Timetable - <strong>Class {selectedClass}</strong>
+            <p className="text-xs text-gray-700 font-semibold mt-0.5">
+              Weekly Routine Schedule  <strong>Class {selectedClass} ({activeDay})</strong>
             </p>
           </div>
           <div className="text-right">
-            <span className="inline-block px-3 py-1 bg-indigo-50 border border-indigo-200 rounded-md text-xs font-bold text-indigo-950 uppercase">
-              Day: {activeDay}
+            <span className="inline-block px-3.5 py-1.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs font-black text-indigo-950 uppercase tracking-wide">
+              {activeDay} Schedule ({ (timetable[activeDay] || []).length } Periods)
             </span>
-            <p className="text-[10px] text-gray-500 mt-1 font-mono">
-              Generated: {currentTimeStr}
-            </p>
           </div>
         </div>
 
-        {/* Periods List */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border border-gray-300 border-collapse">
-            <thead className="bg-indigo-950 text-white">
-              <tr>
-                <th className="p-2.5 border border-indigo-950">Period</th>
-                <th className="p-2.5 border border-indigo-950">Timing</th>
-                <th className="p-2.5 border border-indigo-950">Subject</th>
-                <th className="p-2.5 border border-indigo-950">Faculty / Teacher</th>
-                <th className="p-2.5 border border-indigo-950">Room</th>
-                <th className="p-2.5 border border-indigo-950 text-right print:hidden">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {(!timetable[activeDay] || timetable[activeDay].length === 0) ? (
-                <tr>
-                  <td colSpan={6} className="p-6 text-center text-gray-500">
-                    No periods scheduled for {activeDay} in Class {selectedClass}. Click "+ Add Period" to add.
-                  </td>
-                </tr>
-              ) : (
-                timetable[activeDay].map((p, idx) => (
-                  <tr key={p.id || idx} className="hover:bg-gray-50">
-                    <td className="p-2.5 border border-gray-300 font-bold text-indigo-950">Period {p.period || idx + 1}</td>
-                    <td className="p-2.5 border border-gray-300 font-semibold">{p.time}</td>
-                    <td className="p-2.5 border border-gray-300 font-black text-indigo-900">{p.subject}</td>
-                    <td className="p-2.5 border border-gray-300 font-semibold">{p.teacher}</td>
-                    <td className="p-2.5 border border-gray-300">{p.room}</td>
-                    <td className="p-2.5 border border-gray-300 text-right print:hidden">
+        {/* Modern Period Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          {(!timetable[activeDay] || timetable[activeDay].length === 0) ? (
+            <div className="col-span-full p-8 text-center bg-gray-50 rounded-xl border border-gray-200 text-gray-500 text-sm">
+              No periods scheduled for {activeDay} in Class {selectedClass}. Click "+ Add Period to {activeDay}" below.
+            </div>
+          ) : (
+            timetable[activeDay].map((p, idx) => (
+              <div
+                key={p.id || idx}
+                className="bg-white rounded-xl border-2 border-indigo-100 hover:border-indigo-300 p-4 shadow-2xs hover:shadow-sm transition-all relative group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="px-2.5 py-1 rounded-md bg-indigo-950 text-white text-[11px] font-black uppercase tracking-wider">
+                      Period {p.period || idx + 1}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-900 text-[11px] font-bold border border-indigo-200 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-indigo-600" />
+                        <span>{p.time}</span>
+                      </span>
                       <button
                         onClick={() => handleDeletePeriod(p.id)}
-                        className="text-rose-500 hover:text-rose-700 p-1 cursor-pointer"
-                        title="Delete period"
+                        className="text-rose-400 hover:text-rose-600 p-1 cursor-pointer transition-colors"
+                        title="Remove Period"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+
+                  <h3 className="text-base font-black text-indigo-950 mb-2">
+                    {p.subject}
+                  </h3>
+                </div>
+
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-600">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <User className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>{p.teacher}</span>
+                  </div>
+                  <div className="flex items-center gap-1 font-semibold text-gray-500">
+                    <Building className="w-3.5 h-3.5" />
+                    <span>Room {p.room || '101'}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
-        {/* Add Period Form (Hidden on Print) */}
+        {/* Add Period Form */}
         <div className="mt-4 print:hidden">
           {isAdding ? (
             <form onSubmit={handleAddPeriod} className="p-4 bg-surface2 rounded-xl border border-border space-y-3">
@@ -332,9 +537,11 @@ export default function TimetableView() {
         </div>
 
         {/* Printable Footer */}
-        <div className="mt-8 pt-4 border-t border-gray-400 flex items-center justify-between text-[11px] font-bold">
+        <div className="mt-8 pt-4 border-t border-gray-300 flex items-center justify-between text-xs font-bold text-gray-700">
           <div>Class Teacher Signature</div>
-          <div>Principal Signature & Seal</div>
+          <div className="text-right text-[#1E3A8A] font-black uppercase">
+            Authorized Principal Signature & Seal
+          </div>
         </div>
       </div>
     </div>

@@ -7,27 +7,28 @@ import {
   GraduationCap, FileText, CheckCircle2, User, Search, Share2, Shield, QrCode
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { getImageDataUrl } from '../lib/exportUtils';
 
 export default function AdmitCardView() {
   const { students, settings, showToast } = useSchoolStore();
 
   const [selectedClass, setSelectedClass] = useState('all');
-  const [examTitle, setExamTitle] = useState('Annual Board & Final Examination 2026-27');
+  const [examTitle, setExamTitle] = useState('ANNUAL EXAMINATION 2026');
   const [searchQuery, setSearchQuery] = useState('');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   // Editable Timetable
   const [timetable, setTimetable] = useState([
-    { subject: 'Hindi', date: '2026-10-15', time: '09:00 AM - 12:00 PM' },
-    { subject: 'English', date: '2026-10-17', time: '09:00 AM - 12:00 PM' },
-    { subject: 'Mathematics', date: '2026-10-19', time: '09:00 AM - 12:00 PM' },
-    { subject: 'Science', date: '2026-10-22', time: '09:00 AM - 12:00 PM' },
-    { subject: 'Social Science', date: '2026-10-24', time: '09:00 AM - 12:00 PM' },
+    { day: 'Day 1', subject: 'Mathematics', timing: '09:30 AM - 12:30 PM' },
+    { day: 'Day 2', subject: 'Science', timing: '09:30 AM - 12:30 PM' },
+    { day: 'Day 3', subject: 'Social Studies', timing: '09:30 AM - 12:30 PM' },
+    { day: 'Day 4', subject: 'English', timing: '09:30 AM - 12:30 PM' },
+    { day: 'Day 5', subject: 'Hindi', timing: '09:30 AM - 12:30 PM' },
   ]);
 
+  const [newDay, setNewDay] = useState('Day 6');
   const [newSubject, setNewSubject] = useState('');
-  const [newDate, setNewDate] = useState('');
-  const [newTime, setNewTime] = useState('09:00 AM - 12:00 PM');
+  const [newTiming, setNewTiming] = useState('09:30 AM - 12:30 PM');
   const [isAddingSubject, setIsAddingSubject] = useState(false);
 
   // Filter students
@@ -46,15 +47,14 @@ export default function AdmitCardView() {
 
   const handleAddSubject = (e) => {
     e.preventDefault();
-    if (!newSubject.trim() || !newDate) {
-      showToast('Please enter subject and date', 'error');
+    if (!newSubject.trim()) {
+      showToast('Please enter subject name', 'error');
       return;
     }
-    setTimetable([...timetable, { subject: newSubject.trim(), date: newDate, time: newTime.trim() }]);
+    setTimetable([...timetable, { day: newDay.trim(), subject: newSubject.trim(), timing: newTiming.trim() }]);
     setNewSubject('');
-    setNewDate('');
     setIsAddingSubject(false);
-    showToast('Subject added to timetable', 'success');
+    showToast('Subject added to schedule', 'success');
   };
 
   const handleRemoveSubject = (index) => {
@@ -66,7 +66,7 @@ export default function AdmitCardView() {
     window.print();
   };
 
-  // Direct jsPDF Multi-Page PDF Download for All or Single Student
+  // Direct jsPDF Multi-Page PDF Download for All or Single Student (guaranteed photo, sign, QR)
   const handleDownloadPdf = async (singleStudent = null) => {
     const targetList = singleStudent ? [singleStudent] : filteredStudents;
     if (targetList.length === 0) {
@@ -75,7 +75,7 @@ export default function AdmitCardView() {
     }
 
     setIsExportingPdf(true);
-    showToast(`Generating official PDF for ${targetList.length} student(s)...`, 'info');
+    showToast(`Generating official Admit Cards PDF (${targetList.length} cards)...`, 'info');
 
     try {
       const doc = new jsPDF({
@@ -84,190 +84,263 @@ export default function AdmitCardView() {
         format: 'a4',
       });
 
-      const schoolName = (settings.instituteName || 'MISSION NAVODAYA PUBLIC SCHOOL').toUpperCase();
-      const session = settings.currentSession || '2026-27';
-      const address = settings.address || 'Mora Mairi, Bhagwaanpur, Siwan, Bihar';
-      const phone = settings.mobile || '';
+      const schoolName = (settings.instituteName || settings.schoolName || 'MISSION NAVODAYA').toUpperCase();
+      const session = settings.currentSession || settings.academicYear || '2026-27';
+      const address = settings.address || 'Mora Mairi, BagwaanPur hat ,Siwan,Bihar 841507';
 
-      targetList.forEach((s, index) => {
-        if (index > 0) {
-          doc.addPage();
-        }
+      // Preload School Logo and Principal Signature
+      const logoData = await getImageDataUrl(settings.logoUrl || settings.logoPath || settings.logo);
+      const sigData = await getImageDataUrl(settings.principalSignature || settings.signatureUrl || settings.signature);
+
+      for (let index = 0; index < targetList.length; index++) {
+        const s = targetList[index];
+        if (index > 0) doc.addPage();
 
         const W = 210;
-        const M = 12;
+        const M = 10;
         const cardW = W - 2 * M;
-        const cardH = 265;
+        const cardH = 277;
 
-        // Outer Dark Navy Border
-        doc.setDrawColor(10, 17, 40); // #0A1128
+        // Outer rounded blue border (Matching Image 1)
+        doc.setDrawColor(30, 58, 138); // #1E3A8A
         doc.setLineWidth(1.2);
-        doc.roundedRect(M, M, cardW, cardH, 3, 3);
+        doc.roundedRect(M, M, cardW, cardH, 4, 4);
 
-        // Header Background Banner
-        doc.setFillColor(10, 17, 40);
-        doc.rect(M, M, cardW, 28, 'F');
+        // Header Top Banner (Solid Blue Background)
+        const bannerH = 26;
+        doc.setFillColor(30, 58, 138);
+        doc.roundedRect(M + 1, M + 1, cardW - 2, bannerH, 3, 3, 'F');
 
-        // Header Title
+        // Logo inside banner
+        if (logoData) {
+          try {
+            doc.setFillColor(255, 255, 255);
+            doc.roundedRect(M + 4, M + 4, 18, 18, 2, 2, 'F');
+            doc.addImage(logoData, 'PNG', M + 5, M + 5, 16, 16);
+          } catch (e) { }
+        }
+
+        // Header School Name & Address
+        const headerTextX = logoData ? M + 26 : M + 8;
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
-        doc.text(schoolName, W / 2, M + 10, { align: 'center' });
+        doc.text(schoolName, headerTextX, M + 12);
 
-        doc.setTextColor(255, 215, 0); // Gold
-        doc.setFontSize(8.5);
+        doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'normal');
-        doc.text(address, W / 2, M + 17, { align: 'center' });
-
-        doc.setTextColor(200, 220, 255);
         doc.setFontSize(8);
-        doc.text(`SESSION: ${session} | HELPLINE: ${phone}`, W / 2, M + 23, { align: 'center' });
+        doc.text(address, headerTextX, M + 18);
 
-        // Official Hall Ticket Ribbon
-        doc.setFillColor(238, 242, 255);
-        doc.rect(M, M + 28, cardW, 11, 'F');
-        doc.setDrawColor(10, 17, 40);
-        doc.setLineWidth(0.4);
-        doc.line(M, M + 39, M + cardW, M + 39);
-
-        doc.setTextColor(10, 17, 40);
+        // Right side of banner: Session & HALL TICKET
+        doc.setTextColor(255, 215, 0); // Gold
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.text(`OFFICIAL ADMIT CARD / HALL TICKET - ${examTitle.toUpperCase()}`, W / 2, M + 35, { align: 'center' });
+        doc.setFontSize(8.5);
+        doc.text(`SESSION: ${session}`, M + cardW - 6, M + 11, { align: 'right' });
 
-        // Student Info & Aadhaar Box
-        const infoTop = M + 44;
-        const infoH = 46;
-        doc.setFillColor(248, 249, 250);
-        doc.setDrawColor(200, 200, 210);
-        doc.roundedRect(M + 4, infoTop, cardW - 8, infoH, 2, 2, 'FD');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(11);
+        doc.text('HALL TICKET', M + cardW - 6, M + 18, { align: 'right' });
 
-        // Text details
-        doc.setFontSize(9);
-        doc.setTextColor(50, 50, 60);
+        // Centered Exam Title Pill Badge (Matching Image 1)
+        const pillTop = M + bannerH + 4;
+        const pillW = 86;
+        const pillH = 9;
+        const pillX = (W - pillW) / 2;
 
-        const leftX = M + 8;
-        doc.setFont('helvetica', 'bold');
-        doc.text('Student Name:', leftX, infoTop + 8);
-        doc.setTextColor(10, 17, 40);
-        doc.text((s.name || '').toUpperCase(), leftX + 28, infoTop + 8);
-
-        doc.setTextColor(50, 50, 60);
-        doc.text('Father Name:', leftX, infoTop + 16);
-        doc.setTextColor(20, 20, 20);
-        doc.text((s.fatherName || '-').toUpperCase(), leftX + 28, infoTop + 16);
-
-        doc.setTextColor(50, 50, 60);
-        doc.text('Class & Sec:', leftX, infoTop + 24);
-        doc.setTextColor(20, 20, 20);
-        doc.text(`${s.className || ''} ${s.section ? '(' + s.section + ')' : ''}`, leftX + 28, infoTop + 24);
-
-        doc.setTextColor(50, 50, 60);
-        doc.text('Roll Number:', leftX, infoTop + 32);
-        doc.setTextColor(10, 17, 40);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(s.rollNumber || s.id || '-'), leftX + 28, infoTop + 32);
-
-        // Aadhaar ID Badge (Highlighted in Deep Blue Box)
-        const aadhaar = s.aadhaarNumber || s.aadharNumber || s.aadhaar || 'NA-NOT-LINKED';
-        doc.setFillColor(224, 231, 255);
-        doc.setDrawColor(99, 102, 241);
-        doc.roundedRect(leftX, infoTop + 36, 110, 7.5, 1.5, 1.5, 'FD');
-        doc.setTextColor(30, 27, 75);
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Official Aadhaar ID: ${aadhaar}`, leftX + 3, infoTop + 41);
-
-        // Right side: Photo Frame
-        const photoX = M + cardW - 36;
-        const photoY = infoTop + 4;
-        doc.setDrawColor(180, 180, 180);
+        doc.setDrawColor(30, 58, 138);
+        doc.setLineWidth(0.8);
         doc.setFillColor(255, 255, 255);
-        doc.rect(photoX, photoY, 28, 36, 'FD');
-        doc.setFontSize(7);
-        doc.setTextColor(150, 150, 150);
-        doc.text('AFFIX PHOTO', photoX + 14, photoY + 18, { align: 'center' });
+        doc.roundedRect(pillX, pillTop, pillW, pillH, 2, 2, 'FD');
 
-        // Timetable Section
-        const tableTop = infoTop + infoH + 8;
-        doc.setFontSize(9.5);
+        doc.setTextColor(30, 58, 138);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(10, 17, 40);
-        doc.text('EXAMINATION TIMETABLE & VERIFICATION SCHEDULE', M + 4, tableTop);
+        doc.setFontSize(11);
+        doc.text(examTitle.toUpperCase(), W / 2, pillTop + 6.5, { align: 'center' });
+
+        // Middle Info Section: Photo (Left), Student Details (Middle), QR Code (Right)
+        const infoTop = pillTop + pillH + 6;
+        const photoW = 34;
+        const photoH = 42;
+        const photoX = M + 6;
+        const photoY = infoTop;
+
+        // Student Photo
+        const photoData = await getImageDataUrl(s.photoUrl || s.photoPath);
+        if (photoData) {
+          try {
+            doc.addImage(photoData, 'JPEG', photoX, photoY, photoW, photoH);
+            doc.setDrawColor(180, 180, 180);
+            doc.rect(photoX, photoY, photoW, photoH);
+          } catch (e) {
+            drawPhotoBox(doc, photoX, photoY, photoW, photoH);
+          }
+        } else {
+          drawPhotoBox(doc, photoX, photoY, photoW, photoH);
+        }
+
+        // Student Details in large, clear, bold font
+        const detailX = photoX + photoW + 8;
+        const aadhaar = s.aadhaarNumber || s.aadharNumber || s.aadhaar || 'NOT-LINKED';
+        const dobStr = s.dob ? (typeof s.dob === 'string' ? s.dob.slice(0, 10) : '01/01/2010') : '01/01/2010';
+        const genderStr = s.gender || 'Male';
+
+        const rows = [
+          ['STUDENT NAME:', (s.name || '').toUpperCase()],
+          ['ROLL NO / ADM NO:', `${s.rollNumber || s.id || 'N/A'}  /  ${s.admissionNumber || s.id || 'N/A'}`],
+          ['CLASS & SECTION:', `Class ${s.className || ''} - ${s.section || 'A'}`],
+          ['FATHER\'S NAME:', (s.fatherName || '-').toUpperCase()],
+          ['DOB / GENDER:', `${dobStr}  /  ${genderStr}`],
+          ['AADHAAR NUMBER:', aadhaar]
+        ];
+
+        let curY = infoTop + 6;
+        doc.setFontSize(9.5);
+        rows.forEach(([label, val], rIdx) => {
+          doc.setTextColor(60, 60, 60);
+          doc.setFont('helvetica', 'bold');
+          doc.text(label, detailX, curY);
+
+          if (rIdx === 5) { // Aadhaar in blue font
+            doc.setTextColor(37, 99, 235);
+          } else {
+            doc.setTextColor(15, 23, 42);
+          }
+          doc.setFont('helvetica', rIdx === 0 ? 'bold' : 'normal');
+          doc.text(val, detailX + 44, curY);
+
+          curY += 6.8;
+        });
+
+        // QR Code Box on Right
+        const qrSize = 34;
+        const qrX = M + cardW - qrSize - 6;
+        const qrY = infoTop + 2;
+        const qrDataUrl = await getImageDataUrl(`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=ADMIT:${encodeURIComponent(s.name)}|Roll:${s.rollNumber || s.id}|Class:${s.className}|Aadhaar:${aadhaar}`);
+        if (qrDataUrl) {
+          try {
+            doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+            doc.setDrawColor(200, 200, 200);
+            doc.rect(qrX - 1, qrY - 1, qrSize + 2, qrSize + 2);
+          } catch (e) { }
+        }
+
+        // Section Title: EXAMINATION SCHEDULE & TIME TABLE (Matching Image 1)
+        const tableTitleY = infoTop + photoH + 10;
+        doc.setTextColor(30, 58, 138);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10.5);
+        doc.text('EXAMINATION SCHEDULE & TIME TABLE', M + 6, tableTitleY);
+
+        // Schedule Table
+        const tableTop = tableTitleY + 3;
+        const colW = [26, 48, 54, cardW - 12 - 26 - 48 - 54]; // DATE | SUBJECT | TIMING | INVIGILATOR SIGN
 
         // Table Header
-        const thY = tableTop + 4;
-        doc.setFillColor(10, 17, 40);
-        doc.rect(M + 4, thY, cardW - 8, 8, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(8);
-        doc.text('Date', M + 8, thY + 5.5);
-        doc.text('Subject', M + 45, thY + 5.5);
-        doc.text('Exam Timing', M + 105, thY + 5.5);
-        doc.text('Invigilator Sign', M + 155, thY + 5.5);
+        doc.setFillColor(243, 244, 246);
+        doc.rect(M + 6, tableTop, cardW - 12, 7.5, 'F');
+        doc.setDrawColor(209, 213, 219);
+        doc.rect(M + 6, tableTop, cardW - 12, 7.5);
+
+        doc.setTextColor(17, 24, 39);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.text('DATE', M + 9, tableTop + 5);
+        doc.text('SUBJECT', M + 6 + colW[0] + 3, tableTop + 5);
+        doc.text('TIMING', M + 6 + colW[0] + colW[1] + 3, tableTop + 5);
+        doc.text('INVIGILATOR SIGN', M + 6 + colW[0] + colW[1] + colW[2] + 8, tableTop + 5);
 
         // Table Rows
-        let rowY = thY + 8;
+        let rowY = tableTop + 7.5;
         timetable.forEach((t, i) => {
-          doc.setFillColor(i % 2 === 0 ? 255 : 248, i % 2 === 0 ? 255 : 249, i % 2 === 0 ? 255 : 252);
-          doc.rect(M + 4, rowY, cardW - 8, 7, 'F');
-          doc.setDrawColor(220, 220, 230);
-          doc.line(M + 4, rowY + 7, M + cardW - 4, rowY + 7);
+          doc.setFillColor(i % 2 === 0 ? 255 : 249, i % 2 === 0 ? 255 : 250, i % 2 === 0 ? 255 : 251);
+          doc.rect(M + 6, rowY, cardW - 12, 7, 'F');
+          doc.setDrawColor(229, 231, 235);
+          doc.rect(M + 6, rowY, cardW - 12, 7);
 
-          doc.setTextColor(40, 40, 40);
+          doc.setTextColor(55, 65, 81);
           doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7.5);
-          doc.text(t.date || '', M + 8, rowY + 5);
+          doc.setFontSize(8.5);
+          doc.text(t.day || `Day ${i + 1}`, M + 9, rowY + 5);
+
           doc.setFont('helvetica', 'bold');
-          doc.text(t.subject || '', M + 45, rowY + 5);
+          doc.setTextColor(17, 24, 39);
+          doc.text(t.subject || '', M + 6 + colW[0] + 3, rowY + 5);
+
           doc.setFont('helvetica', 'normal');
-          doc.text(t.time || '', M + 105, rowY + 5);
-          doc.setTextColor(180, 180, 180);
-          doc.text('___________________', M + 150, rowY + 5);
+          doc.setTextColor(55, 65, 81);
+          doc.text(t.timing || '09:30 AM - 12:30 PM', M + 6 + colW[0] + colW[1] + 3, rowY + 5);
 
           rowY += 7;
         });
 
-        // Instructions
-        const instY = rowY + 8;
-        doc.setFontSize(8);
+        // Instructions for Candidates (Matching Image 1)
+        const instY = rowY + 9;
+        doc.setTextColor(17, 24, 39);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(10, 17, 40);
-        doc.text('CANDIDATE INSTRUCTIONS:', M + 4, instY);
+        doc.setFontSize(8.5);
+        doc.text('INSTRUCTIONS FOR CANDIDATES:', M + 6, instY);
 
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(80, 80, 90);
-        doc.text('1. Candidates must carry this physical Admit Card along with valid Aadhaar identification to all exams.', M + 4, instY + 5);
-        doc.text('2. Entry to the examination hall closes exactly 15 minutes prior to the scheduled exam commencement.', M + 4, instY + 9.5);
-        doc.text('3. Mobile phones, smart watches, bags and study materials are strictly prohibited inside examination room.', M + 4, instY + 14);
+        doc.setFontSize(7.5);
+        doc.setTextColor(75, 85, 99);
+        doc.text('1. Candidate must bring this Admit Card to the Examination Centre on every exam day.', M + 6, instY + 5);
+        doc.text('2. Entry to the examination hall is permitted up to 15 minutes prior to commencement.', M + 6, instY + 9.5);
+        doc.text('3. Electronic devices, mobile phones, and calculators are strictly prohibited.', M + 6, instY + 14);
 
-        // Bold Signature Section with High Contrast Plaque
-        const sigY = cardH - 14;
-        doc.setDrawColor(10, 17, 40);
+        // Bottom Signatures Section (Matching Image 1)
+        const sigLineY = cardH - 14;
+
+        // Left: Candidate Signature
+        doc.setDrawColor(156, 163, 175);
         doc.setLineWidth(0.8);
-        doc.line(M + 12, sigY, M + 65, sigY);
-        doc.line(M + cardW - 65, sigY, M + cardW - 12, sigY);
-
-        doc.setFontSize(8);
+        doc.line(M + 10, sigLineY, M + 65, sigLineY);
+        doc.setTextColor(55, 65, 81);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(10, 17, 40); // Deep Dark Navy for maximum clarity
-        doc.text('Class Teacher Signature', M + 38, sigY + 5, { align: 'center' });
-        doc.text('Authorized Principal Signature', M + cardW - 38, sigY + 5, { align: 'center' });
-      });
+        doc.setFontSize(8.5);
+        doc.text('Candidate Signature', M + 37, sigLineY + 5, { align: 'center' });
+
+        // Right: Principal / Controller of Exam with Guaranteed Signature Image
+        const rightSigX = M + cardW - 70;
+        if (sigData) {
+          try {
+            doc.addImage(sigData, 'PNG', rightSigX + 6, sigLineY - 16, 38, 14);
+          } catch (e) { }
+        }
+
+        doc.setDrawColor(30, 58, 138);
+        doc.setLineWidth(1.0);
+        doc.line(rightSigX, sigLineY, rightSigX + 55, sigLineY);
+
+        doc.setTextColor(30, 58, 138);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.text('Principal / Controller of Exam', rightSigX + 27, sigLineY + 5, { align: 'center' });
+      }
 
       const filename = singleStudent
-        ? `Admit_Card_${(singleStudent.name || 'Student').replace(/\s+/g, '_')}_${singleStudent.className || 'Class'}.pdf`
-        : `All_Admit_Cards_${selectedClass}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        ? `Admit_Card_${(singleStudent.name || 'Student').replace(/\s+/g, '_')}.pdf`
+        : `Class_${selectedClass}_Admit_Cards.pdf`;
 
       doc.save(filename);
-      showToast(`Admit card PDF downloaded successfully! (${targetList.length} cards)`, 'success');
+      showToast(`Admit Cards PDF exported successfully! (${targetList.length} cards)`, 'success');
     } catch (err) {
       console.error('PDF error:', err);
-      showToast('Error generating PDF document', 'error');
+      showToast('Error generating Admit Card PDF', 'error');
     } finally {
       setIsExportingPdf(false);
     }
+  };
+
+  const drawPhotoBox = (doc, x, y, w, h) => {
+    doc.setDrawColor(180, 180, 180);
+    doc.setFillColor(255, 255, 255);
+    doc.rect(x, y, w, h, 'FD');
+    doc.setFontSize(7.5);
+    doc.setTextColor(140, 140, 140);
+    doc.setFont('helvetica', 'bold');
+    doc.text('AFFIX', x + w / 2, y + h / 2 - 2, { align: 'center' });
+    doc.text('PHOTO HERE', x + w / 2, y + h / 2 + 4, { align: 'center' });
   };
 
   const handleShare = async () => {
@@ -278,9 +351,7 @@ export default function AdmitCardView() {
           text: `Official Student Admit Cards for ${examTitle}. Total students: ${filteredStudents.length}.`,
           url: window.location.href,
         });
-      } catch (err) {
-        console.warn('Share cancelled or not supported');
-      }
+      } catch (err) { }
     } else {
       navigator.clipboard.writeText(window.location.href);
       showToast('Page link copied to clipboard for sharing!', 'success');
@@ -301,7 +372,7 @@ export default function AdmitCardView() {
             Admit Card & Hall Ticket Studio
           </h1>
           <p className="text-xs text-text-secondary mt-1">
-            Official Admit Cards with Aadhaar ID, QR Code verification, and full multi-page PDF export.
+            Official Admit Cards with Photo, Signature, QR Code verification, and full multi-page PDF export.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -315,7 +386,7 @@ export default function AdmitCardView() {
           <button
             onClick={() => handleDownloadPdf()}
             disabled={filteredStudents.length === 0 || isExportingPdf}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
+            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
           >
             <Download className="w-4 h-4" />
             <span>{isExportingPdf ? 'Exporting...' : `Save All as PDF (${filteredStudents.length})`}</span>
@@ -375,7 +446,7 @@ export default function AdmitCardView() {
               value={examTitle}
               onChange={(e) => setExamTitle(e.target.value)}
               className="mt-1 w-full px-3 py-2 bg-surface2 rounded-xl border border-border text-xs font-semibold text-text focus:outline-primary"
-              placeholder="e.g. Annual Board & Final Examination 2026-27"
+              placeholder="e.g. ANNUAL EXAMINATION 2026"
             />
           </div>
 
@@ -406,22 +477,23 @@ export default function AdmitCardView() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <input
                   type="text"
+                  placeholder="Day (e.g. Day 6)"
+                  value={newDay}
+                  onChange={(e) => setNewDay(e.target.value)}
+                  className="px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold"
+                />
+                <input
+                  type="text"
                   placeholder="Subject Name"
                   value={newSubject}
                   onChange={(e) => setNewSubject(e.target.value)}
                   className="px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold"
                 />
                 <input
-                  type="date"
-                  value={newDate}
-                  onChange={(e) => setNewDate(e.target.value)}
-                  className="px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold"
-                />
-                <input
                   type="text"
-                  placeholder="Timing (e.g. 09:00 AM - 12:00 PM)"
-                  value={newTime}
-                  onChange={(e) => setNewTime(e.target.value)}
+                  placeholder="Timing (e.g. 09:30 AM - 12:30 PM)"
+                  value={newTiming}
+                  onChange={(e) => setNewTiming(e.target.value)}
                   className="px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold"
                 />
               </div>
@@ -438,8 +510,8 @@ export default function AdmitCardView() {
             <table className="w-full text-left text-xs">
               <thead className="bg-surface2 font-bold text-text-secondary border-b border-border">
                 <tr>
+                  <th className="py-2 px-3">Date / Day</th>
                   <th className="py-2 px-3">Subject</th>
-                  <th className="py-2 px-3">Date</th>
                   <th className="py-2 px-3">Exam Timing</th>
                   <th className="py-2 px-3 text-right">Action</th>
                 </tr>
@@ -447,9 +519,9 @@ export default function AdmitCardView() {
               <tbody className="divide-y divide-border">
                 {timetable.map((item, idx) => (
                   <tr key={idx} className="hover:bg-surface2/50">
-                    <td className="py-2 px-3 font-bold text-text">{item.subject}</td>
-                    <td className="py-2 px-3 text-text-secondary font-semibold">{item.date}</td>
-                    <td className="py-2 px-3 text-text-secondary font-semibold">{item.time}</td>
+                    <td className="py-2 px-3 font-bold text-text">{item.day}</td>
+                    <td className="py-2 px-3 text-text font-bold">{item.subject}</td>
+                    <td className="py-2 px-3 text-text-secondary font-semibold">{item.timing}</td>
                     <td className="py-2 px-3 text-right">
                       <button
                         onClick={() => handleRemoveSubject(idx)}
@@ -474,7 +546,7 @@ export default function AdmitCardView() {
             Previewing Admit Cards ({filteredStudents.length} Students)
           </h2>
           <span className="text-xs text-text-secondary">
-            Aadhaar ID & QR Verification Included  Each student card prints on full page
+            Matching Official Hall Ticket Format Exactly
           </span>
         </div>
 
@@ -483,156 +555,170 @@ export default function AdmitCardView() {
             No students found matching the selected class/search filter.
           </div>
         ) : (
-          <div className="admit-cards-container grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-1 print:gap-0">
+          <div className="admit-cards-container grid grid-cols-1 gap-8 print:gap-0">
             {filteredStudents.map((s) => {
-              const aadhaar = s.aadhaarNumber || s.aadharNumber || s.aadhaar || 'NA-NOT-LINKED';
-              const qrData = encodeURIComponent(`STUDENT ADMIT CARD | Name: ${s.name} | Roll: ${s.rollNumber || s.id} | Class: ${s.className} | Aadhaar: ${aadhaar} | Session: ${settings.currentSession || '2026-27'}`);
-              const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${qrData}`;
+              const aadhaar = s.aadhaarNumber || s.aadharNumber || s.aadhaar || 'NOT-LINKED';
+              const qrData = encodeURIComponent(`ADMIT:${s.name}|Roll:${s.rollNumber || s.id}|Class:${s.className}|Aadhaar:${aadhaar}`);
+              const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrData}`;
+              const photoSrc = s.photoUrl || s.photoPath;
+              const sigSrc = settings.principalSignature || settings.signatureUrl || settings.signature;
 
               return (
                 <div
                   key={s.id}
-                  className="admit-card-item bg-white border-2 border-indigo-950 rounded-xl p-5 shadow-sm print:shadow-none print:break-after-page text-black font-sans relative"
+                  className="admit-card-item bg-white border-2 border-[#1E3A8A] rounded-2xl p-6 shadow-sm print:shadow-none print:border-2 text-black font-sans relative print:m-0 print:mb-8"
+                  style={{ printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}
                 >
                   {/* Individual Action Bar (Hidden on Print) */}
-                  <div className="print:hidden flex items-center justify-between pb-3 mb-3 border-b border-gray-200">
-                    <span className="text-[11px] font-bold text-gray-500 uppercase">Roll: {s.rollNumber || s.id}</span>
+                  <div className="print:hidden flex items-center justify-between pb-3 mb-4 border-b border-gray-200">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Roll: {s.rollNumber || s.id} | Student: {s.name}</span>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleDownloadPdf(s)}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1 transition-all"
+                        className="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center gap-1.5 transition-all cursor-pointer"
                       >
-                        <Download className="w-3 h-3" />
+                        <Download className="w-3.5 h-3.5" />
                         <span>Download Single PDF</span>
                       </button>
                     </div>
                   </div>
 
-                  {/* Header */}
-                  <div className="flex items-center gap-3 border-b-2 border-indigo-950 pb-3">
-                    {settings.logoUrl || settings.logoPath || settings.logo ? (
-                      <img
-                        src={settings.logoUrl || settings.logoPath || settings.logo}
-                        alt="Logo"
-                        className="w-14 h-14 object-contain"
-                      />
-                    ) : (
-                      <div className="w-14 h-14 bg-indigo-900 text-white rounded-lg flex items-center justify-center font-bold text-xl">
-                        MN
+                  {/* Header Banner (Matching Image 1) */}
+                  <div className="bg-[#1E3A8A] text-white rounded-xl p-3.5 flex items-center justify-between mb-4" style={{ backgroundColor: '#1E3A8A', color: '#ffffff' }}>
+                    <div className="flex items-center gap-3">
+                      {settings.logoUrl || settings.logoPath || settings.logo ? (
+                        <div className="w-12 h-12 bg-white rounded-lg p-1 flex items-center justify-center">
+                          <img
+                            src={settings.logoUrl || settings.logoPath || settings.logo}
+                            alt="Logo"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 bg-white text-[#1E3A8A] rounded-lg flex items-center justify-center font-black text-lg">
+                          MN
+                        </div>
+                      )}
+                      <div>
+                        <h2 className="font-black text-base uppercase leading-tight tracking-wide text-white">
+                          {settings.instituteName || settings.schoolName || 'MISSION NAVODAYA'}
+                        </h2>
+                        <p className="text-[10px] text-white/90 font-medium">
+                          {settings.address || 'Mora Mairi, BagwaanPur hat ,Siwan,Bihar 841507'}
+                        </p>
                       </div>
-                    )}
-                    <div className="flex-1 text-center pr-2">
-                      <h2 className="font-black text-base uppercase text-indigo-950 leading-tight">
-                        {settings.instituteName || 'Mission Navodaya Public School'}
-                      </h2>
-                      <p className="text-[10px] text-gray-700 font-semibold">{settings.address || 'Mora Mairi, Bhagwaanpur, Siwan, Bihar'}</p>
-                      <p className="text-[10px] text-indigo-900 font-black">
-                        Session: {settings.currentSession || '2026-27'} | Mobile: {settings.mobile || ''}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-[#FFD700] font-black uppercase tracking-wider">
+                        SESSION: {settings.currentSession || settings.academicYear || '2026-27'}
+                      </p>
+                      <p className="text-sm font-black uppercase tracking-wider text-white">
+                        HALL TICKET
                       </p>
                     </div>
                   </div>
 
-                  {/* Exam Title Badge */}
-                  <div className="my-3 text-center flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-gray-600 uppercase tracking-wider">
-                      OFFICIAL HALL TICKET
-                    </span>
-                    <span className="inline-block px-4 py-1 bg-indigo-100 text-indigo-950 font-black text-xs uppercase tracking-wider rounded-md border border-indigo-200 shadow-2xs">
+                  {/* Exam Title Pill Badge (Matching Image 1) */}
+                  <div className="my-3 text-center">
+                    <span className="inline-block px-8 py-1.5 bg-white text-[#1E3A8A] font-black text-sm uppercase tracking-wider rounded-md border border-[#1E3A8A] shadow-2xs">
                       {examTitle}
-                    </span>
-                    <span className="text-[9px] font-bold text-indigo-800">
-                      SESSION {settings.currentSession || '2026-27'}
                     </span>
                   </div>
 
-                  {/* Student Info, Photo & QR Code */}
-                  <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 flex justify-between gap-3 text-xs mb-3">
-                    <div className="space-y-1 font-semibold flex-1">
-                      <p><span className="font-bold text-gray-600">Student Name:</span> <strong className="text-black uppercase">{s.name}</strong></p>
-                      <p><span className="font-bold text-gray-600">Father Name:</span> {s.fatherName || '-'}</p>
-                      <p><span className="font-bold text-gray-600">Class & Section:</span> <strong>{s.className} {s.section || 'A'}</strong></p>
-                      <p><span className="font-bold text-gray-600">Roll No:</span> <strong>{s.rollNumber || s.id}</strong> | <span className="font-bold text-gray-600">Admission No:</span> {s.admissionNumber || s.id}</p>
-                      <p className="pt-1 border-t border-gray-200">
-                        <span className="font-bold text-indigo-950">Aadhaar Card No (Official ID):</span>{' '}
-                        <strong className="text-indigo-950 font-black bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
-                          {aadhaar}
-                        </strong>
-                      </p>
+                  {/* Student Info, Photo & QR Code (Matching Image 1) */}
+                  <div className="flex justify-between gap-4 text-xs mb-5 items-center">
+                    {/* Photo Box */}
+                    <div className="w-24 h-32 border border-gray-400 bg-white flex flex-col items-center justify-center text-[10px] font-bold text-gray-400 uppercase text-center overflow-hidden rounded flex-shrink-0">
+                      {photoSrc ? (
+                        <img src={photoSrc} alt="Student Photo" className="w-full h-full object-cover" />
+                      ) : (
+                        <div>
+                          <div>AFFIX</div>
+                          <div>PHOTO HERE</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Middle Details (Large, Bold Text) */}
+                    <div className="space-y-1.5 font-semibold flex-1 pl-2 text-sm">
+                      <div className="flex"><span className="w-36 text-gray-600 font-bold">STUDENT NAME:</span> <strong className="text-black uppercase text-base">{s.name}</strong></div>
+                      <div className="flex"><span className="w-36 text-gray-600 font-bold">ROLL NO / ADM NO:</span> <strong className="text-black">{s.rollNumber || s.id || 'N/A'}  /  {s.admissionNumber || s.id || 'N/A'}</strong></div>
+                      <div className="flex"><span className="w-36 text-gray-600 font-bold">CLASS & SECTION:</span> <strong className="text-black">Class {s.className} - {s.section || 'A'}</strong></div>
+                      <div className="flex"><span className="w-36 text-gray-600 font-bold">FATHER'S NAME:</span> <span className="text-black uppercase font-bold">{s.fatherName || '-'}</span></div>
+                      <div className="flex"><span className="w-36 text-gray-600 font-bold">DOB / GENDER:</span> <span className="text-black font-semibold">{s.dob ? String(s.dob).slice(0, 10) : '01/01/2010'}  /  {s.gender || 'Male'}</span></div>
+                      <div className="flex pt-0.5">
+                        <span className="w-36 text-gray-600 font-bold">AADHAAR NUMBER:</span>
+                        <strong className="text-[#1D4ED8] font-black">{aadhaar}</strong>
+                      </div>
                     </div>
 
                     {/* QR Code */}
-                    <div className="flex flex-col items-center justify-center p-1 bg-white border border-gray-300 rounded-lg">
+                    <div className="flex flex-col items-center justify-center p-1.5 bg-white border border-gray-300 rounded-lg flex-shrink-0">
                       <img
                         src={qrUrl}
                         alt="Admit Card QR"
-                        className="w-16 h-16 object-contain"
+                        className="w-20 h-20 object-contain"
                       />
-                      <span className="text-[7px] text-gray-500 font-bold tracking-tighter uppercase mt-0.5">
-                        SCAN TO VERIFY
-                      </span>
-                    </div>
-
-                    {/* Photo */}
-                    <div className="w-20 h-24 border border-gray-400 bg-white flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase text-center overflow-hidden rounded">
-                      {s.photoUrl || s.photoPath ? (
-                        <img src={s.photoUrl || s.photoPath} alt="Photo" className="w-full h-full object-cover" />
-                      ) : (
-                        'STUDENT PHOTO'
-                      )}
                     </div>
                   </div>
 
+                  {/* Examination Schedule Title */}
+                  <div className="text-xs font-black uppercase text-[#1E3A8A] mb-1.5 tracking-wider">
+                    EXAMINATION SCHEDULE & TIME TABLE
+                  </div>
+
                   {/* Timetable Table */}
-                  <div className="mb-3">
-                    <div className="text-[10px] font-black uppercase text-indigo-950 mb-1">Examination Schedule:</div>
-                    <table className="w-full text-left text-[10px] border border-gray-400 border-collapse">
-                      <thead className="bg-indigo-50 font-bold border-b border-gray-400">
+                  <div className="mb-4">
+                    <table className="w-full text-left text-xs border border-gray-300 border-collapse">
+                      <thead className="bg-gray-100 font-bold border-b border-gray-300">
                         <tr>
-                          <th className="p-1 border-r border-gray-400">Date</th>
-                          <th className="p-1 border-r border-gray-400">Subject</th>
-                          <th className="p-1 border-r border-gray-400">Timing</th>
-                          <th className="p-1 text-center">Invigilator Sign</th>
+                          <th className="p-2 border-r border-gray-300 w-24">DATE</th>
+                          <th className="p-2 border-r border-gray-300">SUBJECT</th>
+                          <th className="p-2 border-r border-gray-300">TIMING</th>
+                          <th className="p-2 text-center w-36">INVIGILATOR SIGN</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-300">
+                      <tbody className="divide-y divide-gray-200">
                         {timetable.map((t, idx) => (
-                          <tr key={idx}>
-                            <td className="p-1 border-r border-gray-400 font-semibold">{t.date}</td>
-                            <td className="p-1 border-r border-gray-400 font-bold">{t.subject}</td>
-                            <td className="p-1 border-r border-gray-400">{t.time}</td>
-                            <td className="p-1 text-center text-gray-400">__________</td>
+                          <tr key={idx} className={idx % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}>
+                            <td className="p-2 border-r border-gray-300 font-semibold text-gray-700">{t.day}</td>
+                            <td className="p-2 border-r border-gray-300 font-bold text-black">{t.subject}</td>
+                            <td className="p-2 border-r border-gray-300 text-gray-700 font-semibold">{t.timing}</td>
+                            <td className="p-2 text-center text-gray-300">__________</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
 
-                  {/* Instructions */}
-                  <div className="text-[8px] text-gray-600 space-y-0.5 border-t border-gray-300 pt-2 mb-6">
-                    <p className="font-bold text-black uppercase">Instructions for Candidate:</p>
-                    <p>1. Candidate must carry this Admit Card with Aadhaar verification to all examinations.</p>
-                    <p>2. Report to examination room at least 15 minutes before the scheduled time.</p>
-                    <p>3. Electronic gadgets and unauthorized materials are strictly forbidden inside the hall.</p>
+                  {/* Instructions for Candidate */}
+                  <div className="text-[10px] text-gray-600 space-y-0.5 border-t border-gray-200 pt-2 mb-10">
+                    <p className="font-bold text-black uppercase">INSTRUCTIONS FOR CANDIDATES:</p>
+                    <p>1. Candidate must bring this Admit Card to the Examination Centre on every exam day.</p>
+                    <p>2. Entry to the examination hall is permitted up to 15 minutes prior to commencement.</p>
+                    <p>3. Electronic devices, mobile phones, and calculators are strictly prohibited.</p>
                   </div>
 
-                  {/* Signatures with Bold Deep Dark Navy Highlight */}
-                  <div className="flex justify-between items-end border-t-2 border-indigo-950 pt-3 mt-4 text-[10px] font-black text-indigo-950">
+                  {/* Signatures (Matching Image 1) */}
+                  <div className="flex justify-between items-end border-t border-gray-300 pt-4 mt-6 text-xs font-bold">
                     <div className="text-center">
-                      <div className="w-32 border-b-2 border-indigo-950 mb-1" />
-                      <span className="uppercase tracking-wider">Class Teacher Sign</span>
+                      <div className="w-36 border-b border-gray-400 mb-1.5" />
+                      <span className="text-gray-700">Candidate Signature</span>
                     </div>
                     <div className="text-center flex flex-col items-center">
-                      {settings.principalSignature || settings.signatureUrl ? (
+                      {sigSrc ? (
                         <img
-                          src={settings.principalSignature || settings.signatureUrl}
+                          src={sigSrc}
                           alt="Signature"
-                          className="h-9 object-contain mb-1 filter drop-shadow-sm"
+                          className="h-9 object-contain mb-1"
                         />
                       ) : (
                         <div className="h-9" />
                       )}
-                      <div className="w-36 border-b-2 border-indigo-950 mb-1" />
-                      <span className="uppercase tracking-wider">Authorized Principal Sign</span>
+                      <div className="w-44 border-b-2 border-[#1E3A8A] mb-1.5" />
+                      <span className="text-[#1E3A8A] font-black uppercase tracking-wider">
+                        Principal / Controller of Exam
+                      </span>
                     </div>
                   </div>
                 </div>
