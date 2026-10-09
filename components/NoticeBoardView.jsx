@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useSchoolStore } from '../lib/store';
 import {
-  Megaphone, Plus, Search, Pin, Calendar,
+  Megaphone, FileText, Plus, Search, Pin, Calendar,
   Clock, Eye, Image as ImageIcon, CheckCircle2,
   Trash2, Edit2, AlertCircle, Share2, Filter,
   Sparkles, Bell, ExternalLink

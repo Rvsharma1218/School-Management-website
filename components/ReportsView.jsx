@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import { useSchoolStore, calculateStudentFeeMetrics } from '../lib/store';
 import {
   FileSpreadsheet, Download, FileText, Users, CreditCard,
-  CalendarCheck, Award, Upload, CheckCircle2, AlertCircle,
+  Calendar, CalendarCheck, Award, Upload, CheckCircle2, AlertCircle,
   BarChart3, TrendingUp, Layers, Share2, Printer, BookOpen, Clock,
   FileCheck, CheckCircle, GraduationCap, Search, Filter, Plus,
   ChevronRight, ChevronLeft, Eye, RefreshCw, X, Database, ShieldCheck
