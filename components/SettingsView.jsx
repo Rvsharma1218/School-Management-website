@@ -35,6 +35,8 @@ export default function SettingsView() {
     logoUrl: settings.logoUrl || settings.logoPath || settings.logo || '',
     principalSignature: settings.principalSignature || settings.signatureUrl || '',
     signatureUrl: settings.signatureUrl || settings.principalSignature || '',
+    schoolStamp: settings.schoolStamp || settings.stampUrl || '',
+    stampUrl: settings.stampUrl || settings.schoolStamp || '',
     currentSession: settings.currentSession || settings.academicYear || '2026-27',
     ...settings
   });
@@ -339,6 +341,74 @@ export default function SettingsView() {
                     <p className="text-[10px] text-text-secondary mt-0.5">
                       Supports PNG, JPG, SVG or WebP (Max 5MB)
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* School Stamp / Official Seal (मोहर) Upload Box */}
+              <div className="p-4 rounded-2xl bg-surface2/60 border border-border/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-text flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-primary" />
+                    <span>School Stamp / Official Seal (स्कूल की मोहर)</span>
+                  </label>
+                  {formData.schoolStamp && (
+                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+                      Stamp Active
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                  <div className="sm:col-span-4 flex items-center justify-center p-3 rounded-xl border border-dashed border-border bg-white min-h-[90px]">
+                    {formData.schoolStamp ? (
+                      <div className="relative group">
+                        <img
+                          src={formData.schoolStamp}
+                          alt="School Stamp"
+                          className="h-16 w-16 object-contain rounded-full border border-primary/30 p-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, schoolStamp: '', stampUrl: '' })}
+                          className="absolute -top-2 -right-2 p-1 rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-700 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center text-text-muted">
+                        <Shield className="w-6 h-6 mx-auto mb-1 opacity-40 text-primary" />
+                        <p className="text-[10px] font-medium">No Stamp Uploaded</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="sm:col-span-8 space-y-2">
+                    <p className="text-[11px] text-text-secondary leading-relaxed">
+                      Upload your circular official school seal / stamp (मोहर). It will be printed next to the Principal signature on Admit Cards, Marksheets, and Certificates.
+                    </p>
+                    <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-dark cursor-pointer transition-all active:scale-95">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{formData.schoolStamp ? 'Replace Stamp' : 'Upload School Stamp (मोहर)'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (re) => {
+                              const b64 = re.target.result;
+                              setFormData({ ...formData, schoolStamp: b64, stampUrl: b64 });
+                              showToast('Stamp uploaded. Click Save Changes to apply.', 'info');
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
                   </div>
                 </div>
               </div>

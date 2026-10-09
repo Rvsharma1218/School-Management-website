@@ -36,6 +36,7 @@ export default function ResultsView() {
   const [modalClassFilter, setModalClassFilter] = useState('all'); // 'all' | class/course
   const [modalStudentSearch, setModalStudentSearch] = useState('');
   const [examName, setExamName] = useState('Term Examination');
+  const [passingMarks, setPassingMarks] = useState(33);
   const [subjects, setSubjects] = useState([
     { subjectName: 'Mathematics', marks: '', totalMarks: 100 },
     { subjectName: 'Science', marks: '', totalMarks: 100 },
@@ -864,6 +865,26 @@ export default function ResultsView() {
                     placeholder="e.g. Mid-Term Examination"
                     required
                   />
+                  {/* Passing Marks Threshold */}
+                  <div className="mt-3 p-3 rounded-xl bg-surface2/80 border border-border flex items-center justify-between gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-text">Passing Criteria (%)</label>
+                      <span className="text-[10px] text-text-muted">Minimum percentage required to pass</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={passingMarks}
+                        onChange={e => setPassingMarks(e.target.value)}
+                        className="w-16 px-2 py-1 rounded-lg bg-white border border-border text-center font-bold text-xs font-mono text-primary"
+                        required
+                      />
+                      <span className="text-xs font-bold text-text-muted">%</span>
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     {['1st Unit Test', 'Mid-Term Examination', 'Term Examination', 'Annual Examination'].map(tag => (
                       <button

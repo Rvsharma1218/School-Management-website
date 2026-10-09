@@ -106,6 +106,7 @@ export default function AdmitCardView() {
       // Preload School Logo and Principal Signature
       const logoData = await getImageDataUrl(settings.logoUrl || settings.logoPath || settings.logo);
       const sigData = await getImageDataUrl(settings.principalSignature || settings.signatureUrl || settings.signature);
+        const stampData = await getImageDataUrl(settings.schoolStamp || settings.stampUrl || settings.sealUrl);
 
       for (let index = 0; index < targetList.length; index++) {
         const s = targetList[index];
@@ -147,7 +148,7 @@ export default function AdmitCardView() {
         doc.setFontSize(8);
         doc.text(address, headerTextX, M + 18);
 
-        // Right side of banner: Session & HALL TICKET
+        // Right side of banner: Session & ADMIT CARD
         doc.setTextColor(255, 215, 0); // Gold
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
@@ -155,7 +156,7 @@ export default function AdmitCardView() {
 
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(11);
-        doc.text('HALL TICKET', M + cardW - 6, M + 18, { align: 'right' });
+        doc.text('ADMIT CARD', M + cardW - 6, M + 18, { align: 'right' });
 
         // Centered Exam Title Pill Badge (Matching Image 1)
         const pillTop = M + bannerH + 4;
@@ -317,9 +318,16 @@ export default function AdmitCardView() {
 
         // Right: Principal / Controller of Exam with Guaranteed Signature Image
         const rightSigX = M + cardW - 70;
-        if (sigData) {
+        if (stampData) {
+            try {
+              // Stamp / Mohar placed near Principal Signature
+              doc.addImage(stampData, 'PNG', rightSigX - 18, sigLineY - 21, 20, 20);
+            } catch (e) { }
+          }
+          if (sigData) {
           try {
-            doc.addImage(sigData, 'PNG', rightSigX + 6, sigLineY - 16, 38, 14);
+            // Principal Signature (+30% larger, prominent hand-signed look)
+          doc.addImage(sigData, 'PNG', rightSigX + 2, sigLineY - 20, 50, 18);
           } catch (e) { }
         }
 
@@ -692,7 +700,7 @@ export default function AdmitCardView() {
                           SESSION: {settings.currentSession || settings.academicYear || '2026-27'}
                         </p>
                         <p className="text-xs font-black uppercase tracking-wider text-white">
-                          HALL TICKET
+                          ADMIT CARD
                         </p>
                       </div>
                     </div>
@@ -853,7 +861,7 @@ export default function AdmitCardView() {
                           SESSION: {settings.currentSession || settings.academicYear || '2026-27'}
                         </p>
                         <p className="text-sm font-black uppercase tracking-wider text-white">
-                          HALL TICKET
+                          ADMIT CARD
                         </p>
                       </div>
                     </div>
