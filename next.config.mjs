@@ -70,6 +70,14 @@ const nextConfig = {
         source: '/users',
         destination: '/',
       },
+      {
+        source: '/timetable',
+        destination: '/',
+      },
+      {
+        source: '/classes',
+        destination: '/',
+      },
     ];
   },
 };
