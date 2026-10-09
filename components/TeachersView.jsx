@@ -237,6 +237,12 @@ export default function TeachersView() {
                         <span className="font-mono text-text font-semibold">{teacher.mobile}</span>
                       </div>
                     )}
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-text-secondary font-medium">Base Salary:</span>
+                      <span className="font-extrabold text-emerald-600 font-mono text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        ₹25,000 / mo
+                      </span>
+                    </div>
 
                     {teacher.password && (
                       <div className="flex items-center justify-between">
