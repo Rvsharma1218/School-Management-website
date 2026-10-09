@@ -75,6 +75,7 @@ export default function AttendanceView() {
   // Calculate daily stats
   let presentCount = 0;
   let absentCount = 0;
+  let halfDayCount = 0;
   let lateCount = 0;
   let unmarkedCount = 0;
 
@@ -82,6 +83,7 @@ export default function AttendanceView() {
     const st = dayAttendance[s.id];
     if (st === 'present') presentCount++;
     else if (st === 'absent') absentCount++;
+    else if (st === 'half_day') halfDayCount++;
     else if (st === 'leave' || st === 'late') lateCount++;
     else unmarkedCount++;
   });
@@ -519,6 +521,14 @@ export default function AttendanceView() {
                                 }`}
                               >
                                 Absent
+                              </button>
+                              <button
+                                onClick={() => markStudentAttendance(s.id, selectedDate, 'half_day')}
+                                className={`px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider cursor-pointer transition-all ${
+                                  st === 'half_day' ? 'bg-purple-600 text-white shadow-2xs' : 'text-text-secondary hover:text-text'
+                                }`}
+                              >
+                                Half Day
                               </button>
                               <button
                                 onClick={() => markStudentAttendance(s.id, selectedDate, 'leave')}

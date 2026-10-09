@@ -10,6 +10,7 @@ import FeesView from '../components/FeesView';
 import AttendanceView from '../components/AttendanceView';
 import ResultsView from '../components/ResultsView';
 import IdCardView from '../components/IdCardView';
+import AdmitCardView from '../components/AdmitCardView';
 import TeachersView from '../components/TeachersView';
 import ReportsView from '../components/ReportsView';
 import QrScannerView from '../components/QrScannerView';
@@ -274,6 +275,7 @@ function AppContent() {
             {currentPath === '/attendance' && <AttendanceView />}
             {currentPath === '/results' && <ResultsView />}
             {currentPath === '/idcards' && <IdCardView />}
+            {currentPath === '/admitcards' && <AdmitCardView />}
             {currentPath === '/teachers' && <TeachersView />}
             {currentPath === '/reports' && <ReportsView />}
             {currentPath === '/documents' && <ReportsView />}

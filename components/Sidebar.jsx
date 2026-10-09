@@ -125,6 +125,7 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
           <NavBtn icon={CalendarCheck} label="Daily Attendance" active={currentPath === '/attendance'} onClick={() => nav('attendance')} collapsed={collapsed} />
           <NavBtn icon={Award} label="Exam Results" active={currentPath === '/results'} onClick={() => nav('results')} collapsed={collapsed} />
           <NavBtn icon={Contact} label="ID Cards Studio" active={currentPath === '/idcards'} onClick={() => nav('idcards')} collapsed={collapsed} />
+          <NavBtn icon={FileText} label="Admit Cards" active={currentPath === '/admitcards'} onClick={() => nav('admitcards')} collapsed={collapsed} />
 
           {/* Administrative / Principal Only */}
           {isPrincipal && (
