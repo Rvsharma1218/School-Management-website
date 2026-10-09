@@ -990,15 +990,24 @@ export default function StudentProfileModal({ student, onClose }) {
                   </span>
                 </div>
 
-                {/* Student Info Grid */}
-                <div className="grid grid-cols-2 gap-2 text-xs bg-muted/40 p-3 rounded-xl mb-3 border border-border">
-                  <div><span className="font-semibold text-text-muted">Student Name:</span> <span className="font-bold">{student.name}</span></div>
-                  <div><span className="font-semibold text-text-muted">Roll No:</span> <span className="font-bold">{student.rollNumber || 'N/A'}</span></div>
-                  <div><span className="font-semibold text-text-muted">Class & Sec:</span> <span className="font-bold">{student.className} {student.section || ''}</span></div>
-                  <div><span className="font-semibold text-text-muted">Father's Name:</span> <span className="font-bold">{student.fatherName || 'N/A'}</span></div>
-                  <div><span className="font-semibold text-text-muted">Admission No:</span> <span className="font-mono">{student.admissionNumber || student.studentId}</span></div>
-                  <div><span className="font-semibold text-text-muted">Contact:</span> <span>{student.mobile || 'N/A'}</span></div>
-                  <div><span className="font-semibold text-text-muted">Aadhaar No:</span> <span className="font-bold text-primary">{student.aadhaarNumber || student.aadharNumber || student.aadhaar || 'N/A'}</span></div>
+                {/* Student Info Grid with QR Code */}
+                <div className="flex gap-3 text-xs bg-muted/40 p-3 rounded-xl mb-3 border border-border items-center">
+                  <div className="grid grid-cols-2 gap-2 flex-1">
+                    <div><span className="font-semibold text-text-muted">Student Name:</span> <span className="font-bold uppercase text-primary">{student.name}</span></div>
+                    <div><span className="font-semibold text-text-muted">Roll No:</span> <span className="font-bold">{student.rollNumber || 'N/A'}</span></div>
+                    <div><span className="font-semibold text-text-muted">Class & Sec:</span> <span className="font-bold">{student.className} {student.section || ''}</span></div>
+                    <div><span className="font-semibold text-text-muted">Father's Name:</span> <span className="font-bold">{student.fatherName || 'N/A'}</span></div>
+                    <div><span className="font-semibold text-text-muted">Admission No:</span> <span className="font-mono">{student.admissionNumber || student.studentId}</span></div>
+                    <div><span className="font-semibold text-text-muted">Aadhaar No:</span> <span className="font-bold text-indigo-900 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">{student.aadhaarNumber || student.aadharNumber || student.aadhaar || 'N/A'}</span></div>
+                  </div>
+                  <div className="p-1 bg-white border border-border rounded-lg flex flex-col items-center">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(`STUDENT ADMIT CARD | Name: ${student.name} | Roll: ${student.rollNumber || 'N/A'} | Aadhaar: ${student.aadhaarNumber || 'N/A'}`)}`}
+                      alt="QR Code"
+                      className="w-14 h-14 object-contain"
+                    />
+                    <span className="text-[7px] text-text-muted font-bold mt-0.5">VERIFIED</span>
+                  </div>
                 </div>
 
                 {/* Timetable Snippet */}
