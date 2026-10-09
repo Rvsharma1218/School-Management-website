@@ -7,7 +7,8 @@ import {
   CreditCard, AlertCircle, FileSpreadsheet, QrCode,
   Settings, GraduationCap, Award, Contact,
   ShieldCheck, UserCheck, School, Sun, Moon, Zap,
-  ChevronRight, ChevronLeft, Plus, FileText, Megaphone, X
+  ChevronRight, ChevronLeft, Plus, FileText, Megaphone, X,
+  Building2, Calendar
 } from 'lucide-react';
 
 function NavBtn({ icon: Icon, label, badge, active, onClick, iconColor, collapsed }) {
