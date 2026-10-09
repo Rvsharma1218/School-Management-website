@@ -4,14 +4,14 @@ import React, { useState, useMemo } from 'react';
 import { useSchoolStore } from '../lib/store';
 import {
   Printer, Download, Plus, Trash2, Calendar,
-  GraduationCap, FileText, CheckCircle2, User, Search
+  GraduationCap, FileText, CheckCircle2, User, Search, Share2, Shield, QrCode
 } from 'lucide-react';
 
 export default function AdmitCardView() {
   const { students, settings, showToast } = useSchoolStore();
 
-  const [selectedClass, setSelectedClass] = useState('10th');
-  const [examTitle, setExamTitle] = useState('Half Yearly Examination 2026-27');
+  const [selectedClass, setSelectedClass] = useState('all');
+  const [examTitle, setExamTitle] = useState('Annual Board & Final Examination 2026-27');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Editable Timetable
@@ -32,7 +32,12 @@ export default function AdmitCardView() {
   const filteredStudents = useMemo(() => {
     return students.filter(s => {
       const matchClass = selectedClass === 'all' || s.className === selectedClass;
-      const matchSearch = !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || (s.rollNumber && s.rollNumber.includes(searchQuery));
+      const q = searchQuery.trim().toLowerCase();
+      const matchSearch = !q ||
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.rollNumber && String(s.rollNumber).toLowerCase().includes(q)) ||
+        (s.aadhaarNumber && String(s.aadhaarNumber).toLowerCase().includes(q)) ||
+        (s.admissionNumber && String(s.admissionNumber).toLowerCase().includes(q));
       return matchClass && matchSearch;
     });
   }, [students, selectedClass, searchQuery]);
@@ -58,6 +63,23 @@ export default function AdmitCardView() {
     window.print();
   };
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Student Admit Cards - ${settings.instituteName || 'School'}`,
+          text: `Official Student Admit Cards for ${examTitle}. Total students: ${filteredStudents.length}.`,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.warn('Share cancelled or not supported');
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      showToast('Page link copied to clipboard for sharing!', 'success');
+    }
+  };
+
   const schoolClasses = settings.schoolClasses && settings.schoolClasses.length > 0
     ? settings.schoolClasses
     : ['Nursery', 'LKG', 'UKG', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
@@ -72,17 +94,24 @@ export default function AdmitCardView() {
             Admit Card & Hall Ticket Studio
           </h1>
           <p className="text-xs text-text-secondary mt-1">
-            Generate, customize timetable, and batch print student admit cards.
+            Generate official Admit Cards with Aadhaar ID, QR Code verification, and bulk PDF printing.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleShare}
+            className="px-4 py-2.5 rounded-xl bg-surface2 hover:bg-surface2/80 text-text font-bold text-xs border border-border transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+          >
+            <Share2 className="w-4 h-4 text-primary" />
+            <span>Share</span>
+          </button>
           <button
             onClick={handlePrint}
             disabled={filteredStudents.length === 0}
-            className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
           >
             <Printer className="w-4 h-4" />
-            <span>Print {filteredStudents.length} Admit Cards</span>
+            <span>Print / Save PDF ({filteredStudents.length})</span>
           </button>
         </div>
       </div>
@@ -103,11 +132,25 @@ export default function AdmitCardView() {
               onChange={(e) => setSelectedClass(e.target.value)}
               className="mt-1 w-full px-3 py-2 bg-surface2 rounded-xl border border-border text-xs font-semibold text-text focus:outline-primary"
             >
-              <option value="all">All Classes ({students.length})</option>
+              <option value="all">All Classes Booklet ({students.length} Students)</option>
               {schoolClasses.map(c => (
                 <option key={c} value={c}>Class {c}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold text-text-secondary uppercase">Search Single Student</label>
+            <div className="relative mt-1">
+              <Search className="w-4 h-4 text-text-secondary absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, roll, or Aadhaar..."
+                className="w-full pl-9 pr-3 py-2 bg-surface2 rounded-xl border border-border text-xs font-semibold text-text focus:outline-primary"
+              />
+            </div>
           </div>
 
           <div>
@@ -117,12 +160,13 @@ export default function AdmitCardView() {
               value={examTitle}
               onChange={(e) => setExamTitle(e.target.value)}
               className="mt-1 w-full px-3 py-2 bg-surface2 rounded-xl border border-border text-xs font-semibold text-text focus:outline-primary"
-              placeholder="e.g. Half Yearly Examination 2026-27"
+              placeholder="e.g. Annual Board & Final Examination 2026-27"
             />
           </div>
 
-          <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
-            Found {filteredStudents.length} students in selected class.
+          <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary flex items-center justify-between">
+            <span>Ready to Print:</span>
+            <span className="font-bold">{filteredStudents.length} Students</span>
           </div>
         </div>
 
@@ -138,46 +182,46 @@ export default function AdmitCardView() {
               className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add Subject</span>
+              <span>{isAddingSubject ? 'Cancel' : 'Add Subject'}</span>
             </button>
           </div>
 
-          {/* Add Subject Inline Form */}
           {isAddingSubject && (
-            <form onSubmit={handleAddSubject} className="p-3 bg-surface2 rounded-xl border border-border flex flex-wrap items-center gap-2">
-              <input
-                type="text"
-                placeholder="Subject Name"
-                value={newSubject}
-                onChange={(e) => setNewSubject(e.target.value)}
-                className="px-2.5 py-1.5 text-xs bg-white rounded-lg border border-border font-semibold flex-1 min-w-[120px]"
-              />
-              <input
-                type="date"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                className="px-2.5 py-1.5 text-xs bg-white rounded-lg border border-border font-semibold"
-              />
-              <input
-                type="text"
-                placeholder="Timing"
-                value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
-                className="px-2.5 py-1.5 text-xs bg-white rounded-lg border border-border font-semibold w-36"
-              />
+            <form onSubmit={handleAddSubject} className="p-3 bg-surface2 rounded-xl border border-border space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  placeholder="Subject Name"
+                  value={newSubject}
+                  onChange={(e) => setNewSubject(e.target.value)}
+                  className="px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold"
+                />
+                <input
+                  type="date"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  className="px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold"
+                />
+                <input
+                  type="text"
+                  placeholder="Timing (e.g. 09:00 AM - 12:00 PM)"
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                  className="px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold"
+                />
+              </div>
               <button
                 type="submit"
-                className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs"
               >
-                Save
+                Save Subject to Schedule
               </button>
             </form>
           )}
 
-          {/* Timetable List */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border border-border rounded-xl">
-              <thead className="bg-surface2 text-text-secondary uppercase text-[10px] font-black">
+          <div className="overflow-x-auto border border-border rounded-xl">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-surface2 font-bold text-text-secondary border-b border-border">
                 <tr>
                   <th className="py-2 px-3">Subject</th>
                   <th className="py-2 px-3">Date</th>
@@ -210,125 +254,161 @@ export default function AdmitCardView() {
 
       {/* Printable Admit Cards Grid */}
       <div className="space-y-6">
-        <h2 className="print:hidden text-sm font-bold text-text">
-          Previewing Admit Cards ({filteredStudents.length} Students)
-        </h2>
+        <div className="print:hidden flex items-center justify-between">
+          <h2 className="text-sm font-bold text-text">
+            Previewing Admit Cards ({filteredStudents.length} Students)
+          </h2>
+          <span className="text-xs text-text-secondary">
+            Aadhaar ID & QR Verification Included
+          </span>
+        </div>
 
         {filteredStudents.length === 0 ? (
           <div className="p-8 text-center bg-white rounded-2xl border border-border text-text-secondary text-sm">
-            No students found in this class.
+            No students found matching the selected class/search filter.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-1 print:gap-10">
-            {filteredStudents.map((s) => (
-              <div
-                key={s.id}
-                className="bg-white border-2 border-indigo-950 rounded-xl p-5 shadow-sm print:shadow-none print:break-after-page text-black font-sans relative"
-              >
-                {/* Header */}
-                <div className="flex items-center gap-3 border-b-2 border-indigo-950 pb-3">
-                  {settings.logoUrl || settings.logoPath || settings.logo ? (
-                    <img
-                      src={settings.logoUrl || settings.logoPath || settings.logo}
-                      alt="Logo"
-                      className="w-14 h-14 object-contain"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 bg-indigo-900 text-white rounded-lg flex items-center justify-center font-bold text-xl">
-                      MN
-                    </div>
-                  )}
-                  <div className="flex-1 text-center pr-10">
-                    <h2 className="font-black text-base uppercase text-indigo-950 leading-tight">
-                      {settings.instituteName || 'Mission Navodaya Public School'}
-                    </h2>
-                    <p className="text-[10px] text-gray-700 font-semibold">{settings.address || 'School Campus'}</p>
-                    <p className="text-[10px] text-indigo-900 font-black">
-                      Session: {settings.currentSession || '2026-27'} | Mobile: {settings.mobile || ''}
-                    </p>
-                  </div>
-                </div>
+            {filteredStudents.map((s) => {
+              const aadhaar = s.aadhaarNumber || s.aadharNumber || s.aadhaar || 'NA-NOT-LINKED';
+              const qrData = encodeURIComponent(`STUDENT ADMIT CARD | Name: ${s.name} | Roll: ${s.rollNumber || s.id} | Class: ${s.className} | Aadhaar: ${aadhaar} | Session: ${settings.currentSession || '2026-27'}`);
+              const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${qrData}`;
 
-                {/* Exam Title Badge */}
-                <div className="my-3 text-center">
-                  <span className="inline-block px-4 py-1 bg-indigo-100 text-indigo-950 font-black text-xs uppercase tracking-wider rounded-md border border-indigo-200">
-                    {examTitle}
-                  </span>
-                </div>
-
-                {/* Student Info & Photo */}
-                <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 flex justify-between gap-3 text-xs mb-3">
-                  <div className="space-y-1 font-semibold">
-                    <p><span className="font-bold text-gray-600">Student Name:</span> <strong className="text-black uppercase">{s.name}</strong></p>
-                    <p><span className="font-bold text-gray-600">Father's Name:</span> {s.fatherName || '-'}</p>
-                    <p><span className="font-bold text-gray-600">Class & Section:</span> <strong>{s.className} {s.section || ''}</strong></p>
-                    <p><span className="font-bold text-gray-600">Roll No:</span> <strong>{s.rollNumber || s.id}</strong> | <span className="font-bold text-gray-600">Admission No:</span> {s.admissionNumber || s.id}</p>
-                    <p><span className="font-bold text-gray-600">Aadhaar Card No:</span> <strong className="text-indigo-950 font-bold">{s.aadhaarNumber || s.aadharNumber || s.aadhaar || 'N/A'}</strong></p>
-                  </div>
-                  <div className="w-20 h-24 border border-gray-400 bg-white flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase text-center overflow-hidden">
-                    {s.photoUrl || s.photoPath ? (
-                      <img src={s.photoUrl || s.photoPath} alt="Photo" className="w-full h-full object-cover" />
-                    ) : (
-                      'STUDENT PHOTO'
-                    )}
-                  </div>
-                </div>
-
-                {/* Timetable Table */}
-                <div className="mb-3">
-                  <div className="text-[10px] font-black uppercase text-indigo-950 mb-1">Examination Schedule:</div>
-                  <table className="w-full text-left text-[10px] border border-gray-400 border-collapse">
-                    <thead className="bg-indigo-50 font-bold border-b border-gray-400">
-                      <tr>
-                        <th className="p-1 border-r border-gray-400">Date</th>
-                        <th className="p-1 border-r border-gray-400">Subject</th>
-                        <th className="p-1 border-r border-gray-400">Timing</th>
-                        <th className="p-1">Invigilator Sign</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-300">
-                      {timetable.map((t, idx) => (
-                        <tr key={idx}>
-                          <td className="p-1 border-r border-gray-400 font-semibold">{t.date}</td>
-                          <td className="p-1 border-r border-gray-400 font-bold">{t.subject}</td>
-                          <td className="p-1 border-r border-gray-400">{t.time}</td>
-                          <td className="p-1"></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Instructions */}
-                <div className="text-[8px] text-gray-600 space-y-0.5 border-t border-gray-300 pt-2 mb-8">
-                  <p className="font-bold text-black uppercase">Instructions for Candidate:</p>
-                  <p>1. Admit card must be presented on each day of examination.</p>
-                  <p>2. Report to examination room 15 minutes before exam start.</p>
-                  <p>3. Possession of mobile phones or smart watches is strictly prohibited.</p>
-                </div>
-
-                {/* Signatures */}
-                <div className="flex justify-between items-end border-t border-gray-400 pt-3 mt-4 text-[10px] font-bold">
-                  <div className="text-center">
-                    <div className="w-28 border-b border-gray-400 mb-1" />
-                    <span>Class Teacher Sign</span>
-                  </div>
-                  <div className="text-center flex flex-col items-center">
-                    {settings.principalSignature || settings.signatureUrl ? (
+              return (
+                <div
+                  key={s.id}
+                  className="bg-white border-2 border-indigo-950 rounded-xl p-5 shadow-sm print:shadow-none print:break-after-page text-black font-sans relative"
+                >
+                  {/* Header */}
+                  <div className="flex items-center gap-3 border-b-2 border-indigo-950 pb-3">
+                    {settings.logoUrl || settings.logoPath || settings.logo ? (
                       <img
-                        src={settings.principalSignature || settings.signatureUrl}
-                        alt="Signature"
-                        className="h-8 object-contain mb-1"
+                        src={settings.logoUrl || settings.logoPath || settings.logo}
+                        alt="Logo"
+                        className="w-14 h-14 object-contain"
                       />
                     ) : (
-                      <div className="h-8" />
+                      <div className="w-14 h-14 bg-indigo-900 text-white rounded-lg flex items-center justify-center font-bold text-xl">
+                        MN
+                      </div>
                     )}
-                    <div className="w-28 border-b border-gray-400 mb-1" />
-                    <span>Principal Signature</span>
+                    <div className="flex-1 text-center pr-2">
+                      <h2 className="font-black text-base uppercase text-indigo-950 leading-tight">
+                        {settings.instituteName || 'Mission Navodaya Public School'}
+                      </h2>
+                      <p className="text-[10px] text-gray-700 font-semibold">{settings.address || 'School Campus'}</p>
+                      <p className="text-[10px] text-indigo-900 font-black">
+                        Session: {settings.currentSession || '2026-27'} | Mobile: {settings.mobile || ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Exam Title Badge */}
+                  <div className="my-3 text-center flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-gray-600 uppercase tracking-wider">
+                      OFFICIAL HALL TICKET
+                    </span>
+                    <span className="inline-block px-4 py-1 bg-indigo-100 text-indigo-950 font-black text-xs uppercase tracking-wider rounded-md border border-indigo-200 shadow-2xs">
+                      {examTitle}
+                    </span>
+                    <span className="text-[9px] font-bold text-indigo-800">
+                      SESSION {settings.currentSession || '2026-27'}
+                    </span>
+                  </div>
+
+                  {/* Student Info, Photo & QR Code */}
+                  <div className="bg-gray-50 border border-gray-300 rounded-lg p-3 flex justify-between gap-3 text-xs mb-3">
+                    <div className="space-y-1 font-semibold flex-1">
+                      <p><span className="font-bold text-gray-600">Student Name:</span> <strong className="text-black uppercase">{s.name}</strong></p>
+                      <p><span className="font-bold text-gray-600">Father Name:</span> {s.fatherName || '-'}</p>
+                      <p><span className="font-bold text-gray-600">Class & Section:</span> <strong>{s.className} {s.section || 'A'}</strong></p>
+                      <p><span className="font-bold text-gray-600">Roll No:</span> <strong>{s.rollNumber || s.id}</strong> | <span className="font-bold text-gray-600">Admission No:</span> {s.admissionNumber || s.id}</p>
+                      <p className="pt-1 border-t border-gray-200">
+                        <span className="font-bold text-indigo-950">Aadhaar Card No (Official ID):</span>{' '}
+                        <strong className="text-indigo-950 font-black bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                          {aadhaar}
+                        </strong>
+                      </p>
+                    </div>
+
+                    {/* QR Code */}
+                    <div className="flex flex-col items-center justify-center p-1 bg-white border border-gray-300 rounded-lg">
+                      <img
+                        src={qrUrl}
+                        alt="Admit Card QR"
+                        className="w-16 h-16 object-contain"
+                      />
+                      <span className="text-[7px] text-gray-500 font-bold tracking-tighter uppercase mt-0.5">
+                        SCAN TO VERIFY
+                      </span>
+                    </div>
+
+                    {/* Photo */}
+                    <div className="w-20 h-24 border border-gray-400 bg-white flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase text-center overflow-hidden rounded">
+                      {s.photoUrl || s.photoPath ? (
+                        <img src={s.photoUrl || s.photoPath} alt="Photo" className="w-full h-full object-cover" />
+                      ) : (
+                        'STUDENT PHOTO'
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Timetable Table */}
+                  <div className="mb-3">
+                    <div className="text-[10px] font-black uppercase text-indigo-950 mb-1">Examination Schedule:</div>
+                    <table className="w-full text-left text-[10px] border border-gray-400 border-collapse">
+                      <thead className="bg-indigo-50 font-bold border-b border-gray-400">
+                        <tr>
+                          <th className="p-1 border-r border-gray-400">Date</th>
+                          <th className="p-1 border-r border-gray-400">Subject</th>
+                          <th className="p-1 border-r border-gray-400">Timing</th>
+                          <th className="p-1 text-center">Invigilator Sign</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-300">
+                        {timetable.map((t, idx) => (
+                          <tr key={idx}>
+                            <td className="p-1 border-r border-gray-400 font-semibold">{t.date}</td>
+                            <td className="p-1 border-r border-gray-400 font-bold">{t.subject}</td>
+                            <td className="p-1 border-r border-gray-400">{t.time}</td>
+                            <td className="p-1 text-center text-gray-400">__________</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Instructions */}
+                  <div className="text-[8px] text-gray-600 space-y-0.5 border-t border-gray-300 pt-2 mb-6">
+                    <p className="font-bold text-black uppercase">Instructions for Candidate:</p>
+                    <p>1. Candidate must carry this Admit Card with Aadhaar verification to all examinations.</p>
+                    <p>2. Report to examination room at least 15 minutes before the scheduled time.</p>
+                    <p>3. Electronic gadgets and unauthorized materials are strictly forbidden inside the hall.</p>
+                  </div>
+
+                  {/* Signatures */}
+                  <div className="flex justify-between items-end border-t border-gray-400 pt-3 mt-4 text-[10px] font-bold">
+                    <div className="text-center">
+                      <div className="w-28 border-b border-gray-400 mb-1" />
+                      <span>Class Teacher Sign</span>
+                    </div>
+                    <div className="text-center flex flex-col items-center">
+                      {settings.principalSignature || settings.signatureUrl ? (
+                        <img
+                          src={settings.principalSignature || settings.signatureUrl}
+                          alt="Signature"
+                          className="h-8 object-contain mb-1"
+                        />
+                      ) : (
+                        <div className="h-8" />
+                      )}
+                      <div className="w-28 border-b border-gray-400 mb-1" />
+                      <span>Principal Signature</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

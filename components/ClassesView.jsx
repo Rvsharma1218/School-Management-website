@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 export default function ClassesView() {
-  const { students, settings, setCurrentPath, setFilterClass } = useSchoolStore();
+  const { students, settings, navigate, setAttendanceTargetClass } = useSchoolStore();
 
   const allClasses = ['Nursery', 'LKG', 'UKG', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
@@ -80,8 +80,10 @@ export default function ClassesView() {
             <div className="pt-2 border-t border-dashed border-border flex items-center justify-between text-xs">
               <button
                 onClick={() => {
-                  setFilterClass(c.className);
-                  setCurrentPath('/students');
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('school_students_target_class', c.className);
+                  }
+                  navigate('/students');
                 }}
                 className="text-primary hover:text-primary-dark font-bold flex items-center gap-1 cursor-pointer"
               >
@@ -90,11 +92,15 @@ export default function ClassesView() {
               </button>
               <button
                 onClick={() => {
-                  setCurrentPath('/attendance');
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('school_attendance_target_class', c.className);
+                  }
+                  if (setAttendanceTargetClass) setAttendanceTargetClass(c.className);
+                  navigate('/attendance');
                 }}
-                className="text-text-muted hover:text-text-primary font-medium cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white font-bold text-xs transition-colors cursor-pointer"
               >
-                Take Attendance
+                Take Attendance &rarr;
               </button>
             </div>
           </div>

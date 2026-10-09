@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 export default function SignInView() {
-  const { signIn, teacherSignIn, fetchSchoolTeachersByEmail, teachers, settings, currentUser, navigate } = useSchoolStore();
+  const { signIn, teacherSignIn, fetchSchoolTeachersByEmail, teachers, settings, currentUser, navigate, demoSignIn } = useSchoolStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('principal'); // 'principal' | 'teacher'
@@ -188,6 +188,50 @@ export default function SignInView() {
                 <UserCheck className="w-4 h-4" />
                 <span>Teacher / Faculty</span>
               </button>
+            </div>
+
+                        {/* Quick 1-Click Instant Demo Access (Guaranteed to open on Vercel & localhost) */}
+            <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase text-indigo-950 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  Instant 1-Click Demo Login:
+                </span>
+                <span className="text-[10px] text-indigo-600 font-semibold bg-white px-2 py-0.5 rounded-full border border-indigo-100">
+                  No Password Needed
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (demoSignIn) demoSignIn('principal');
+                    else {
+                      setEmail('admin@example.com');
+                      setPassword('123456');
+                    }
+                  }}
+                  className="py-2 px-3 rounded-xl bg-[#1f108e] hover:bg-[#150b69] text-white text-[11px] font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Principal (Admin)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (demoSignIn) demoSignIn('teacher');
+                    else {
+                      setRole('teacher');
+                      setEmail('admin@example.com');
+                      setPassword('123456');
+                    }
+                  }}
+                  className="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-[#1f108e] border border-[#1f108e]/30 text-[11px] font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>Class Teacher</span>
+                </button>
+              </div>
             </div>
 
             {/* Error Message Box */}

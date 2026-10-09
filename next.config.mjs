@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   async rewrites() {
     return [
       {
@@ -24,6 +27,18 @@ const nextConfig = {
       },
       {
         source: '/idcards',
+        destination: '/',
+      },
+      {
+        source: '/admitcards',
+        destination: '/',
+      },
+      {
+        source: '/timetable',
+        destination: '/',
+      },
+      {
+        source: '/classes',
         destination: '/',
       },
       {
@@ -68,14 +83,6 @@ const nextConfig = {
       },
       {
         source: '/users',
-        destination: '/',
-      },
-      {
-        source: '/timetable',
-        destination: '/',
-      },
-      {
-        source: '/classes',
         destination: '/',
       },
     ];

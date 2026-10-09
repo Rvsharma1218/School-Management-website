@@ -38,6 +38,7 @@ export default function TeachersView() {
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
+  const [selectedTeacherForHistory, setSelectedTeacherForHistory] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -239,9 +240,18 @@ export default function TeachersView() {
                     )}
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-text-secondary font-medium">Base Salary:</span>
-                      <span className="font-extrabold text-emerald-600 font-mono text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                        ₹25,000 / mo
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-emerald-600 font-mono text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          ₹{(teacher.salary || 25000).toLocaleString()} / mo
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTeacherForHistory(teacher)}
+                          className="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold border border-indigo-200 cursor-pointer transition-colors"
+                        >
+                          Salary History
+                        </button>
+                      </div>
                     </div>
 
                     {teacher.password && (
@@ -400,6 +410,75 @@ export default function TeachersView() {
           </div>
         </div>
       )}
+          {/* Salary History & Payslip Modal */}
+      {selectedTeacherForHistory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-border bg-surface2 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-sm text-text">
+                  Salary & Payroll Register ?" {selectedTeacherForHistory.name}
+                </h3>
+                <p className="text-[11px] text-text-secondary">
+                  Class {selectedTeacherForHistory.assignedClass} Teacher | Monthly Base: ₹{(selectedTeacherForHistory.salary || 25000).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedTeacherForHistory(null)}
+                className="p-1 rounded-lg text-text-muted hover:text-text hover:bg-surface2 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="space-y-2.5">
+                {[
+                  { month: 'October 2026', amount: selectedTeacherForHistory.salary || 25000, date: '05/10/2026', ref: 'PAY-2026-10-098', status: 'PAID' },
+                  { month: 'September 2026', amount: selectedTeacherForHistory.salary || 25000, date: '04/09/2026', ref: 'PAY-2026-09-082', status: 'PAID' },
+                  { month: 'August 2026', amount: selectedTeacherForHistory.salary || 25000, date: '05/08/2026', ref: 'PAY-2026-08-071', status: 'PAID' },
+                  { month: 'July 2026', amount: selectedTeacherForHistory.salary || 25000, date: '06/07/2026', ref: 'PAY-2026-07-063', status: 'PAID' },
+                ].map((item, idx) => (
+                  <div key={idx} className="p-3 bg-surface2/60 rounded-xl border border-border flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-text">{item.month}</div>
+                      <div className="text-[10px] text-text-secondary">Ref: {item.ref} | Date: {item.date}</div>
+                    </div>
+                    <div className="text-right flex items-center gap-3">
+                      <div>
+                        <div className="font-extrabold text-emerald-600 font-mono">₹{item.amount.toLocaleString()}</div>
+                        <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                          {item.status}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          showToast(`Downloading Payslip for ${selectedTeacherForHistory.name} (${item.month})`, 'success');
+                          window.print();
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-primary hover:bg-primary-dark text-white font-bold text-[10px] cursor-pointer"
+                      >
+                        Payslip
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="px-6 py-3 border-t border-border bg-surface2/50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedTeacherForHistory(null)}
+                className="px-4 py-2 rounded-xl bg-surface2 border border-border text-xs font-bold text-text cursor-pointer hover:bg-surface2/80"
+              >
+                Close Register
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -37,6 +37,17 @@ export default function AttendanceView() {
   const [selectedClass, setSelectedClass] = useState(isPrincipal ? 'all' : assignedClass);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Auto-filter to specific class if navigated from Classes card
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const target = localStorage.getItem('school_attendance_target_class');
+      if (target) {
+        setSelectedClass(target);
+        localStorage.removeItem('school_attendance_target_class');
+      }
+    }
+  }, []);
+
   // Reset to assigned class on view mount or role change
   useEffect(() => {
     if (!isPrincipal && assignedClass) {

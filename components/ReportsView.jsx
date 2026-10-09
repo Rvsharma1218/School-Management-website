@@ -224,6 +224,33 @@ export default function ReportsView() {
       onExcel: () => exportAttendanceToExcel(students, attendance, settings.instituteName)
     },
     {
+      id: 'payroll',
+      category: 'fees',
+      title: 'Staff Payroll & Teacher Salary Register',
+      description: 'Monthly teacher compensation, payment statuses, bank disbursements, and salary slips register.',
+      icon: CreditCard,
+      color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+      totalCount: `${teachers.length} Active Staff`,
+      onPdf: () => {
+        showToast('Opening Faculty Payroll Register...', 'info');
+        window.print();
+      },
+      onExcel: () => exportFacultyToExcel(teachers, settings.instituteName)
+    },
+    {
+      id: 'routine',
+      category: 'academic',
+      title: 'Weekly School Routine & Timetables',
+      description: 'Class-wise periods, teacher allocations, subject timing, and room distribution.',
+      icon: Calendar,
+      color: 'bg-blue-500/10 text-blue-600 border-blue-200',
+      totalCount: `${settings.schoolClasses?.length || 15} Classes`,
+      onPdf: () => {
+        window.location.href = '/timetable';
+      },
+      onExcel: () => exportFacultyToExcel(teachers, settings.instituteName)
+    },
+    {
       id: 'academic',
       category: 'academic',
       title: 'Exam Results & Academic Performance',
