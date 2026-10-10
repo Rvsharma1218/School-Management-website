@@ -315,7 +315,6 @@ export default function SettingsView() {
     {
       group: 'BILLING & CLOUD',
       items: [
-        { id: 'subscription', label: 'Subscriptions', icon: Sparkles, desc: '100% All Access & Plans' },
         { id: 'backup', label: 'Data Backup', icon: RefreshCw, desc: 'Export & Import database' },
       ]
     },
