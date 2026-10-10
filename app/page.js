@@ -17,6 +17,7 @@ import TeachersView from '../components/TeachersView';
 import ReportsView from '../components/ReportsView';
 import QrScannerView from '../components/QrScannerView';
 import SettingsView from '../components/SettingsView';
+import TeacherPermissionsModal from '../components/TeacherPermissionsModal';
 import SubscriptionView from '../components/SubscriptionView';
 import PrintReceiptModal from '../components/PrintReceiptModal';
 import PrintResultModal from '../components/PrintResultModal';
@@ -62,7 +63,8 @@ function AppContent() {
     isGlobalSearchOpen, setIsGlobalSearchOpen,
     isAddNoticeOpen, setIsAddNoticeOpen,
     editingNotice, setEditingNotice,
-    viewingNotice, setViewingNotice
+    viewingNotice, setViewingNotice,
+    isTeacherPermissionsModalOpen, setIsTeacherPermissionsModalOpen
   } = useSchoolStore();
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -296,6 +298,12 @@ function AppContent() {
       </div>
 
       {/* Modals */}
+      {isTeacherPermissionsModalOpen && (
+        <TeacherPermissionsModal
+          isOpen={isTeacherPermissionsModalOpen}
+          onClose={() => setIsTeacherPermissionsModalOpen(false)}
+        />
+      )}
       {isAddStudentOpen && (
         <AddEditStudentModal
           isOpen={isAddStudentOpen}

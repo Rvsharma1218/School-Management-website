@@ -57,7 +57,8 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
   const {
     settings, stats, currentUser, themeMode, toggleTheme, teacherPermissions,
     setIsAddStudentOpen, currentTeacher, currentPath, navigate,
-    unreadNoticeCount
+    unreadNoticeCount,
+    isTeacherPermissionsModalOpen, setIsTeacherPermissionsModalOpen
   } = useSchoolStore();
 
   if (!currentUser) return null;
@@ -158,6 +159,17 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
               <SectionLabel collapsed={collapsed}>Administration</SectionLabel>
               <NavBtn icon={CreditCard} label="Fee Collections" badge={stats.defaultersCount > 0 ? `${stats.defaultersCount} dues` : undefined} active={currentPath === '/fees'} onClick={() => nav('fees')} collapsed={collapsed} />
               <NavBtn icon={GraduationCap} label="Faculty & Teachers" active={currentPath === '/teachers'} onClick={() => nav('teachers')} collapsed={collapsed} />
+              <NavBtn
+                icon={ShieldCheck}
+                label="Teacher Access"
+                badge="Roles"
+                active={currentPath === '/teacher-access' || isTeacherPermissionsModalOpen}
+                onClick={() => {
+                  setIsTeacherPermissionsModalOpen(true);
+                  if (onClose) onClose();
+                }}
+                collapsed={collapsed}
+              />
               <NavBtn icon={FileSpreadsheet} label="Reports & Docs" active={currentPath === '/reports'} onClick={() => nav('reports')} collapsed={collapsed} />
               <NavBtn icon={QrCode} label="QR Scanner" active={currentPath === '/qrscanner'} onClick={() => nav('qrscanner')} collapsed={collapsed} />
               <NavBtn icon={UserCheck} label="User Management" active={currentPath === '/users'} onClick={() => nav('users')} collapsed={collapsed} />
