@@ -1097,48 +1097,45 @@ export default function SettingsView() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { name: 'Monthly Plan', price: '₹999', dur: '/ month', note: 'Flexible billing', badge: 'Standard' },
-                  { name: 'Annual Session', price: '₹8,999', dur: '/ full session', note: 'Save 25% (Save ₹3,000)', badge: 'Most Popular', highlight: true },
-                  { name: '3-Year Multi-Year', price: '₹19,999', dur: '/ 3 full years', note: 'Save 35% (Save ₹16,000)', badge: 'Best Value' },
+                  { name: 'Free Trial', price: '₹0', dur: 'Trial', note: 'Max 10 Students', badge: 'Test Drive' },
+                  { name: 'Starter Plan', price: '₹199', dur: '/ mo', note: 'Up to 50 Students', badge: 'Affordable' },
+                  { name: 'Standard School', price: '₹399', dur: '/ mo', note: 'Up to 200 Students', badge: 'Most Popular', highlight: true },
+                  { name: 'Pro Unlimited', price: '₹699', dur: '/ mo', note: 'Unlimited Students', badge: 'Unlimited' },
                 ].map((plan) => (
                   <div
                     key={plan.name}
-                    className={`p-5 rounded-2xl border flex flex-col justify-between transition-all relative ${
+                    className={`p-4 rounded-2xl border flex flex-col justify-between transition-all relative ${
                       plan.highlight
                         ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md'
                         : 'border-border bg-surface2/30'
                     }`}
                   >
                     {plan.badge && (
-                      <span className={`absolute -top-3 left-4 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      <span className={`absolute -top-3 left-4 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
                         plan.highlight ? 'bg-primary text-white' : 'bg-surface2 text-text-secondary border border-border'
                       }`}>
                         {plan.badge}
                       </span>
                     )}
-                    <div className="space-y-2 mt-1">
-                      <div className="text-sm font-bold text-text">{plan.name}</div>
+                    <div className="space-y-1.5 mt-1">
+                      <div className="text-xs font-bold text-text">{plan.name}</div>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-black text-text">{plan.price}</span>
-                        <span className="text-xs text-text-secondary">{plan.dur}</span>
+                        <span className="text-xl font-black text-text">{plan.price}</span>
+                        <span className="text-[10px] text-text-secondary">{plan.dur}</span>
                       </div>
-                      <p className="text-xs font-semibold text-emerald-600">{plan.note}</p>
+                      <p className="text-[11px] font-semibold text-emerald-600">{plan.note}</p>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-border/80 space-y-1.5 text-xs text-text-secondary">
-                      <div className="flex items-center gap-1.5 font-bold text-text text-[11px]">
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>All Features Unlocked</span>
+                    <div className="mt-3 pt-2.5 border-t border-border/80 space-y-1 text-xs text-text-secondary">
+                      <div className="flex items-center gap-1.5 font-bold text-text text-[10px]">
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span>All 15+ Modules Unlocked</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-[11px]">
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Unlimited Students & Teachers</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[11px]">
-                        <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Automatic Daily Cloud Sync</span>
+                      <div className="flex items-center gap-1.5 text-[10px]">
+                        <Check className="w-3 h-3 text-emerald-600" />
+                        <span>Receipts & Marksheets PDF</span>
                       </div>
                     </div>
                   </div>

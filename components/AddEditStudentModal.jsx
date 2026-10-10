@@ -150,11 +150,14 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
     if (isEdit) {
       await updateStudent(student.id, payload);
       showToast(`Student "${formData.name}" updated successfully!`, "success");
+      onClose();
     } else {
-      await addStudent(payload);
-      showToast(`New admission for "${formData.name}" completed in ${payload.className}!`, "success");
+      const added = await addStudent(payload);
+      if (added) {
+        showToast(`New admission for "${formData.name}" completed in ${payload.className}!`, "success");
+        onClose();
+      }
     }
-    onClose();
   };
 
   const handlePhotoFileSelect = (e) => {
