@@ -55,7 +55,7 @@ function SectionLabel({ children, collapsed }) {
 
 export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }) {
   const {
-    settings, stats, currentUser, themeMode, toggleTheme,
+    settings, stats, currentUser, themeMode, toggleTheme, teacherPermissions,
     setIsAddStudentOpen, currentTeacher, currentPath, navigate,
     unreadNoticeCount
   } = useSchoolStore();
@@ -121,14 +121,36 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
 
           {/* Academic Management */}
           <SectionLabel collapsed={collapsed}>Academic</SectionLabel>
-          <NavBtn icon={Megaphone} label="Notice Board" badge={unreadNoticeCount > 0 ? `${unreadNoticeCount} new` : undefined} active={currentPath === '/notices'} onClick={() => nav('notices')} collapsed={collapsed} />
-          <NavBtn icon={Users} label="Students Directory" badge={stats.totalStudents} active={currentPath === '/students'} onClick={() => nav('students')} collapsed={collapsed} />
-          <NavBtn icon={CalendarCheck} label="Daily Attendance" active={currentPath === '/attendance'} onClick={() => nav('attendance')} collapsed={collapsed} />
-          <NavBtn icon={Award} label="Exam Results" active={currentPath === '/results'} onClick={() => nav('results')} collapsed={collapsed} />
-          <NavBtn icon={Building2} label="Classes & Sections" active={currentPath === '/classes'} onClick={() => nav('classes')} collapsed={collapsed} />
-          <NavBtn icon={Calendar} label="Class Timetable" active={currentPath === '/timetable'} onClick={() => nav('timetable')} collapsed={collapsed} />
-          <NavBtn icon={Contact} label="ID Cards Studio" active={currentPath === '/idcards'} onClick={() => nav('idcards')} collapsed={collapsed} />
-          <NavBtn icon={FileText} label="Admit Cards" active={currentPath === '/admitcards'} onClick={() => nav('admitcards')} collapsed={collapsed} />
+          {(isPrincipal || teacherPermissions?.canPostNotices !== false) && (
+            <NavBtn icon={Megaphone} label="Notice Board" badge={unreadNoticeCount > 0 ? `${unreadNoticeCount} new` : undefined} active={currentPath === '/notices'} onClick={() => nav('notices')} collapsed={collapsed} />
+          )}
+          {(isPrincipal || teacherPermissions?.canViewStudents !== false) && (
+            <NavBtn icon={Users} label="Students Directory" badge={stats.totalStudents} active={currentPath === '/students'} onClick={() => nav('students')} collapsed={collapsed} />
+          )}
+          {(isPrincipal || teacherPermissions?.canMarkAttendance !== false) && (
+            <NavBtn icon={CalendarCheck} label="Daily Attendance" active={currentPath === '/attendance'} onClick={() => nav('attendance')} collapsed={collapsed} />
+          )}
+          {(isPrincipal || teacherPermissions?.canEnterResults !== false) && (
+            <NavBtn icon={Award} label="Exam Results" active={currentPath === '/results'} onClick={() => nav('results')} collapsed={collapsed} />
+          )}
+          {(isPrincipal || teacherPermissions?.canManageClasses !== false) && (
+            <NavBtn icon={Building2} label="Classes & Sections" active={currentPath === '/classes'} onClick={() => nav('classes')} collapsed={collapsed} />
+          )}
+          {(isPrincipal || teacherPermissions?.canManageTimetable !== false) && (
+            <NavBtn icon={Calendar} label="Class Timetable" active={currentPath === '/timetable'} onClick={() => nav('timetable')} collapsed={collapsed} />
+          )}
+          {(isPrincipal || teacherPermissions?.canViewIdCards !== false) && (
+            <NavBtn icon={Contact} label="ID Cards Studio" active={currentPath === '/idcards'} onClick={() => nav('idcards')} collapsed={collapsed} />
+          )}
+          {(isPrincipal || teacherPermissions?.canViewAdmitCards !== false) && (
+            <NavBtn icon={FileText} label="Admit Cards" active={currentPath === '/admitcards'} onClick={() => nav('admitcards')} collapsed={collapsed} />
+          )}
+          {!isPrincipal && teacherPermissions?.canCollectFees && (
+            <NavBtn icon={CreditCard} label="Fee Collections" active={currentPath === '/fees'} onClick={() => nav('fees')} collapsed={collapsed} />
+          )}
+          {!isPrincipal && teacherPermissions?.canExportReports && (
+            <NavBtn icon={FileSpreadsheet} label="Reports & Docs" active={currentPath === '/reports'} onClick={() => nav('reports')} collapsed={collapsed} />
+          )}
 
           {/* Administrative / Principal Only */}
           {isPrincipal && (

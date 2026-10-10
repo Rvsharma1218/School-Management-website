@@ -1,5 +1,7 @@
 'use client';
 
+import TeacherPermissionsModal from './TeacherPermissionsModal';
+
 import React, { useState } from 'react';
 import { useSchoolStore, getNextTeacherId, getActiveSchoolId } from '../lib/store';
 import { exportFacultyToExcel, exportFacultyPDF } from '../lib/exportUtils';
@@ -37,6 +39,7 @@ export default function TeachersView() {
   } = useSchoolStore();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isPermsModalOpen, setIsPermsModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [selectedTeacherForHistory, setSelectedTeacherForHistory] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
@@ -148,6 +151,15 @@ export default function TeachersView() {
               </button>
             </>
           )}
+
+          <button
+            onClick={() => setIsPermsModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-[#1E3A8A] hover:bg-[#152865] text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Configure teacher login access (ON / OFF switches)"
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>Role Access (अनुमति)</span>
+          </button>
 
           <button
             onClick={handleOpenAdd}

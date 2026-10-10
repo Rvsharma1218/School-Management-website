@@ -1,3 +1,6 @@
+'use client';
+
+import TeacherPermissionsModal from './TeacherPermissionsModal';
 import React, { useState, useRef } from 'react';
 import { useSchoolStore } from '../lib/store';
 import {
@@ -35,6 +38,8 @@ export default function SettingsView() {
     logoUrl: settings.logoUrl || settings.logoPath || settings.logo || '',
     principalSignature: settings.principalSignature || settings.signatureUrl || '',
     signatureUrl: settings.signatureUrl || settings.principalSignature || '',
+    rawSignature: settings.rawSignature || '',
+    signatureColorMode: settings.signatureColorMode || 'white',
     schoolStamp: settings.schoolStamp || settings.stampUrl || '',
     stampUrl: settings.stampUrl || settings.schoolStamp || '',
     currentSession: settings.currentSession || settings.academicYear || '2026-27',
@@ -478,7 +483,9 @@ export default function SettingsView() {
                             setFormData(prev => ({
                               ...prev,
                               principalSignature: transparent,
-                              signatureUrl: transparent
+                              signatureUrl: transparent,
+                              rawSignature: dataUrl,
+                              signatureColorMode: 'white'
                             }));
                             showToast('Signature converted to White ink! Click "Save Institute Profile" below to apply.', 'success');
                           }
@@ -495,6 +502,81 @@ export default function SettingsView() {
                       ✨ Ink is automatically converted to bright <b>White contrast</b> with 100% transparent background for dark ID cards.
                     </p>
                   </label>
+
+                  {/* Ink Color Switcher */}
+                  {(formData.rawSignature || formData.principalSignature) && (
+                    <div className="sm:col-span-12 flex items-center gap-2 pt-3 border-t border-border/60 flex-wrap">
+                      <span className="text-[11px] font-bold text-text-secondary">Ink Color:</span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const raw = formData.rawSignature || formData.principalSignature;
+                          const res = await removeSignatureBackground(raw, 210, 'white');
+                          setFormData(prev => ({ ...prev, principalSignature: res, signatureUrl: res, signatureColorMode: 'white' }));
+                          showToast('Converted signature to Pure White ink!', 'success');
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                          formData.signatureColorMode === 'white' || !formData.signatureColorMode
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                            : 'bg-white text-slate-700 border-border hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-white border border-slate-400" />
+                        <span>White (सफेद)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const raw = formData.rawSignature || formData.principalSignature;
+                          const res = await removeSignatureBackground(raw, 210, 'gold');
+                          setFormData(prev => ({ ...prev, principalSignature: res, signatureUrl: res, signatureColorMode: 'gold' }));
+                          showToast('Converted signature to Gold ink!', 'success');
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                          formData.signatureColorMode === 'gold'
+                            ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
+                            : 'bg-white text-slate-700 border-border hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        <span>Gold (गोल्ड)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const raw = formData.rawSignature || formData.principalSignature;
+                          const res = await removeSignatureBackground(raw, 210, 'dark');
+                          setFormData(prev => ({ ...prev, principalSignature: res, signatureUrl: res, signatureColorMode: 'dark' }));
+                          showToast('Converted signature to Dark ink!', 'success');
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                          formData.signatureColorMode === 'dark'
+                            ? 'bg-slate-800 text-white border-slate-900 shadow-2xs'
+                            : 'bg-white text-slate-700 border-border hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-slate-900" />
+                        <span>Dark (काला)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const raw = formData.rawSignature || formData.principalSignature;
+                          const res = await removeSignatureBackground(raw, 210, 'blue');
+                          setFormData(prev => ({ ...prev, principalSignature: res, signatureUrl: res, signatureColorMode: 'blue' }));
+                          showToast('Converted signature to Royal Blue ink!', 'success');
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                          formData.signatureColorMode === 'blue'
+                            ? 'bg-blue-600 text-white border-blue-700 shadow-2xs'
+                            : 'bg-white text-slate-700 border-border hover:bg-slate-50'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-blue-600" />
+                        <span>Blue (नीला)</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

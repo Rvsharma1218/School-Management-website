@@ -25,8 +25,25 @@ export default function AttendanceView() {
     currentUser,
     markStudentAttendance,
     bulkMarkAttendance,
+    teachers,
+    teacherAttendance,
+    bulkMarkTeacherAttendance,
+    teacherPermissions,
     showToast
   } = useSchoolStore();
+
+  const [selectedTeacherDate, setSelectedTeacherDate] = useState(new Date().toISOString().split('T')[0]);
+  const [localTeacherStatus, setLocalTeacherStatus] = useState({});
+  const [isSavingTeacherAtt, setIsSavingTeacherAtt] = useState(false);
+
+  useEffect(() => {
+    const saved = (teacherAttendance && teacherAttendance[selectedTeacherDate]) || {};
+    const initialMap = {};
+    (teachers || []).forEach(t => {
+      initialMap[t.id || t.teacherId] = saved[t.id || t.teacherId] || 'present';
+    });
+    setLocalTeacherStatus(initialMap);
+  }, [selectedTeacherDate, teacherAttendance, teachers]);
 
   const isPrincipal = currentUser?.role === 'principal';
   const assignedClass = currentUser?.assignedClass || '10th';
@@ -193,6 +210,20 @@ export default function AttendanceView() {
             <Users className="w-3.5 h-3.5" />
             <span>Mark Daily Attendance</span>
           </button>
+
+          {(isPrincipal || teacherPermissions?.canMarkTeacherAtt) && (
+            <button
+              onClick={() => setActiveTab('teachers')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+                activeTab === 'teachers'
+                  ? 'bg-[#1E3A8A] text-white shadow-xs'
+                  : 'text-text-secondary hover:text-text hover:bg-surface2'
+              }`}
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>Teacher Attendance (शिक्षक हाजिरी)</span>
+            </button>
+          )}
         </div>
 
         {/* Global Export Actions */}
@@ -404,8 +435,187 @@ export default function AttendanceView() {
             </div>
           </div>
         </div>
+      ) : activeTab === 'teachers' ? (
+        /* TEACHER ATTENDANCE REGISTER */
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl lg:text-2xl font-bold text-text tracking-tight flex items-center gap-2">
+                <span>Teacher Daily Attendance</span>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  शिक्षक उपस्थिति
+                </span>
+              </h2>
+              <p className="text-xs text-text-secondary mt-0.5">
+                Mark, update, and sync faculty daily presence & leave status.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="date"
+                value={selectedTeacherDate}
+                onChange={(e) => setSelectedTeacherDate(e.target.value)}
+                className="px-3 py-2 rounded-xl bg-white border border-border text-xs text-text font-bold shadow-2xs focus:outline-none focus:border-primary"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const m = {};
+                  (teachers || []).forEach(t => { m[t.id || t.teacherId] = 'present'; });
+                  setLocalTeacherStatus(m);
+                  showToast('All teachers marked Present for today', 'info');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 text-xs font-bold shadow-2xs transition-all cursor-pointer"
+              >
+                Mark All Present
+              </button>
+              <button
+                type="button"
+                disabled={isSavingTeacherAtt}
+                onClick={async () => {
+                  setIsSavingTeacherAtt(true);
+                  await bulkMarkTeacherAttendance(selectedTeacherDate, localTeacherStatus);
+                  setIsSavingTeacherAtt(false);
+                }}
+                className="px-4 py-2 rounded-xl bg-[#1E3A8A] hover:bg-[#152865] text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Check className="w-4 h-4" />
+                <span>{isSavingTeacherAtt ? 'Saving...' : 'Save Attendance'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Metrics summary */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 bg-white rounded-2xl border border-border shadow-2xs">
+              <div className="text-[11px] font-bold text-slate-500 uppercase">Total Faculty</div>
+              <div className="text-xl font-extrabold text-text mt-0.5">{teachers.length}</div>
+            </div>
+            <div className="p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200 shadow-2xs">
+              <div className="text-[11px] font-bold text-emerald-700 uppercase">Present</div>
+              <div className="text-xl font-extrabold text-emerald-800 mt-0.5">
+                {Object.values(localTeacherStatus).filter(s => s === 'present').length}
+              </div>
+            </div>
+            <div className="p-3.5 bg-rose-50/60 rounded-2xl border border-rose-200 shadow-2xs">
+              <div className="text-[11px] font-bold text-rose-700 uppercase">Absent</div>
+              <div className="text-xl font-extrabold text-rose-800 mt-0.5">
+                {Object.values(localTeacherStatus).filter(s => s === 'absent').length}
+              </div>
+            </div>
+            <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200 shadow-2xs">
+              <div className="text-[11px] font-bold text-amber-700 uppercase">Half Day / Leave</div>
+              <div className="text-xl font-extrabold text-amber-800 mt-0.5">
+                {Object.values(localTeacherStatus).filter(s => s === 'half_day' || s === 'leave').length}
+              </div>
+            </div>
+          </div>
+
+          {/* Teacher Attendance List */}
+          <div className="bg-white rounded-2xl border border-border shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#f8fafc] text-text-secondary border-b border-border font-bold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th className="py-3 px-4">Faculty Member</th>
+                    <th className="py-3 px-4">Teacher ID</th>
+                    <th className="py-3 px-4">Assigned Class</th>
+                    <th className="py-3 px-4">Contact</th>
+                    <th className="py-3 px-4 text-center">Attendance Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {teachers.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="py-12 text-center text-text-secondary font-medium">
+                        No faculty members added yet. Add teachers in Faculty & Teachers section.
+                      </td>
+                    </tr>
+                  ) : (
+                    teachers.map(t => {
+                      const tKey = t.id || t.teacherId;
+                      const status = localTeacherStatus[tKey] || 'present';
+
+                      return (
+                        <tr key={tKey} className="hover:bg-surface2/40 transition-colors">
+                          <td className="py-3 px-4 font-bold text-text flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-[#1E3A8A] text-white flex items-center justify-center font-extrabold text-xs flex-shrink-0">
+                              {(t.name || 'T')[0]}
+                            </div>
+                            <div>
+                              <div className="font-extrabold text-text">{t.name}</div>
+                              <div className="text-[10px] text-text-secondary">{t.authEmail || t.email || ''}</div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 font-mono font-bold text-slate-700">
+                            {t.teacherId || t.id}
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-text">
+                            {t.assignedClass ? `${t.assignedClass} (Sec ${t.assignedSection || 'A'})` : 'General'}
+                          </td>
+                          <td className="py-3 px-4 text-text-secondary font-medium">
+                            {t.mobile || '—'}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="inline-flex items-center gap-1.5 p-1 bg-surface2 rounded-xl border border-border">
+                              <button
+                                type="button"
+                                onClick={() => setLocalTeacherStatus(prev => ({ ...prev, [tKey]: 'present' }))}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  status === 'present'
+                                    ? 'bg-emerald-600 text-white shadow-2xs'
+                                    : 'text-slate-600 hover:bg-white'
+                                }`}
+                              >
+                                Present
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setLocalTeacherStatus(prev => ({ ...prev, [tKey]: 'absent' }))}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  status === 'absent'
+                                    ? 'bg-rose-600 text-white shadow-2xs'
+                                    : 'text-slate-600 hover:bg-white'
+                                }`}
+                              >
+                                Absent
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setLocalTeacherStatus(prev => ({ ...prev, [tKey]: 'half_day' }))}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  status === 'half_day'
+                                    ? 'bg-amber-600 text-white shadow-2xs'
+                                    : 'text-slate-600 hover:bg-white'
+                                }`}
+                              >
+                                Half Day
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setLocalTeacherStatus(prev => ({ ...prev, [tKey]: 'leave' }))}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  status === 'leave'
+                                    ? 'bg-blue-600 text-white shadow-2xs'
+                                    : 'text-slate-600 hover:bg-white'
+                                }`}
+                              >
+                                Leave
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       ) : (
-        /* ─── DAILY ATTENDANCE REGISTER ─── */
+        /* DAILY ATTENDANCE REGISTER */
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Controls Bar */}
           <div className="bg-white border border-border rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">

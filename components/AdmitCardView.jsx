@@ -792,16 +792,26 @@ export default function AdmitCardView() {
                         <div className="w-28 border-b border-gray-400 mb-1" />
                         <span className="text-gray-700">Candidate Signature</span>
                       </div>
-                      <div className="text-center flex flex-col items-center">
-                        {sigSrc ? (
-                          <img
-                            src={sigSrc}
-                            alt="Signature"
-                            className="h-7 object-contain mb-1"
-                          />
-                        ) : (
-                          <div className="h-7" />
-                        )}
+                      <div className="text-center flex flex-col items-center relative">
+                        <div className="flex items-center gap-1 mb-1">
+                          {(settings.schoolStamp || settings.stampUrl) && (
+                            <img
+                              src={settings.schoolStamp || settings.stampUrl}
+                              alt="Stamp"
+                              className="h-7 w-7 object-contain opacity-85"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          )}
+                          {sigSrc ? (
+                            <img
+                              src={sigSrc}
+                              alt="Signature"
+                              className="h-7 object-contain"
+                            />
+                          ) : (
+                            <div className="h-7" />
+                          )}
+                        </div>
                         <div className="w-36 border-b-2 border-[#1E3A8A] mb-1" />
                         <span className="text-[#1E3A8A] font-black uppercase tracking-wider text-[8.5px]">
                           Principal / Controller of Exam
