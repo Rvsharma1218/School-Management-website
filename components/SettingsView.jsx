@@ -3,7 +3,7 @@ import { useSchoolStore } from '../lib/store';
 import {
   Settings, Building2, Save, Download, Upload, RefreshCw,
   Plus, Trash2, CheckCircle, School, ArrowRight,
-  Info, Sparkles, Check, UploadCloud, Image as ImageIcon, Camera, X, FileSignature, Crop
+  Info, Sparkles, Check, UploadCloud, Image as ImageIcon, Camera, X, FileSignature, Crop, Shield
 } from 'lucide-react';
 import { removeSignatureBackground } from '../lib/exportUtils';
 import ImageCropperModal from './ImageCropperModal';
