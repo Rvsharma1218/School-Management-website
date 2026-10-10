@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 export default function SubscriptionView() {
-  const { settings, students, showToast } = useSchoolStore();
+  const { settings, students, showToast, isSubscriptionEnabled, systemPlansConfig } = useSchoolStore();
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
   const [selectedPlanModal, setSelectedPlanModal] = useState(null);
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
@@ -18,9 +18,9 @@ export default function SubscriptionView() {
 
   const schoolName = settings.instituteName || settings.schoolName || 'My Institute';
   const currentSession = settings.currentSession || '2026-27';
-  const activePlanId = settings.subscriptionPlan || 'free_trial';
-  const rawStudentLimit = settings.studentLimit !== undefined ? Number(settings.studentLimit) : 10;
-  const isUnlimited = rawStudentLimit <= 0 || rawStudentLimit >= 99999;
+  const activePlanId = isSubscriptionEnabled ? (settings.subscriptionPlan || 'free_trial') : 'pro_unlimited';
+  const rawStudentLimit = !isSubscriptionEnabled ? 0 : (settings.studentLimit !== undefined ? Number(settings.studentLimit) : (systemPlansConfig?.trialLimit || 10));
+  const isUnlimited = !isSubscriptionEnabled || rawStudentLimit <= 0 || rawStudentLimit >= 99999;
   const studentCount = (students || []).length;
   const capacityPercent = isUnlimited ? 0 : Math.min(100, Math.round((studentCount / rawStudentLimit) * 100));
 
@@ -33,11 +33,11 @@ export default function SubscriptionView() {
       monthlyPrice: '₹0',
       yearlyPrice: '₹0',
       period: 'forever',
-      studentLimit: 10,
-      studentLimitLabel: 'Max 10 Students',
-      description: 'Test drive all 15+ features with up to 10 student records.',
+      studentLimit: systemPlansConfig?.trialLimit || 10,
+      studentLimitLabel: `Max ${systemPlansConfig?.trialLimit || 10} Students`,
+      description: `Test drive all 15+ features with up to ${systemPlansConfig?.trialLimit || 10} student records.`,
       features: [
-        'Max 10 Student Admissions',
+        `Max ${systemPlansConfig?.trialLimit || 10} Student Admissions`,
         'Mark Entry Desk (Theory, Pract, Int)',
         'Marksheet PDF & Statement of Marks',
         'Fee Collection & Multi-Format Receipts',
@@ -52,15 +52,15 @@ export default function SubscriptionView() {
       name: 'Starter Plan',
       badge: 'Affordable',
       badgeStyle: 'bg-blue-100 text-blue-800 border border-blue-300',
-      monthlyPrice: '₹199',
-      yearlyPrice: '₹1,790',
+      monthlyPrice: systemPlansConfig?.starterMonthPrice ? `₹${systemPlansConfig.starterMonthPrice}` : '₹199',
+      yearlyPrice: systemPlansConfig?.starterYearPrice ? `₹${systemPlansConfig.starterYearPrice}` : '₹1,790',
       period: billingCycle === 'monthly' ? '/ month' : '/ year',
-      savings: billingCycle === 'yearly' ? 'Save 25% (Save ₹598)' : null,
-      studentLimit: 50,
-      studentLimitLabel: 'Up to 50 Students',
+      savings: billingCycle === 'yearly' ? 'Save 25%' : null,
+      studentLimit: systemPlansConfig?.starterLimit || 50,
+      studentLimitLabel: `Up to ${systemPlansConfig?.starterLimit || 50} Students`,
       description: 'Ideal for coaching institutes & small computer centers.',
       features: [
-        'Up to 50 Student Admissions',
+        `Up to ${systemPlansConfig?.starterLimit || 50} Student Admissions`,
         'Everything in Free Trial',
         'Class & Course Batch Management',
         'Automated Monthly Fee Dues Tracker',
@@ -75,15 +75,15 @@ export default function SubscriptionView() {
       name: 'Standard School',
       badge: 'Most Popular',
       badgeStyle: 'bg-amber-100 text-amber-900 border border-amber-300',
-      monthlyPrice: '₹399',
-      yearlyPrice: '₹3,590',
+      monthlyPrice: systemPlansConfig?.standardMonthPrice ? `₹${systemPlansConfig.standardMonthPrice}` : '₹399',
+      yearlyPrice: systemPlansConfig?.standardYearPrice ? `₹${systemPlansConfig.standardYearPrice}` : '₹3,590',
       period: billingCycle === 'monthly' ? '/ month' : '/ year',
-      savings: billingCycle === 'yearly' ? 'Save 25% (Save ₹1,198)' : null,
-      studentLimit: 200,
-      studentLimitLabel: 'Up to 200 Students',
+      savings: billingCycle === 'yearly' ? 'Save 25%' : null,
+      studentLimit: systemPlansConfig?.standardLimit || 200,
+      studentLimitLabel: `Up to ${systemPlansConfig?.standardLimit || 200} Students`,
       description: 'Recommended for primary & secondary schools.',
       features: [
-        'Up to 200 Student Admissions',
+        `Up to ${systemPlansConfig?.standardLimit || 200} Student Admissions`,
         'Everything in Starter Plan',
         'Official School Seal & Stamp Integration',
         'Admit Card & Exam Roll Sheet Generator',
@@ -98,10 +98,10 @@ export default function SubscriptionView() {
       name: 'Pro Unlimited',
       badge: 'Unlimited Growth',
       badgeStyle: 'bg-purple-100 text-purple-900 border border-purple-300',
-      monthlyPrice: '₹699',
-      yearlyPrice: '₹6,290',
+      monthlyPrice: systemPlansConfig?.proMonthPrice ? `₹${systemPlansConfig.proMonthPrice}` : '₹699',
+      yearlyPrice: systemPlansConfig?.proYearPrice ? `₹${systemPlansConfig.proYearPrice}` : '₹6,290',
       period: billingCycle === 'monthly' ? '/ month' : '/ year',
-      savings: billingCycle === 'yearly' ? 'Save 25% (Save ₹2,098)' : null,
+      savings: billingCycle === 'yearly' ? 'Save 25%' : null,
       studentLimit: 0,
       studentLimitLabel: 'Unlimited Students',
       description: 'Uncapped student enrollment for large institutions.',
@@ -151,6 +151,57 @@ export default function SubscriptionView() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-200">
+      {/* ─── Master Switch Status Notice ─── */}
+      {!isSubscriptionEnabled ? (
+        <div className="bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-500 text-white shadow-md">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-emerald-900 dark:text-emerald-200">
+                Full Unrestricted Version Active (Master Subscription Switch OFF)
+              </h4>
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                Subscription system is currently disabled by Super Admin. Your institution has 100% full access to all modules and unlimited student admissions without any charge.
+              </p>
+            </div>
+          </div>
+          <span className="shrink-0 px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white shadow-sm">
+            100% FREE UNRESTRICTED
+          </span>
+        </div>
+      ) : systemPlansConfig?.isOfferActive ? (
+        <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 border border-amber-400/30 rounded-2xl p-4 sm:p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-400 text-purple-950 font-black shadow-md">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-400 text-purple-950 uppercase tracking-wider">
+                  Special Offer Active
+                </span>
+                <span className="text-xs text-amber-300 font-bold">
+                  {systemPlansConfig.offerDiscount || 25}% Instant Discount
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-white mt-0.5">
+                {systemPlansConfig.offerBanner || 'Special Festival Offer on All Annual Plans!'}
+              </h4>
+            </div>
+          </div>
+          {systemPlansConfig.promoCode && (
+            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/20">
+              <span className="text-xs text-slate-300">Use Coupon:</span>
+              <code className="text-xs font-mono font-black text-amber-300 bg-black/40 px-2 py-0.5 rounded">
+                {systemPlansConfig.promoCode}
+              </code>
+            </div>
+          )}
+        </div>
+      ) : null}
+
       {/* ─── Top Header Banner ─── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#1f108e] via-[#281ab5] to-[#160b6a] p-6 sm:p-8 text-white shadow-xl">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
