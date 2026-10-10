@@ -37,20 +37,48 @@ export default function AdmitCardView() {
   const [selectedStudentIndex, setSelectedStudentIndex] = useState(0);
   const [printTargetStudentId, setPrintTargetStudentId] = useState('all');
 
-  // Editable Timetable
-  const [timetable, setTimetable] = useState([
-    { day: 'Day 1', subject: 'Mathematics', timing: '09:30 AM - 12:30 PM' },
-    { day: 'Day 2', subject: 'Science', timing: '09:30 AM - 12:30 PM' },
-    { day: 'Day 3', subject: 'Social Studies', timing: '09:30 AM - 12:30 PM' },
-    { day: 'Day 4', subject: 'English', timing: '09:30 AM - 12:30 PM' },
-    { day: 'Day 5', subject: 'Hindi', timing: '09:30 AM - 12:30 PM' },
-  ]);
+  // Class-wise Editable Timetable
+  const defaultTimetable = [
+    { day: '15/03/2026', subject: 'Mathematics', timing: '09:30 AM - 12:30 PM' },
+    { day: '17/03/2026', subject: 'Science', timing: '09:30 AM - 12:30 PM' },
+    { day: '19/03/2026', subject: 'Social Studies', timing: '09:30 AM - 12:30 PM' },
+    { day: '21/03/2026', subject: 'English', timing: '09:30 AM - 12:30 PM' },
+    { day: '23/03/2026', subject: 'Hindi', timing: '09:30 AM - 12:30 PM' },
+    { day: '25/03/2026', subject: 'Computer', timing: '09:30 AM - 12:30 PM' },
+  ];
 
-  const [newDay, setNewDay] = useState('Day 6');
-  const [newSubject, setNewSubject] = useState('');
+  const [timetable, setTimetable] = useState(defaultTimetable);
+  const [newDay, setNewDay] = useState('27/03/2026');
+  const [newSubject, setNewSubject] = useState('Mathematics');
+  const [customSubjectName, setCustomSubjectName] = useState('');
   const [newTiming, setNewTiming] = useState('09:30 AM - 12:30 PM');
   const [isAddingSubject, setIsAddingSubject] = useState(false);
 
+  // Load schedule for selected class from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const classKey = selectedClass === 'all' ? 'school_admit_schedule_default' : `school_admit_schedule_${selectedClass}`;
+      const saved = localStorage.getItem(classKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setTimetable(parsed);
+            return;
+          }
+        } catch (e) {}
+      }
+      setTimetable(defaultTimetable);
+    }
+  }, [selectedClass]);
+
+  const handleSaveClassSchedule = () => {
+    if (typeof window !== 'undefined') {
+      const classKey = selectedClass === 'all' ? 'school_admit_schedule_default' : `school_admit_schedule_${selectedClass}`;
+      localStorage.setItem(classKey, JSON.stringify(timetable));
+      showToast(`Exam Schedule for ${selectedClass === 'all' ? 'All Classes' : 'Class ' + selectedClass} saved successfully!`, 'success');
+    }
+  };
   // Filter students
   const filteredStudents = useMemo(() => {
     return students.filter(s => {
@@ -67,16 +95,25 @@ export default function AdmitCardView() {
 
   const handleAddSubject = (e) => {
     e.preventDefault();
-    if (!newSubject.trim()) {
-      showToast('Please enter subject name', 'error');
+    const finalSubject = newSubject === 'Other' ? customSubjectName.trim() : newSubject.trim();
+    if (!finalSubject) {
+      showToast('Please enter or select a subject name', 'error');
       return;
     }
-    setTimetable([...timetable, { day: newDay.trim(), subject: newSubject.trim(), timing: newTiming.trim() }]);
-    setNewSubject('');
+    if (!newDay.trim()) {
+      showToast('Please enter an exam date', 'error');
+      return;
+    }
+    const updated = [...timetable, { day: newDay.trim(), subject: finalSubject, timing: newTiming.trim() }];
+    setTimetable(updated);
+    if (typeof window !== 'undefined') {
+      const classKey = selectedClass === 'all' ? 'school_admit_schedule_default' : `school_admit_schedule_${selectedClass}`;
+      localStorage.setItem(classKey, JSON.stringify(updated));
+    }
+    setCustomSubjectName('');
     setIsAddingSubject(false);
-    showToast('Subject added to schedule', 'success');
+    showToast('Subject added to exam schedule', 'success');
   };
-
   const handleRemoveSubject = (index) => {
     setTimetable(timetable.filter((_, i) => i !== index));
   };
