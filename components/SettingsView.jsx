@@ -753,6 +753,86 @@ export default function SettingsView() {
             </div>
           </div>
 
+          {/* ─── Application Language & Subscription (Matching Mobile App) ─── */}
+          <div className="bg-white border border-border rounded-2xl p-6 shadow-xs space-y-4">
+            <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2 border-b border-border pb-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span>Language & Cloud Subscriptions</span>
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* App Language Toggle */}
+              <div className="p-4 rounded-xl bg-surface2/60 border border-border space-y-2">
+                <label className="text-xs font-bold text-text block">Portal Display Language (भाषा)</label>
+                <p className="text-[11px] text-text-secondary">Choose default language across mobile app and website.</p>
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, appLanguage: 'en' }));
+                      updateSettings({ appLanguage: 'en' });
+                      showToast('Display language set to English', 'success');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      (formData.appLanguage || 'en') === 'en'
+                        ? 'bg-primary text-white border-primary shadow-xs'
+                        : 'bg-white text-text border-border hover:border-primary/40'
+                    }`}
+                  >
+                    English (Default)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, appLanguage: 'hi' }));
+                      updateSettings({ appLanguage: 'hi' });
+                      showToast('भाषा हिन्दी पर सेट की गई', 'success');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      formData.appLanguage === 'hi'
+                        ? 'bg-primary text-white border-primary shadow-xs'
+                        : 'bg-white text-text border-border hover:border-primary/40'
+                    }`}
+                  >
+                    हिन्दी (Hindi)
+                  </button>
+                </div>
+              </div>
+
+              {/* Subscription All-Access Banner */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 space-y-2 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Cloud Subscription: Active</span>
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      100% All Access
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-amber-800/80 mt-1">
+                    Every subscription plan gives you full, unrestricted access to all 15+ school management features.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.history.pushState({}, '', '/subscription');
+                      window.dispatchEvent(new PopStateEvent('popstate'));
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-300 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <span>View Subscription Plans & Pricing</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Backup & System Maintenance */}
           <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2">

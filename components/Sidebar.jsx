@@ -162,6 +162,7 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
               <NavBtn icon={QrCode} label="QR Scanner" active={currentPath === '/qrscanner'} onClick={() => nav('qrscanner')} collapsed={collapsed} />
               <NavBtn icon={UserCheck} label="User Management" active={currentPath === '/users'} onClick={() => nav('users')} collapsed={collapsed} />
               <NavBtn icon={Settings} label="System Settings" active={currentPath === '/settings'} onClick={() => nav('settings')} collapsed={collapsed} />
+              <NavBtn icon={Sparkles} label="Subscription & Plans" badge="All Access" active={currentPath === '/subscription'} onClick={() => nav('subscription')} collapsed={collapsed} />
             </>
           )}
 

@@ -17,6 +17,7 @@ import TeachersView from '../components/TeachersView';
 import ReportsView from '../components/ReportsView';
 import QrScannerView from '../components/QrScannerView';
 import SettingsView from '../components/SettingsView';
+import SubscriptionView from '../components/SubscriptionView';
 import PrintReceiptModal from '../components/PrintReceiptModal';
 import PrintResultModal from '../components/PrintResultModal';
 import PrintIdCardsModal from '../components/PrintIdCardsModal';
@@ -286,6 +287,7 @@ function AppContent() {
             {currentPath === '/import-export' && <ReportsView />}
             {currentPath === '/qrscanner' && <QrScannerView />}
             {currentPath === '/settings' && <SettingsView />}
+            {currentPath === '/subscription' && <SubscriptionView />}
             {currentPath === '/users' && <UserManagementView />}
             {currentPath === '/profile' && <ProfileView />}
             {currentPath === '/access-denied' && <AccessDeniedView />}
