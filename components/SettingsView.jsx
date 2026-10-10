@@ -306,7 +306,8 @@ export default function SettingsView() {
     {
       group: 'INSTITUTION',
       items: [
-        { id: 'branding', label: 'School Profile', icon: Building2, desc: 'Name, Logo, Seal & Signature' },
+        { id: 'branding', label: 'School Profile', icon: Building2, desc: 'Name, Logo & Contact Info' },
+        { id: 'signatures', label: 'Official Signatures & School Seal', icon: FileSignature, desc: 'Principal Sign & School Stamp' },
         { id: 'academic', label: 'Academic & Classes', icon: GraduationCap, desc: 'Classes, Sessions & Batches' },
         { id: 'language', label: 'Language (भाषा)', icon: Languages, desc: 'Portal Display Language' },
       ]
@@ -329,7 +330,7 @@ export default function SettingsView() {
 
   return (
     <div className="space-y-6 pb-16 max-w-7xl mx-auto font-sans">
-      {/* ── Top Header Banner with Instant Save Action ── */}
+      {/* --- Top Header Banner with Instant Save Action --- */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-surface border border-border p-5 sm:p-6 rounded-3xl shadow-sm">
         <div className="flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white flex items-center justify-center font-bold shadow-md shadow-primary/20 flex-shrink-0">
@@ -364,10 +365,10 @@ export default function SettingsView() {
         </div>
       </div>
 
-      {/* ── Modern 2-Column Split Layout ── */}
+      {/* --- Modern 2-Column Split Layout --- */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-        {/* ── Left Column: Clean Category Navigation Hub ── */}
+        {/* --- Left Column: Clean Category Navigation Hub --- */}
         <div className="lg:col-span-4 xl:col-span-3 space-y-4 lg:sticky lg:top-24">
           <div className="bg-white dark:bg-surface border border-border rounded-3xl p-3 sm:p-4 shadow-sm space-y-4">
             {navCategories.map((cat, catIdx) => (
@@ -428,10 +429,10 @@ export default function SettingsView() {
           </div>
         </div>
 
-        {/* ── Right Column: Active Content Canvas ── */}
+        {/* --- Right Column: Active Content Canvas --- */}
         <div className="lg:col-span-8 xl:col-span-9 min-w-0">
 
-          {/* ═════════ SECTION 1: BRANDING & PROFILE ═════════ */}
+          {/* === SECTION 1: BRANDING & PROFILE === */}
           {activeSection === 'branding' && (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="bg-white dark:bg-surface border border-border rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
@@ -618,72 +619,6 @@ export default function SettingsView() {
                   </div>
                 </div>
 
-                {/* ── Official Signatures & Stamp ── */}
-                <div className="border-t border-border pt-5 space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-text flex items-center gap-2">
-                    <FileSignature className="w-4 h-4 text-primary" />
-                    <span>Official Signatures & School Seal</span>
-                  </h3>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Principal Signature */}
-                    <div className="p-4 rounded-2xl bg-surface2/60 border border-border/80 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-text">Principal Signature</label>
-                        {formData.principalSignature && (
-                          <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Auto Transparent
-                          </span>
-                        )}
-                      </div>
-                      <div className="h-20 rounded-xl border border-border bg-white dark:bg-surface flex items-center justify-center p-2 relative overflow-hidden">
-                        {formData.principalSignature ? (
-                          <img src={formData.principalSignature} alt="Principal Signature" className="max-h-full object-contain" />
-                        ) : (
-                          <p className="text-[11px] text-text-secondary">No signature uploaded</p>
-                        )}
-                      </div>
-                      <label className="block">
-                        <span className="sr-only">Upload signature</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="block w-full text-xs text-text-secondary file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                          onChange={(e) => handleSignatureFile(e.target.files?.[0])}
-                        />
-                      </label>
-                    </div>
-
-                    {/* School Seal / Stamp */}
-                    <div className="p-4 rounded-2xl bg-surface2/60 border border-border/80 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-text">School Stamp / Seal</label>
-                        {formData.schoolStamp && (
-                          <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Seal Active
-                          </span>
-                        )}
-                      </div>
-                      <div className="h-20 rounded-xl border border-border bg-white dark:bg-surface flex items-center justify-center p-2 relative overflow-hidden">
-                        {formData.schoolStamp ? (
-                          <img src={formData.schoolStamp} alt="School Stamp" className="max-h-full object-contain" />
-                        ) : (
-                          <p className="text-[11px] text-text-secondary">No stamp uploaded</p>
-                        )}
-                      </div>
-                      <label className="block">
-                        <span className="sr-only">Upload stamp</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="block w-full text-xs text-text-secondary file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                          onChange={(e) => handleSchoolStampFile(e.target.files?.[0])}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Bottom Submit Button */}
                 <div className="pt-2 flex justify-end">
                   <button
@@ -691,14 +626,256 @@ export default function SettingsView() {
                     className="px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md shadow-primary/25 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
                   >
                     <Save className="w-4 h-4" />
-                    <span>Save All Profile Details</span>
+                    <span>Save Profile Details</span>
                   </button>
                 </div>
               </div>
             </form>
           )}
+          {/* === SECTION: OFFICIAL SIGNATURES & SCHOOL SEAL === */}
+          {activeSection === 'signatures' && (
+            <div className="bg-white dark:bg-surface border border-border rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4">
+                <div>
+                  <h2 className="text-base font-bold text-text flex items-center gap-2">
+                    <FileSignature className="w-5 h-5 text-primary" />
+                    <span>Official Signatures & School Seal</span>
+                  </h2>
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    Upload official stamps and signatures used across Admit Cards, ID Cards, Fee Receipts, and Report Cards.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="self-start sm:self-auto px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save Signatures & Seal</span>
+                </button>
+              </div>
 
-          {/* ═════════ SECTION 2: ACADEMIC & CLASSES ═════════ */}
+              {/* Two Column Grid: Signature & Seal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {/* Card 1: Principal Signature */}
+                <div className="p-5 sm:p-6 rounded-3xl bg-surface2/60 border border-border/80 flex flex-col justify-between space-y-4 shadow-2xs">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                          <FileSignature className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-text">Principal / Authorized Signature</div>
+                          <div className="text-[10px] text-text-secondary">Printed on marksheets & receipts</div>
+                        </div>
+                      </div>
+                      {formData.principalSignature ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Active
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300">
+                          Pending
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Preview Box with Checkerboard Background */}
+                    <div className="h-32 rounded-2xl border-2 border-dashed border-border bg-white dark:bg-surface flex items-center justify-center p-3 relative overflow-hidden group shadow-inner">
+                      {formData.principalSignature ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <img
+                            src={formData.principalSignature}
+                            alt="Principal Signature"
+                            className="max-h-full max-w-full object-contain filter contrast-125"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-center space-y-1">
+                          <FileSignature className="w-8 h-8 text-text-secondary/40 mx-auto" />
+                          <p className="text-[11px] font-bold text-text-secondary">No signature uploaded</p>
+                          <p className="text-[10px] text-text-secondary/80">Upload photo from phone or scanner</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-primary/5 border border-primary/15 text-[11px] text-text-secondary leading-snug">
+                      <span className="font-bold text-primary">✨ Auto Background Removal:</span> When you upload a signature photo on white paper, our system automatically makes the background transparent.
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <label className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95">
+                      <UploadCloud className="w-4 h-4" />
+                      <span>{formData.principalSignature ? 'Change Signature Photo' : 'Upload Signature'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleSignatureFile(e.target.files?.[0])}
+                      />
+                    </label>
+
+                    {formData.principalSignature && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            principalSignature: '',
+                            signatureUrl: '',
+                            rawSignature: ''
+                          }));
+                          updateSettings({
+                            principalSignature: '',
+                            signatureUrl: '',
+                            rawSignature: ''
+                          });
+                          showToast('Principal signature cleared.', 'info');
+                        }}
+                        className="w-full py-1.5 text-xs text-red-500 hover:text-red-600 font-bold transition-colors cursor-pointer text-center"
+                      >
+                        Remove Signature
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card 2: Official School Stamp / Seal */}
+                <div className="p-5 sm:p-6 rounded-3xl bg-surface2/60 border border-border/80 flex flex-col justify-between space-y-4 shadow-2xs">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                          <Stamp className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-text">Official School Seal / Stamp</div>
+                          <div className="text-[10px] text-text-secondary">Used on certificates, ID & admit cards</div>
+                        </div>
+                      </div>
+                      {formData.schoolStamp ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Active
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300">
+                          Pending
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Preview Box */}
+                    <div className="h-32 rounded-2xl border-2 border-dashed border-border bg-white dark:bg-surface flex items-center justify-center p-3 relative overflow-hidden group shadow-inner">
+                      {formData.schoolStamp ? (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <img
+                            src={formData.schoolStamp}
+                            alt="School Seal"
+                            className="max-h-full max-w-full object-contain filter contrast-125"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-center space-y-1">
+                          <Stamp className="w-8 h-8 text-text-secondary/40 mx-auto" />
+                          <p className="text-[11px] font-bold text-text-secondary">No seal uploaded</p>
+                          <p className="text-[10px] text-text-secondary/80">Round or oval school rubber stamp</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-primary/5 border border-primary/15 text-[11px] text-text-secondary leading-snug">
+                      <span className="font-bold text-primary">✨ Clean Seal Processing:</span> Rubber stamps stamped on white paper are processed with auto background clearing so the text stays crisp on printouts.
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-1">
+                    <label className="w-full py-2.5 px-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95">
+                      <UploadCloud className="w-4 h-4" />
+                      <span>{formData.schoolStamp ? 'Change School Seal Photo' : 'Upload School Seal'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleSchoolStampFile(e.target.files?.[0])}
+                      />
+                    </label>
+
+                    {formData.schoolStamp && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            schoolStamp: '',
+                            stampUrl: ''
+                          }));
+                          updateSettings({
+                            schoolStamp: '',
+                            stampUrl: ''
+                          });
+                          showToast('School stamp cleared.', 'info');
+                        }}
+                        className="w-full py-1.5 text-xs text-red-500 hover:text-red-600 font-bold transition-colors cursor-pointer text-center"
+                      >
+                        Remove Stamp
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* --- Document Footer Live Preview --- */}
+              <div className="p-5 sm:p-6 rounded-3xl bg-surface2/40 border border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold text-text flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span>Live Document Print Preview (Marksheet & Receipt Validation)</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-text-secondary">Real-time Layout</span>
+                </div>
+
+                <div className="bg-white dark:bg-surface border border-border/80 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
+                  {/* Left: School Stamp */}
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <div className="w-20 h-20 rounded-2xl border border-dashed border-border/80 flex items-center justify-center p-1 bg-surface2/30">
+                      {formData.schoolStamp ? (
+                        <img src={formData.schoolStamp} alt="Seal Preview" className="max-h-full max-w-full object-contain" />
+                      ) : (
+                        <span className="text-[10px] text-text-secondary italic">Stamp Area</span>
+                      )}
+                    </div>
+                    <div className="text-[10px] font-black uppercase tracking-wider text-text-secondary">
+                      [ Official Institute Seal ]
+                    </div>
+                  </div>
+
+                  {/* Right: Principal Signature */}
+                  <div className="flex flex-col items-center gap-1.5 text-center sm:text-right sm:items-end">
+                    <div className="h-14 w-44 flex items-center justify-center sm:justify-end">
+                      {formData.principalSignature ? (
+                        <img src={formData.principalSignature} alt="Sign Preview" className="max-h-full object-contain" />
+                      ) : (
+                        <span className="text-[10px] text-text-secondary italic">Signature Area</span>
+                      )}
+                    </div>
+                    <div className="w-44 border-t border-text/40 pt-1">
+                      <div className="text-xs font-bold text-text leading-tight">
+                        {formData.principalName || 'Principal / Administrator'}
+                      </div>
+                      <div className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">
+                        Authorized Signatory
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* === SECTION 2: ACADEMIC & CLASSES === */}
           {activeSection === 'academic' && (
             <div className="bg-white dark:bg-surface border border-border rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-border pb-4">
@@ -829,7 +1006,7 @@ export default function SettingsView() {
             </div>
           )}
 
-          {/* ═════════ SECTION 3: LANGUAGE / भाषा ═════════ */}
+          {/* === SECTION 3: LANGUAGE / भाषा === */}
           {activeSection === 'language' && (
             <div className="bg-white dark:bg-surface border border-border rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-border pb-4">
@@ -902,7 +1079,7 @@ export default function SettingsView() {
             </div>
           )}
 
-          {/* ═════════ SECTION 4: SUBSCRIPTION & PLANS ═════════ */}
+          {/* === SECTION 4: SUBSCRIPTION & PLANS === */}
           {activeSection === 'subscription' && (
             <div className="bg-white dark:bg-surface border border-border rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-border pb-4">
@@ -970,7 +1147,7 @@ export default function SettingsView() {
             </div>
           )}
 
-          {/* ═════════ SECTION 5: HELP & SUPPORT ═════════ */}
+          {/* === SECTION 5: HELP & SUPPORT === */}
           {activeSection === 'support' && (
             <div className="bg-white dark:bg-surface border border-border rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-border pb-4">
@@ -1032,7 +1209,7 @@ export default function SettingsView() {
             </div>
           )}
 
-          {/* ═════════ SECTION 6: DATA BACKUP & RESTORE ═════════ */}
+          {/* === SECTION 6: DATA BACKUP & RESTORE === */}
           {activeSection === 'backup' && (
             <div className="bg-white dark:bg-surface border border-border rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-border pb-4">
@@ -1089,7 +1266,7 @@ export default function SettingsView() {
             </div>
           )}
 
-          {/* ═════════ SECTION 7: SETUP WIZARD ═════════ */}
+          {/* === SECTION 7: SETUP WIZARD === */}
           {activeSection === 'wizard' && (
             <div className="bg-white dark:bg-surface border border-border rounded-3xl p-6 sm:p-7 shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-border pb-4">
