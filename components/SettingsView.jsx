@@ -6,7 +6,9 @@ import { useSchoolStore } from '../lib/store';
 import {
   Settings, Building2, Save, Download, Upload, RefreshCw,
   Plus, Trash2, CheckCircle, School, ArrowRight,
-  Info, Sparkles, Check, UploadCloud, Image as ImageIcon, Camera, X, FileSignature, Crop, Shield
+  Info, Sparkles, Check, UploadCloud, Image as ImageIcon, Camera, X, FileSignature, Crop,
+  Shield, Languages, Moon, Sun, HelpCircle, Headphones, MessageCircle, PhoneCall, Mail,
+  ExternalLink, GraduationCap, Lock, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { removeSignatureBackground } from '../lib/exportUtils';
 import ImageCropperModal from './ImageCropperModal';
@@ -17,11 +19,15 @@ export default function SettingsView() {
     updateSettings,
     exportAllDataJson,
     importAllDataJson,
-    showToast
+    showToast,
+    themeMode,
+    toggleTheme,
+    teacherPermissions
   } = useSchoolStore();
 
-  const [activeSubTab, setActiveSubTab] = useState('config'); // 'config' | 'wizard'
+  const [activeSection, setActiveSection] = useState('branding'); // 'branding' | 'academic' | 'language' | 'appearance' | 'permissions' | 'subscription' | 'support' | 'backup' | 'wizard'
   const [wizardStep, setWizardStep] = useState(1); // 1 | 2 | 3
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [isLogoCropperOpen, setIsLogoCropperOpen] = useState(false);
   const [logoToCrop, setLogoToCrop] = useState(null);
@@ -43,6 +49,7 @@ export default function SettingsView() {
     schoolStamp: settings.schoolStamp || settings.stampUrl || '',
     stampUrl: settings.stampUrl || settings.schoolStamp || '',
     currentSession: settings.currentSession || settings.academicYear || '2026-27',
+    appLanguage: settings.appLanguage || 'en',
     ...settings
   });
   const [newClassName, setNewClassName] = useState('');
@@ -69,6 +76,7 @@ export default function SettingsView() {
         principalSignature: settings.principalSignature || settings.signatureUrl || prev.principalSignature || '',
         signatureUrl: settings.signatureUrl || settings.principalSignature || prev.signatureUrl || '',
         currentSession: settings.currentSession || settings.academicYear || prev.currentSession || '2026-27',
+        appLanguage: settings.appLanguage || prev.appLanguage || 'en'
       }));
     }
   }, [settings]);
@@ -100,979 +108,1041 @@ export default function SettingsView() {
       logo: croppedDataUrl,
       logoPath: croppedDataUrl
     }));
-    showToast('Logo cropped! Click "Save Institute Profile" below to apply.', 'success');
+    updateSettings({
+      logoUrl: croppedDataUrl,
+      logo: croppedDataUrl,
+      logoPath: croppedDataUrl
+    });
+    showToast('Institute Logo updated and cropped successfully!', 'success');
   };
 
-  const handleLogoDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingLogo(true);
-  };
-
-  const handleLogoDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingLogo(false);
-  };
-
-  const handleLogoDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingLogo(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleLogoFile(e.dataTransfer.files[0]);
+  const handlePrincipalSignatureFile = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file (PNG, JPG, WebP).', 'error');
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Signature image exceeds 5MB limit.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target.result;
+      try {
+        const transparentSignature = await removeSignatureBackground(dataUrl, 210, 'transparent');
+        setFormData(prev => ({
+          ...prev,
+          principalSignature: transparentSignature,
+          signatureUrl: transparentSignature,
+          rawSignature: dataUrl,
+          signatureColorMode: 'white'
+        }));
+        updateSettings({
+          principalSignature: transparentSignature,
+          signatureUrl: transparentSignature,
+          rawSignature: dataUrl,
+          signatureColorMode: 'white'
+        });
+        showToast('Principal signature processed with background auto-cleared!', 'success');
+      } catch (err) {
+        setFormData(prev => ({
+          ...prev,
+          principalSignature: dataUrl,
+          signatureUrl: dataUrl,
+          rawSignature: dataUrl,
+          signatureColorMode: 'original'
+        }));
+        updateSettings({
+          principalSignature: dataUrl,
+          signatureUrl: dataUrl,
+          rawSignature: dataUrl,
+          signatureColorMode: 'original'
+        });
+        showToast('Principal signature uploaded!', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleRemoveLogo = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setFormData(prev => ({
-      ...prev,
-      logoUrl: '',
-      logo: '',
-      logoPath: ''
-    }));
-    if (logoInputRef.current) logoInputRef.current.value = '';
-    showToast('Logo removed. Click Save to apply.', 'info');
+  const handleSchoolStampFile = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file (PNG, JPG, WebP).', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('School stamp image exceeds 5MB limit.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target.result;
+      try {
+        const transparentStamp = await removeSignatureBackground(dataUrl, 210, 'transparent');
+        setFormData(prev => ({
+          ...prev,
+          schoolStamp: transparentStamp,
+          stampUrl: transparentStamp
+        }));
+        updateSettings({
+          schoolStamp: transparentStamp,
+          stampUrl: transparentStamp
+        });
+        showToast('School seal/stamp processed with background removed!', 'success');
+      } catch (err) {
+        setFormData(prev => ({
+          ...prev,
+          schoolStamp: dataUrl,
+          stampUrl: dataUrl
+        }));
+        updateSettings({
+          schoolStamp: dataUrl,
+          stampUrl: dataUrl
+        });
+        showToast('School seal/stamp uploaded!', 'success');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await updateSettings(formData);
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
+    updateSettings(formData);
     setIsSaved(true);
+    showToast('Settings saved successfully!', 'success');
     setTimeout(() => setIsSaved(false), 3000);
   };
 
-  const handleAddClass = () => {
+  const addClass = () => {
     if (!newClassName.trim()) return;
-    const current = formData.schoolClasses || [];
-    if (!current.includes(newClassName.trim())) {
-      const updated = [...current, newClassName.trim()];
-      setFormData(prev => ({ ...prev, schoolClasses: updated }));
-      updateSettings({ schoolClasses: updated });
+    const currentClasses = settings.classes || [];
+    if (!currentClasses.includes(newClassName.trim())) {
+      const updated = [...currentClasses, newClassName.trim()];
+      updateSettings({ classes: updated });
+      setFormData(prev => ({ ...prev, classes: updated }));
+      setNewClassName('');
+      showToast(`Class "${newClassName.trim()}" added!`, 'success');
     }
-    setNewClassName('');
   };
 
-  const handleRemoveClass = (cls) => {
-    const updated = (formData.schoolClasses || []).filter(c => c !== cls);
-    setFormData(prev => ({ ...prev, schoolClasses: updated }));
-    updateSettings({ schoolClasses: updated });
+  const removeClass = (cls) => {
+    const currentClasses = settings.classes || [];
+    const updated = currentClasses.filter(c => c !== cls);
+    updateSettings({ classes: updated });
+    setFormData(prev => ({ ...prev, classes: updated }));
+    showToast(`Class "${cls}" removed.`, 'info');
   };
 
-  const handleAddCourse = () => {
+  const addCourse = () => {
     if (!newCourseName.trim()) return;
-    const current = formData.computerCourses || [];
-    if (!current.includes(newCourseName.trim())) {
-      const updated = [...current, newCourseName.trim()];
-      setFormData(prev => ({ ...prev, computerCourses: updated }));
-      updateSettings({ computerCourses: updated });
+    const currentCourses = settings.courses || [];
+    if (!currentCourses.includes(newCourseName.trim())) {
+      const updated = [...currentCourses, newCourseName.trim()];
+      updateSettings({ courses: updated });
+      setFormData(prev => ({ ...prev, courses: updated }));
+      setNewCourseName('');
+      showToast(`Course "${newCourseName.trim()}" added!`, 'success');
     }
-    setNewCourseName('');
   };
 
-  const handleRemoveCourse = (course) => {
-    const updated = (formData.computerCourses || []).filter(c => c !== course);
-    setFormData(prev => ({ ...prev, computerCourses: updated }));
-    updateSettings({ computerCourses: updated });
+  const removeCourse = (course) => {
+    const currentCourses = settings.courses || [];
+    const updated = currentCourses.filter(c => c !== course);
+    updateSettings({ courses: updated });
+    setFormData(prev => ({ ...prev, courses: updated }));
+    showToast(`Course "${course}" removed.`, 'info');
   };
 
-  const handleFileImport = (e) => {
+  const handleImportFile = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const json = JSON.parse(event.target.result);
-          importAllDataJson(json);
-        } catch (err) {
-          showToast("Invalid JSON backup file!", "error");
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target.result);
+        const success = importAllDataJson(json);
+        if (success) {
+          showToast('Data imported successfully!', 'success');
+        } else {
+          showToast('Invalid backup file structure.', 'error');
         }
-      };
-      reader.readAsText(file);
-    }
+      } catch (err) {
+        showToast('Error reading JSON file: ' + err.message, 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
-  const handleWizardSubmit = (e) => {
-    e.preventDefault();
-    if (wizardStep === 1) {
-      setWizardStep(2);
-    } else if (wizardStep === 2) {
-      updateSettings(formData);
-      setWizardStep(3);
-    }
-  };
+  const sectionsList = [
+    { id: 'branding', label: 'School Profile', icon: Building2, desc: 'Branding, Logo & Sign' },
+    { id: 'academic', label: 'Academic & Classes', icon: GraduationCap, desc: 'Sessions & Class list' },
+    { id: 'language', label: 'Language (भाषा)', icon: Languages, desc: 'Portal Display Language' },
+    { id: 'appearance', label: 'Theme & Dark Mode', icon: Moon, desc: 'System UI styling' },
+    { id: 'permissions', label: 'Teacher Access', icon: Shield, desc: 'Role permissions' },
+    { id: 'subscription', label: 'Subscriptions', icon: Sparkles, desc: '100% All Access plans' },
+    { id: 'support', label: 'Help & Support', icon: Headphones, desc: 'WhatsApp & Helpline' },
+    { id: 'backup', label: 'Data Backup', icon: RefreshCw, desc: 'Export & Import DB' },
+    { id: 'wizard', label: 'Setup Wizard', icon: School, desc: 'Quick Onboarding' },
+  ];
 
   return (
-    <div className="space-y-6 pb-12 max-w-4xl">
-      {/* Sub tabs navigation */}
-      <div className="flex items-center gap-2 border-b border-border pb-1 overflow-x-auto custom-scrollbar">
-        <button
-          onClick={() => setActiveSubTab('config')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
-            activeSubTab === 'config'
-              ? 'bg-primary text-white shadow-xs'
-              : 'text-text-secondary hover:text-text hover:bg-surface2'
-          }`}
-        >
-          <Settings className="w-3.5 h-3.5" />
-          <span>General Config</span>
-        </button>
-
-        <button
-          onClick={() => { setActiveSubTab('wizard'); setWizardStep(1); }}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
-            activeSubTab === 'wizard'
-              ? 'bg-primary text-white shadow-xs'
-              : 'text-text-secondary hover:text-text hover:bg-surface2'
-          }`}
-        >
-          <School className="w-3.5 h-3.5" />
-          <span>Setup Wizard</span>
-        </button>
+    <div className="space-y-6 pb-12 max-w-5xl">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl lg:text-2xl font-black text-text tracking-tight flex items-center gap-2">
+          <Settings className="w-6 h-6 text-primary" />
+          <span>System Settings & Configuration</span>
+        </h2>
+        <p className="text-xs text-text-secondary mt-1">
+          Manage your institution particulars, regional language, teacher roles, cloud subscriptions, and data backups.
+        </p>
       </div>
 
-      {activeSubTab === 'config' ? (
-        /* ─── GENERAL CONFIGURATION MANAGER ─── */
-        <>
-          <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-text tracking-tight">
-              Institute Profile & Settings
-            </h2>
-            <p className="text-xs text-text-secondary mt-0.5">
-              Configure branding, official particulars, academic sessions, and data backups
-            </p>
-          </div>
+      {/* ─── Multi-Section Tab Navigation (Horizontal bar with clean pill buttons) ─── */}
+      <div className="flex items-center gap-2 border-b border-border pb-2 overflow-x-auto custom-scrollbar">
+        {sectionsList.map((sec) => {
+          const Icon = sec.icon;
+          const isActive = activeSection === sec.id;
+          return (
+            <button
+              key={sec.id}
+              type="button"
+              onClick={() => setActiveSection(sec.id)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 border ${
+                isActive
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-white dark:bg-surface text-text-secondary border-border hover:text-text hover:bg-surface2'
+              }`}
+            >
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              <span>{sec.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Core Institute Details */}
-            <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2 border-b border-border pb-2">
+      {/* ═════════ SECTION 1: BRANDING & PROFILE ═════════ */}
+      {activeSection === 'branding' && (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-white dark:bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-primary" />
-                <span>Institute Branding & Logo</span>
+                <span>Institute Branding, Logo & Signatures</span>
               </h3>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save Profile</span>
+              </button>
+            </div>
 
-              {/* Institute Logo Upload Box (Drag & Drop + File Open) */}
-              <div className="p-4 rounded-2xl bg-surface2/60 border border-border/80 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-text flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-primary" />
-                    <span>Official Institute Logo</span>
-                  </label>
-                  {formData.logoUrl && (
-                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                      Logo Uploaded
-                    </span>
+            {/* Logo Upload Box */}
+            <div className="p-4 rounded-2xl bg-surface2/60 border border-border/80 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-text flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-primary" />
+                  <span>Official Institute Logo / Crest</span>
+                </label>
+                {formData.logoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLogoToCrop(formData.logoUrl);
+                      setIsLogoCropperOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 transition-colors cursor-pointer"
+                  >
+                    <Crop className="w-3.5 h-3.5" />
+                    <span>Recrop Logo</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-border bg-white dark:bg-surface flex items-center justify-center overflow-hidden flex-shrink-0 shadow-inner p-1 relative group">
+                  {formData.logoUrl ? (
+                    <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                  ) : (
+                    <School className="w-8 h-8 text-text-secondary opacity-40" />
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                  {/* Current Logo Preview */}
-                  <div className="sm:col-span-4 flex items-center gap-3 bg-white p-3 rounded-xl border border-border">
-                    <div className="w-16 h-16 rounded-xl border-2 border-dashed border-primary/30 flex items-center justify-center bg-surface2 overflow-hidden flex-shrink-0 relative group">
-                      {formData.logoUrl ? (
-                        <img
-                          src={formData.logoUrl}
-                          alt="Institute Logo"
-                          className="w-full h-full object-contain p-1 rounded-lg"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
-                      ) : (
-                        <School className="w-8 h-8 text-primary/40" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-text truncate">
-                        {formData.logoUrl ? 'Active Logo' : 'No Logo Set'}
-                      </p>
-                      <p className="text-[10px] text-text-secondary">
-                        {formData.logoUrl ? 'Ready for receipts & header' : 'Default icon in use'}
-                      </p>
-                      {formData.logoUrl && (
-                        <div className="flex items-center gap-2 mt-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (formData.logoUrl) {
-                                setLogoToCrop(formData.logoUrl);
-                                setIsLogoCropperOpen(true);
-                              }
-                            }}
-                            className="text-[10px] font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer"
-                          >
-                            <Crop className="w-3 h-3" /> Crop
-                          </button>
-                          <span className="text-slate-300 text-[10px]">&bull;</span>
-                          <button
-                            type="button"
-                            onClick={handleRemoveLogo}
-                            className="text-[10px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
-                          >
-                            <X className="w-3 h-3" /> Remove
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Drag & Drop Upload Zone */}
+                <div className="flex-1 w-full space-y-2">
                   <div
-                    onDragOver={handleLogoDragOver}
-                    onDragLeave={handleLogoDragLeave}
-                    onDrop={handleLogoDrop}
-                    onClick={() => logoInputRef.current?.click()}
-                    className={`sm:col-span-8 border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingLogo(true); }}
+                    onDragLeave={() => setIsDraggingLogo(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDraggingLogo(false);
+                      if (e.dataTransfer.files?.[0]) handleLogoFile(e.dataTransfer.files[0]);
+                    }}
+                    className={`border-2 border-dashed rounded-xl p-4 text-center transition-all cursor-pointer ${
                       isDraggingLogo
-                        ? 'border-primary bg-primary/10 scale-[1.01]'
-                        : 'border-border hover:border-primary/60 hover:bg-surface2/80 bg-white'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50 bg-white/50 dark:bg-surface/50'
                     }`}
+                    onClick={() => logoInputRef.current?.click()}
                   >
-                    <input
-                      ref={logoInputRef}
-                      type="file"
-                      accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleLogoFile(e.target.files[0]);
-                        }
-                      }}
-                      className="hidden"
-                    />
-                    <UploadCloud className={`w-6 h-6 mb-1 transition-transform ${isDraggingLogo ? 'scale-125 text-primary' : 'text-primary/70'}`} />
+                    <UploadCloud className="w-6 h-6 text-primary mx-auto mb-1" />
                     <p className="text-xs font-bold text-text">
-                      Drag & drop your school logo here, or <span className="text-primary underline">Browse File</span>
+                      Click to upload or drag & drop logo
                     </p>
                     <p className="text-[10px] text-text-secondary mt-0.5">
                       Supports PNG, JPG, SVG or WebP (Max 5MB)
                     </p>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleLogoFile(e.target.files[0])}
+                    />
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* School Stamp / Official Seal (मोहर) Upload Box */}
-              <div className="p-4 rounded-2xl bg-surface2/60 border border-border/80 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-text flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-primary" />
-                    <span>School Stamp / Official Seal (स्कूल की मोहर)</span>
-                  </label>
-                  {formData.schoolStamp && (
-                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-                      Stamp Active
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                  <div className="sm:col-span-4 flex items-center justify-center p-3 rounded-xl border border-dashed border-border bg-white min-h-[90px]">
-                    {formData.schoolStamp ? (
-                      <div className="relative group">
-                        <img
-                          src={formData.schoolStamp}
-                          alt="School Stamp"
-                          className="h-16 w-16 object-contain rounded-full border border-primary/30 p-1"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, schoolStamp: '', stampUrl: '' })}
-                          className="absolute -top-2 -right-2 p-1 rounded-full bg-rose-600 text-white shadow-md hover:bg-rose-700 cursor-pointer"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
+            {/* Principal Signature & Stamp */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              {/* Signature */}
+              <div className="p-4 rounded-xl bg-surface2/60 border border-border space-y-3">
+                <label className="text-xs font-bold text-text flex items-center gap-2">
+                  <FileSignature className="w-4 h-4 text-primary" />
+                  <span>Principal Digital Signature</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="w-28 h-16 rounded-xl border border-border bg-white dark:bg-surface p-1 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {formData.principalSignature ? (
+                      <img src={formData.principalSignature} alt="Signature" className="max-w-full max-h-full object-contain" />
                     ) : (
-                      <div className="text-center text-text-muted">
-                        <Shield className="w-6 h-6 mx-auto mb-1 opacity-40 text-primary" />
-                        <p className="text-[10px] font-medium">No Stamp Uploaded</p>
-                      </div>
+                      <span className="text-[10px] text-text-secondary">No Signature</span>
                     )}
                   </div>
-
-                  <div className="sm:col-span-8 space-y-2">
-                    <p className="text-[11px] text-text-secondary leading-relaxed">
-                      Upload your circular official school seal / stamp (मोहर). It will be printed next to the Principal signature on Admit Cards, Marksheets, and Certificates.
-                    </p>
-                    <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-dark cursor-pointer transition-all active:scale-95">
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>{formData.schoolStamp ? 'Replace Stamp' : 'Upload School Stamp (मोहर)'}</span>
+                  <div className="flex-1 space-y-2">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-surface border border-border text-text hover:border-primary cursor-pointer shadow-2xs">
+                      <Upload className="w-3.5 h-3.5 text-primary" />
+                      <span>Upload Sign</span>
                       <input
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (re) => {
-                              const b64 = re.target.result;
-                              setFormData({ ...formData, schoolStamp: b64, stampUrl: b64 });
-                              showToast('Stamp uploaded. Click Save Changes to apply.', 'info');
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
+                        onChange={(e) => e.target.files?.[0] && handlePrincipalSignatureFile(e.target.files[0])}
                       />
                     </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Authorized Principal Signature Upload Box (Auto Background Removal) */}
-              <div className="p-4 rounded-2xl bg-surface2/60 border border-border/80 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-text flex items-center gap-2">
-                    <FileSignature className="w-4 h-4 text-emerald-600" />
-                    <span>Official Authorized Signature (Auto-Clean Background)</span>
-                  </label>
-                  {formData.principalSignature && (
-                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                      Signature Active
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                  {/* Current Signature Preview */}
-                  <div className="sm:col-span-4 flex items-center gap-3 bg-white p-3 rounded-xl border border-border">
-                    <div className="w-20 h-14 rounded-xl border-2 border-dashed border-amber-400/40 bg-[#0A1128] flex items-center justify-center overflow-hidden flex-shrink-0 p-1">
-                      {formData.principalSignature ? (
-                        <img
-                          src={formData.principalSignature}
-                          alt="Principal Signature"
-                          className="w-full h-full object-contain"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
-                      ) : (
-                        <span className="text-[10px] text-white/50 font-bold text-center">No Sign</span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-text truncate">
-                        {formData.principalSignature ? 'Active Sign (White)' : 'No Sign Set'}
-                      </p>
-                      <p className="text-[10px] text-text-secondary">
-                        {formData.principalSignature ? 'Visible on Dark Cards' : 'Upload photo'}
-                      </p>
-                      {formData.principalSignature && (
+                    {formData.principalSignature && (
+                      <div className="flex items-center gap-1.5 pt-1">
                         <button
                           type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, principalSignature: '', signatureUrl: '' }))}
-                          className="mt-1 text-[10px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
+                          onClick={async () => {
+                            const raw = formData.rawSignature || formData.principalSignature;
+                            const res = await removeSignatureBackground(raw, 210, 'transparent');
+                            setFormData(prev => ({ ...prev, principalSignature: res, signatureUrl: res, signatureColorMode: 'white' }));
+                            showToast('Cleaned signature background to transparent!', 'success');
+                          }}
+                          className="px-2 py-1 rounded text-[10px] font-bold border border-border bg-white dark:bg-surface hover:bg-surface2"
                         >
-                          <X className="w-3 h-3" /> Remove
+                          Clear BG
                         </button>
-                      )}
-                    </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const raw = formData.rawSignature || formData.principalSignature;
+                            const res = await removeSignatureBackground(raw, 210, 'blue');
+                            setFormData(prev => ({ ...prev, principalSignature: res, signatureUrl: res, signatureColorMode: 'blue' }));
+                            showToast('Converted signature to Royal Blue ink!', 'success');
+                          }}
+                          className="px-2 py-1 rounded text-[10px] font-bold border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100"
+                        >
+                          Blue Ink
+                        </button>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Drag & Drop / File Input for Signature */}
-                  <label className="sm:col-span-8 border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all border-border hover:border-emerald-500/60 hover:bg-emerald-50/20 bg-white">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = async (ev) => {
-                          const dataUrl = ev.target?.result;
-                          if (dataUrl) {
-                            showToast('Removing paper background & converting ink to White contrast...', 'info');
-                            const transparent = await removeSignatureBackground(dataUrl, 210, 'white');
-                            setFormData(prev => ({
-                              ...prev,
-                              principalSignature: transparent,
-                              signatureUrl: transparent,
-                              rawSignature: dataUrl,
-                              signatureColorMode: 'white'
-                            }));
-                            showToast('Signature converted to White ink! Click "Save Institute Profile" below to apply.', 'success');
-                          }
-                        };
-                        reader.readAsDataURL(file);
-                      }}
-                      className="hidden"
-                    />
-                    <FileSignature className="w-6 h-6 mb-1 text-emerald-600" />
-                    <p className="text-xs font-bold text-text">
-                      Upload sign photo on paper, <span className="text-emerald-600 underline">Browse Image</span>
-                    </p>
-                    <p className="text-[10px] text-text-secondary mt-0.5">
-                      ✨ Ink is automatically converted to bright <b>White contrast</b> with 100% transparent background for dark ID cards.
-                    </p>
-                  </label>
-
-                  {/* Ink Color Switcher */}
-                  {(formData.rawSignature || formData.principalSignature) && (
-                    <div className="sm:col-span-12 flex items-center gap-2 pt-3 border-t border-border/60 flex-wrap">
-                      <span className="text-[11px] font-bold text-text-secondary">Ink Color:</span>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const raw = formData.rawSignature || formData.principalSignature;
-                          const res = await removeSignatureBackground(raw, 210, 'white');
-                          setFormData(prev => ({ ...prev, principalSignature: res, signatureUrl: res, signatureColorMode: 'white' }));
-                          showToast('Converted signature to Pure White ink!', 'success');
-                        }}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
-                          formData.signatureColorMode === 'white' || !formData.signatureColorMode
-                            ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
-                            : 'bg-white text-slate-700 border-border hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="w-2 h-2 rounded-full bg-white border border-slate-400" />
-                        <span>White (सफेद)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const raw = formData.rawSignature || formData.principalSignature;
-                          const res = await removeSignatureBackground(raw, 210, 'gold');
-                          setFormData(prev => ({ ...prev, principalSignature: res, signatureUrl: res, signatureColorMode: 'gold' }));
-                          showToast('Converted signature to Gold ink!', 'success');
-                        }}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
-                          formData.signatureColorMode === 'gold'
-                            ? 'bg-amber-500 text-white border-amber-600 shadow-2xs'
-                            : 'bg-white text-slate-700 border-border hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="w-2 h-2 rounded-full bg-amber-400" />
-                        <span>Gold (गोल्ड)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const raw = formData.rawSignature || formData.principalSignature;
-                          const res = await removeSignatureBackground(raw, 210, 'dark');
-                          setFormData(prev => ({ ...prev, principalSignature: res, signatureUrl: res, signatureColorMode: 'dark' }));
-                          showToast('Converted signature to Dark ink!', 'success');
-                        }}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
-                          formData.signatureColorMode === 'dark'
-                            ? 'bg-slate-800 text-white border-slate-900 shadow-2xs'
-                            : 'bg-white text-slate-700 border-border hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="w-2 h-2 rounded-full bg-slate-900" />
-                        <span>Dark (काला)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const raw = formData.rawSignature || formData.principalSignature;
-                          const res = await removeSignatureBackground(raw, 210, 'blue');
-                          setFormData(prev => ({ ...prev, principalSignature: res, signatureUrl: res, signatureColorMode: 'blue' }));
-                          showToast('Converted signature to Royal Blue ink!', 'success');
-                        }}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
-                          formData.signatureColorMode === 'blue'
-                            ? 'bg-blue-600 text-white border-blue-700 shadow-2xs'
-                            : 'bg-white text-slate-700 border-border hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="w-2 h-2 rounded-full bg-blue-600" />
-                        <span>Blue (नीला)</span>
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-text-secondary">
-                <div>
-                  <label className="block mb-1 text-text">Institute Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.instituteName || ''}
-                    onChange={(e) => setFormData({ ...formData, instituteName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
-                  />
+              {/* School Stamp */}
+              <div className="p-4 rounded-xl bg-surface2/60 border border-border space-y-3">
+                <label className="text-xs font-bold text-text flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-emerald-600" />
+                  <span>Official School Stamp / Seal</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="w-20 h-16 rounded-xl border border-border bg-white dark:bg-surface p-1 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {formData.schoolStamp ? (
+                      <img src={formData.schoolStamp} alt="Stamp" className="max-w-full max-h-full object-contain" />
+                    ) : (
+                      <span className="text-[10px] text-text-secondary">No Stamp</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-surface border border-border text-text hover:border-emerald-600 cursor-pointer shadow-2xs">
+                      <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Upload Stamp</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => e.target.files?.[0] && handleSchoolStampFile(e.target.files[0])}
+                      />
+                    </label>
+                    <p className="text-[10px] text-text-secondary mt-1">Appears on official Marksheets and ID Cards</p>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block mb-1 text-text">Tagline / Motto</label>
-                  <input
-                    type="text"
-                    value={formData.tagline || ''}
-                    onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-text">Principal / Director Name</label>
-                  <input
-                    type="text"
-                    value={formData.principalName || ''}
-                    onChange={(e) => setFormData({ ...formData, principalName: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-text">Affiliation / Reg Number</label>
-                  <input
-                    type="text"
-                    value={formData.affiliationNumber || ''}
-                    onChange={(e) => setFormData({ ...formData, affiliationNumber: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-text">Contact Mobile</label>
-                  <input
-                    type="tel"
-                    value={formData.mobile || ''}
-                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-text">Official Email</label>
-                  <input
-                    type="email"
-                    value={formData.email || ''}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block mb-1 text-text">Campus Address</label>
-                  <input
-                    type="text"
-                    value={formData.address || ''}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-text">Current Academic Session</label>
-                  <input
-                    type="text"
-                    value={formData.currentSession || '2026-27'}
-                    onChange={(e) => setFormData({ ...formData, currentSession: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-bold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3">
-                {isSaved && (
-                  <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4" /> Settings Saved!
-                  </span>
-                )}
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Save Institute Profile</span>
-                </button>
               </div>
             </div>
-          </form>
 
-          {/* Class & Course Catalogs */}
+            {/* Text particulars */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-text-secondary pt-2">
+              <div>
+                <label className="block mb-1 text-text">Institute / School Name</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.instituteName || ''}
+                  onChange={(e) => setFormData({ ...formData, instituteName: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-text">Tagline / Motto</label>
+                <input
+                  type="text"
+                  value={formData.tagline || ''}
+                  onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-text">Principal / Director Name</label>
+                <input
+                  type="text"
+                  value={formData.principalName || ''}
+                  onChange={(e) => setFormData({ ...formData, principalName: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-text">Affiliation / Reg Number</label>
+                <input
+                  type="text"
+                  value={formData.affiliationNumber || ''}
+                  onChange={(e) => setFormData({ ...formData, affiliationNumber: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-text">Contact Mobile</label>
+                <input
+                  type="tel"
+                  value={formData.mobile || ''}
+                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-text">Official Email</label>
+                <input
+                  type="email"
+                  value={formData.email || ''}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block mb-1 text-text">Campus Address</label>
+                <input
+                  type="text"
+                  value={formData.address || ''}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-text">Current Academic Session</label>
+                <input
+                  type="text"
+                  value={formData.currentSession || '2026-27'}
+                  onChange={(e) => setFormData({ ...formData, currentSession: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-bold focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-3 border-t border-border">
+              {isSaved && (
+                <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4" /> Profile Saved!
+                </span>
+              )}
+              <button
+                type="submit"
+                className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save Institute Profile</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+
+      {/* ═════════ SECTION 2: ACADEMIC & CLASSES ═════════ */}
+      {activeSection === 'academic' && (
+        <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-3">
-              <h3 className="text-sm font-bold text-text uppercase tracking-wider">School Classes</h3>
+            {/* School Classes */}
+            <div className="bg-white dark:bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-3">
+              <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2 border-b border-border pb-2">
+                <GraduationCap className="w-4 h-4 text-primary" />
+                <span>School Classes</span>
+              </h3>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="e.g. 11th-Bio"
+                  placeholder="e.g. 11th-Bio, Class 10"
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
+                  onKeyDown={(e) => e.key === 'Enter' && addClass()}
+                  className="flex-1 px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
                 />
                 <button
                   type="button"
-                  onClick={handleAddClass}
-                  className="px-3.5 py-1.5 rounded-xl bg-primary text-white font-bold text-xs cursor-pointer hover:bg-primary-dark transition-all"
+                  onClick={addClass}
+                  className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-dark cursor-pointer transition-all"
                 >
-                  Add
+                  <Plus className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto pt-2">
-                {formData.schoolClasses?.map(c => (
-                  <span key={c} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface2 border border-border text-xs text-text">
-                    <span>Class {c}</span>
+              <div className="flex flex-wrap gap-2 pt-2 max-h-60 overflow-y-auto">
+                {(settings.classes || []).map((cls) => (
+                  <span
+                    key={cls}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface2 border border-border text-xs font-bold text-text"
+                  >
+                    <span>{cls}</span>
                     <button
                       type="button"
-                      onClick={() => handleRemoveClass(c)}
-                      className="text-rose-500 hover:text-rose-700 font-bold ml-1.5"
+                      onClick={() => removeClass(cls)}
+                      className="text-text-secondary hover:text-red-500 cursor-pointer"
                     >
-                      ×
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </span>
                 ))}
               </div>
             </div>
 
-            <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-3">
-              <h3 className="text-sm font-bold text-text uppercase tracking-wider">Computer Institute Courses</h3>
+            {/* Institute Courses */}
+            <div className="bg-white dark:bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-3">
+              <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2 border-b border-border pb-2">
+                <Building2 className="w-4 h-4 text-primary" />
+                <span>Institute / Vocational Courses</span>
+              </h3>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="e.g. DCA (6 Months)"
+                  placeholder="e.g. ADCA, DCA, Python"
                   value={newCourseName}
                   onChange={(e) => setNewCourseName(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
+                  onKeyDown={(e) => e.key === 'Enter' && addCourse()}
+                  className="flex-1 px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-semibold focus:outline-none"
                 />
                 <button
                   type="button"
-                  onClick={handleAddCourse}
-                  className="px-3.5 py-1.5 rounded-xl bg-teal-600 text-white font-bold text-xs cursor-pointer hover:bg-teal-700 transition-all"
+                  onClick={addCourse}
+                  className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary-dark cursor-pointer transition-all"
                 >
-                  Add
+                  <Plus className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto pt-2">
-                {formData.computerCourses?.map(c => (
-                  <span key={c} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface2 border border-border text-xs text-text">
-                    <span>{c}</span>
+              <div className="flex flex-wrap gap-2 pt-2 max-h-60 overflow-y-auto">
+                {(settings.courses || []).map((crs) => (
+                  <span
+                    key={crs}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface2 border border-border text-xs font-bold text-text"
+                  >
+                    <span>{crs}</span>
                     <button
                       type="button"
-                      onClick={() => handleRemoveCourse(c)}
-                      className="text-rose-500 hover:text-rose-700 font-bold ml-1.5"
+                      onClick={() => removeCourse(crs)}
+                      className="text-text-secondary hover:text-red-500 cursor-pointer"
                     >
-                      ×
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </span>
                 ))}
               </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* ─── Application Language & Subscription (Matching Mobile App) ─── */}
-          <div className="bg-white border border-border rounded-2xl p-6 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2 border-b border-border pb-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span>Language & Cloud Subscriptions</span>
+      {/* ═════════ SECTION 3: LANGUAGE & REGIONAL (Dedicated Section) ═════════ */}
+      {activeSection === 'language' && (
+        <div className="bg-white dark:bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-6">
+          <div className="border-b border-border pb-3">
+            <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2">
+              <Languages className="w-4 h-4 text-primary" />
+              <span>Portal Display Language (पोर्टल भाषा चयन)</span>
             </h3>
+            <p className="text-xs text-text-secondary mt-1">
+              Choose your preferred language for the web management portal and mobile app synchronization.
+            </p>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* App Language Toggle */}
-              <div className="p-4 rounded-xl bg-surface2/60 border border-border space-y-2">
-                <label className="text-xs font-bold text-text block">Portal Display Language (भाषा)</label>
-                <p className="text-[11px] text-text-secondary">Choose default language across mobile app and website.</p>
-                <div className="flex items-center gap-3 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, appLanguage: 'en' }));
-                      updateSettings({ appLanguage: 'en' });
-                      showToast('Display language set to English', 'success');
-                    }}
-                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                      (formData.appLanguage || 'en') === 'en'
-                        ? 'bg-primary text-white border-primary shadow-xs'
-                        : 'bg-white text-text border-border hover:border-primary/40'
-                    }`}
-                  >
-                    English (Default)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData(prev => ({ ...prev, appLanguage: 'hi' }));
-                      updateSettings({ appLanguage: 'hi' });
-                      showToast('भाषा हिन्दी पर सेट की गई', 'success');
-                    }}
-                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                      formData.appLanguage === 'hi'
-                        ? 'bg-primary text-white border-primary shadow-xs'
-                        : 'bg-white text-text border-border hover:border-primary/40'
-                    }`}
-                  >
-                    हिन्दी (Hindi)
-                  </button>
-                </div>
-              </div>
-
-              {/* Subscription All-Access Banner */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 space-y-2 flex flex-col justify-between">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* English Card */}
+            <div
+              onClick={() => {
+                setFormData(prev => ({ ...prev, appLanguage: 'en' }));
+                updateSettings({ appLanguage: 'en' });
+                showToast('Display language set to English', 'success');
+              }}
+              className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                (formData.appLanguage || 'en') === 'en'
+                  ? 'border-primary bg-primary/5 shadow-sm'
+                  : 'border-border bg-surface2/40 hover:border-border/80'
+              }`}
+            >
+              <div className="flex items-start justify-between">
                 <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-amber-900 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>Cloud Subscription: Active</span>
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                      100% All Access
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-amber-800/80 mt-1">
-                    Every subscription plan gives you full, unrestricted access to all 15+ school management features.
-                  </p>
+                  <span className="text-sm font-black text-text block">English (Standard)</span>
+                  <span className="text-xs text-text-secondary">Official institutional english vocabulary</span>
                 </div>
+                {(formData.appLanguage || 'en') === 'en' ? (
+                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                ) : (
+                  <div className="w-5 h-5 rounded-full border border-border" />
+                )}
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/50 text-[11px] text-text-secondary">
+                Default across Student records, Fee receipts, and Marksheets.
+              </div>
+            </div>
 
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.history.pushState({}, '', '/subscription');
-                      window.dispatchEvent(new PopStateEvent('popstate'));
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-300 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <span>View Subscription Plans & Pricing</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+            {/* Hindi Card */}
+            <div
+              onClick={() => {
+                setFormData(prev => ({ ...prev, appLanguage: 'hi' }));
+                updateSettings({ appLanguage: 'hi' });
+                showToast('भाषा हिन्दी पर सेट की गई', 'success');
+              }}
+              className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                formData.appLanguage === 'hi'
+                  ? 'border-primary bg-primary/5 shadow-sm'
+                  : 'border-border bg-surface2/40 hover:border-border/80'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-sm font-black text-text block">हिन्दी (Hindi)</span>
+                  <span className="text-xs text-text-secondary">भारतीय विद्यालयों और संस्थानों के लिए अनुकूलित</span>
                 </div>
+                {formData.appLanguage === 'hi' ? (
+                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                ) : (
+                  <div className="w-5 h-5 rounded-full border border-border" />
+                )}
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/50 text-[11px] text-text-secondary">
+                मोबाइल ऐप और वेबसाइट दोनों जगह हिन्दी भाषा सक्रिय हो जाएगी।
               </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Backup & System Maintenance */}
-          <div className="bg-white border border-border rounded-2xl p-6 shadow-sm space-y-4">
+      {/* ═════════ SECTION 4: APPEARANCE & DARK MODE ═════════ */}
+      {activeSection === 'appearance' && (
+        <div className="bg-white dark:bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-6">
+          <div className="border-b border-border pb-3">
             <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-emerald-600" />
-              <span>Data Backup & Restore</span>
+              <Moon className="w-4 h-4 text-primary" />
+              <span>Theme & Visual Appearance</span>
             </h3>
-
-            <p className="text-xs text-text-secondary leading-relaxed">
-              Export your complete institute database to an offline JSON file for safe-keeping, or restore an existing backup.
+            <p className="text-xs text-text-secondary mt-1">
+              Select Light Mode or Night Dark Mode for comfortable viewing across all devices.
             </p>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div
+              onClick={() => {
+                if (themeMode !== 'light') toggleTheme();
+                showToast('Light theme enabled', 'info');
+              }}
+              className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${
+                themeMode === 'light'
+                  ? 'border-primary bg-primary/5 shadow-sm'
+                  : 'border-border bg-surface2/40 hover:border-border/80'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                    <Sun className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-text block">Day / Light Mode</span>
+                    <span className="text-[11px] text-text-secondary">Clean high-contrast daytime interface</span>
+                  </div>
+                </div>
+                {themeMode === 'light' && <CheckCircle2 className="w-5 h-5 text-primary" />}
+              </div>
+            </div>
+
+            <div
+              onClick={() => {
+                if (themeMode !== 'dark') toggleTheme();
+                showToast('Dark theme enabled', 'info');
+              }}
+              className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${
+                themeMode === 'dark'
+                  ? 'border-primary bg-primary/5 shadow-sm'
+                  : 'border-border bg-surface2/40 hover:border-border/80'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-800 text-indigo-400 flex items-center justify-center">
+                    <Moon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-text block">Midnight Dark Mode</span>
+                    <span className="text-[11px] text-text-secondary">Reduced eye strain for night sessions</span>
+                  </div>
+                </div>
+                {themeMode === 'dark' && <CheckCircle2 className="w-5 h-5 text-primary" />}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════ SECTION 5: TEACHER PERMISSIONS ═════════ */}
+      {activeSection === 'permissions' && (
+        <div className="bg-white dark:bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2">
+                <Shield className="w-4 h-4 text-primary" />
+                <span>Teacher Access & Role Permissions</span>
+              </h3>
+              <p className="text-xs text-text-secondary mt-1">
+                Control which modules staff and teachers can access or modify in the school portal and mobile app.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPermissionsModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Configure Permissions</span>
+            </button>
+          </div>
+
+          <div className="p-4 rounded-xl bg-surface2/60 border border-border space-y-2">
+            <span className="text-xs font-bold text-text block">Current Teacher Permission Status:</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-xs">
+              <span className="flex items-center gap-1.5 text-text">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Mark Attendance</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-text">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Mark Entry Desk</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-text">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span>View Students</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-text">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Notice Board</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-text">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Admit Cards</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-text">
+                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Class Timetable</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════ SECTION 6: CLOUD SUBSCRIPTIONS ═════════ */}
+      {activeSection === 'subscription' && (
+        <div className="bg-white dark:bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-6">
+          <div className="border-b border-border pb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>Cloud Subscription & License Status</span>
+              </h3>
+              <p className="text-xs text-text-secondary mt-1">
+                Unrestricted 100% all-access guarantee across all tiers.
+              </p>
+            </div>
+            <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+              Active: 100% All Features
+            </span>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-900/40 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="text-base font-black text-amber-950 dark:text-amber-200 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <span>Annual Pro Plan — ₹8,999 / year</span>
+                </h4>
+                <p className="text-xs text-amber-900/80 dark:text-amber-300/80 mt-1">
+                  Includes All Access to 15+ Modules, Mark Entry Desk, Student ID/Admit Cards, and Real-time Cloud Sync.
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={exportAllDataJson}
-                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all"
+                onClick={() => {
+                  window.history.pushState({}, '', '/subscription');
+                  window.dispatchEvent(new PopStateEvent('popstate'));
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-xs rounded-xl shadow-md hover:from-amber-700 hover:to-orange-700 transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <Download className="w-4 h-4" />
-                <span>Export Backup (JSON)</span>
+                <span>View Full Plans</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
-
-              <label className="px-4 py-2.5 rounded-xl bg-surface2 hover:bg-surface2/80 text-text font-bold text-xs border border-border flex items-center gap-2 cursor-pointer transition-all">
-                <Upload className="w-4 h-4 text-primary" />
-                <span>Restore Backup (JSON)</span>
-                <input type="file" accept=".json" onChange={handleFileImport} className="hidden" />
-              </label>
             </div>
           </div>
-        </>
-      ) : (
-        /* ─── STEP BY STEP SETUP WIZARD ─── */
-        <div className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col p-6 animate-in fade-in duration-200">
-          
-          {/* Wizard Header Info */}
-          <div className="text-center pb-6 border-b border-border">
-            <h3 className="text-xl font-bold text-text">Welcome to EduCore SMS</h3>
-            <p className="text-xs text-text-secondary mt-1">Let's set up your institute to get started.</p>
+        </div>
+      )}
+
+      {/* ═════════ SECTION 7: HELP & SUPPORT (Dedicated Section) ═════════ */}
+      {activeSection === 'support' && (
+        <div className="bg-white dark:bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-6">
+          <div className="border-b border-border pb-3">
+            <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2">
+              <Headphones className="w-4 h-4 text-primary" />
+              <span>Help Desk & Technical Support</span>
+            </h3>
+            <p className="text-xs text-text-secondary mt-1">
+              Need assistance? Connect directly with our priority customer support team.
+            </p>
           </div>
 
-          {/* Stepper horizontal timeline */}
-          <div className="py-6 flex items-center justify-between max-w-xl mx-auto w-full relative">
-            {/* Line background */}
-            <div className="absolute left-6 right-6 top-[37px] h-0.5 bg-neutral-200 -z-10" />
-            <div
-              className="absolute left-6 top-[37px] h-0.5 bg-primary -z-10 transition-all duration-300"
-              style={{ width: wizardStep === 1 ? '0%' : wizardStep === 2 ? '50%' : '100%' }}
-            />
-
-            {/* Step 1 indicator */}
-            <div className="flex flex-col items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
-                wizardStep >= 1 ? 'bg-primary text-white' : 'bg-neutral-200 text-text-secondary'
-              }`}>
-                1
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* WhatsApp Support */}
+            <div className="p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-emerald-950 dark:text-emerald-200 block">WhatsApp Priority Hotline</span>
+                  <span className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80">Instant assistance & onboarding help</span>
+                </div>
               </div>
-              <span className="text-[10px] font-bold text-text">Institute Info</span>
+              <a
+                href="https://wa.me/919304345840?text=Hello%2C%20I%20need%20assistance%20with%20School%20Management%20Portal"
+                target="_blank"
+                rel="noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Chat on WhatsApp (+91 93043 45840)</span>
+              </a>
             </div>
 
-            {/* Step 2 indicator */}
-            <div className="flex flex-col items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
-                wizardStep >= 2 ? 'bg-primary text-white' : 'bg-neutral-200 text-text-secondary'
-              }`}>
-                2
+            {/* Helpline Email */}
+            <div className="p-5 rounded-2xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-blue-950 dark:text-blue-200 block">Official Support Email</span>
+                  <span className="text-[11px] text-blue-800/80 dark:text-blue-300/80">Replies within 2 to 4 business hours</span>
+                </div>
               </div>
-              <span className="text-[10px] font-bold text-text">Academic Session</span>
-            </div>
-
-            {/* Step 3 indicator */}
-            <div className="flex flex-col items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
-                wizardStep >= 3 ? 'bg-primary text-white' : 'bg-neutral-200 text-text-secondary'
-              }`}>
-                3
-              </div>
-              <span className="text-[10px] font-bold text-text">Complete</span>
+              <a
+                href="mailto:support@smartschoolportal.com"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all"
+              >
+                <Mail className="w-4 h-4" />
+                <span>Email Support</span>
+              </a>
             </div>
           </div>
 
-          {/* Wizard step form rendering */}
-          <form onSubmit={handleWizardSubmit} className="max-w-2xl mx-auto w-full py-4">
-            {wizardStep === 1 && (
-              <div className="space-y-4">
-                <h4 className="font-bold text-base text-text flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  <span>Institute Information</span>
-                </h4>
+          {/* System Diagnostic Check */}
+          <div className="p-4 rounded-xl bg-surface2/60 border border-border space-y-3">
+            <span className="text-xs font-bold text-text block flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Portal Diagnostics & Cloud Health</span>
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="p-3 rounded-lg bg-white dark:bg-surface border border-border flex items-center justify-between">
+                <span className="text-text-secondary">Firebase Cloud</span>
+                <span className="font-bold text-emerald-600">Connected</span>
+              </div>
+              <div className="p-3 rounded-lg bg-white dark:bg-surface border border-border flex items-center justify-between">
+                <span className="text-text-secondary">Database Storage</span>
+                <span className="font-bold text-emerald-600">Operational</span>
+              </div>
+              <div className="p-3 rounded-lg bg-white dark:bg-surface border border-border flex items-center justify-between">
+                <span className="text-text-secondary">PWA Sync Engine</span>
+                <span className="font-bold text-emerald-600">Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-text-secondary">
-                  <div className="sm:col-span-2">
-                    <label className="block mb-1 text-text">Institute Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g., Lincoln High School"
-                      value={formData.instituteName || ''}
-                      onChange={(e) => setFormData({ ...formData, instituteName: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none focus:border-primary"
-                    />
-                  </div>
+      {/* ═════════ SECTION 8: BACKUP & RESTORE ═════════ */}
+      {activeSection === 'backup' && (
+        <div className="bg-white dark:bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-4">
+          <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2 border-b border-border pb-2">
+            <RefreshCw className="w-4 h-4 text-emerald-600" />
+            <span>Data Backup & Offline Database Archive</span>
+          </h3>
+          <p className="text-xs text-text-secondary leading-relaxed">
+            Export your complete institute database to an offline JSON file for safe-keeping, or restore an existing backup.
+          </p>
 
-                  <div>
-                    <label className="block mb-1 text-text">Institute Type *</label>
-                    <select
-                      value={formData.instituteType || 'School'}
-                      onChange={(e) => setFormData({ ...formData, instituteType: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none cursor-pointer"
-                    >
-                      <option value="School">School</option>
-                      <option value="College">College</option>
-                      <option value="Coaching Institute">Coaching Institute</option>
-                    </select>
-                  </div>
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={exportAllDataJson}
+              className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all"
+            >
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>Export Complete JSON Backup</span>
+            </button>
 
-                  <div>
-                    <label className="block mb-1 text-text">Primary Mobile Number *</label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="+1 (555) 000-0000"
-                      value={formData.mobile || ''}
-                      onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
-                    />
-                  </div>
+            <label className="px-5 py-2.5 rounded-xl border border-border bg-surface2 hover:bg-surface text-text font-bold text-xs shadow-2xs flex items-center gap-2 cursor-pointer transition-all">
+              <Upload className="w-4 h-4 text-primary" />
+              <span>Restore from Backup File</span>
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+            </label>
+          </div>
+        </div>
+      )}
 
-                  <div className="sm:col-span-2">
-                    <label className="block mb-1 text-text">Official Email Address *</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="admin@institute.edu"
-                      value={formData.email || ''}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
-                    />
-                  </div>
+      {/* ═════════ SECTION 9: SETUP WIZARD ═════════ */}
+      {activeSection === 'wizard' && (
+        <div className="bg-white dark:bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <h3 className="text-sm font-bold text-text uppercase tracking-wider flex items-center gap-2">
+              <School className="w-4 h-4 text-primary" />
+              <span>Quick Onboarding Setup Wizard</span>
+            </h3>
+            <span className="text-xs font-bold text-text-secondary">Step {wizardStep} of 3</span>
+          </div>
 
-                  <div className="sm:col-span-2">
-                    <label className="block mb-1 text-text">Full Address</label>
-                    <textarea
-                      rows={2}
-                      placeholder="123 Education Ave, City, State, Zip"
-                      value={formData.address || ''}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none resize-none"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2 space-y-2">
-                    <label className="block text-text">Institute Logo</label>
-                    <div className="border-2 border-dashed border-border hover:border-primary hover:bg-surface2/35 rounded-xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2">
-                      <UploadCloud className="w-6 h-6 text-text-muted" />
-                      <span className="font-semibold text-text">Click or drag image to upload (Max 2MB)</span>
-                    </div>
-                  </div>
+          {wizardStep === 1 && (
+            <div className="space-y-4">
+              <p className="text-xs text-text-secondary">Verify basic school details to finalize setup.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-text block mb-1">School Name</label>
+                  <input
+                    type="text"
+                    value={formData.instituteName}
+                    onChange={(e) => setFormData({ ...formData, instituteName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-bold"
+                  />
                 </div>
-
-                <div className="flex justify-end pt-4">
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
-                  >
-                    Continue Setup
-                  </button>
+                <div>
+                  <label className="text-xs font-bold text-text block mb-1">Current Session</label>
+                  <input
+                    type="text"
+                    value={formData.currentSession}
+                    onChange={(e) => setFormData({ ...formData, currentSession: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-bold"
+                  />
                 </div>
               </div>
-            )}
-
-            {wizardStep === 2 && (
-              <div className="space-y-4">
-                <h4 className="font-bold text-base text-text flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-accent-gold" />
-                  <span>Academic Session & Batches</span>
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-text-secondary">
-                  <div>
-                    <label className="block mb-1 text-text">Academic Session *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. 2026-27"
-                      value={formData.currentSession || ''}
-                      onChange={(e) => setFormData({ ...formData, currentSession: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-1 text-text">Motto / Tagline</label>
-                    <input
-                      type="text"
-                      placeholder="Empowering Minds"
-                      value={formData.tagline || ''}
-                      onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-between pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setWizardStep(1)}
-                    className="px-6 py-2.5 border border-border bg-surface2 hover:bg-border text-text font-bold text-xs rounded-xl transition-all cursor-pointer"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
-                  >
-                    Complete Setup
-                  </button>
-                </div>
+              <div className="flex justify-end pt-3">
+                <button
+                  type="button"
+                  onClick={() => setWizardStep(2)}
+                  className="px-5 py-2 bg-primary text-white font-bold text-xs rounded-xl flex items-center gap-1.5"
+                >
+                  <span>Next Step</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-            )}
+            </div>
+          )}
 
-            {wizardStep === 3 && (
-              <div className="text-center py-8 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-300 shadow-sm animate-bounce">
-                  <Check className="w-8 h-8" />
-                </div>
-                <h4 className="font-bold text-lg text-text">Congratulations!</h4>
-                <p className="text-xs text-text-secondary max-w-sm mx-auto leading-relaxed">
-                  Institute configurations have been saved. You are ready to start managing students, attendance, fees, and results!
-                </p>
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveSubTab('config')}
-                    className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
-                  >
-                    Return to Settings
-                  </button>
-                </div>
+          {wizardStep === 2 && (
+            <div className="space-y-4">
+              <p className="text-xs text-text-secondary">Confirm and save current settings.</p>
+              <div className="flex justify-between pt-3">
+                <button
+                  type="button"
+                  onClick={() => setWizardStep(1)}
+                  className="px-5 py-2 bg-surface2 text-text font-bold text-xs rounded-xl"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateSettings(formData);
+                    setWizardStep(3);
+                    showToast('Setup wizard completed!', 'success');
+                  }}
+                  className="px-5 py-2 bg-primary text-white font-bold text-xs rounded-xl flex items-center gap-1.5"
+                >
+                  <span>Complete Setup</span>
+                  <Check className="w-3.5 h-3.5" />
+                </button>
               </div>
-            )}
-          </form>
+            </div>
+          )}
+
+          {wizardStep === 3 && (
+            <div className="text-center py-6 space-y-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                <Check className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-bold text-text">Setup Successfully Finished!</h4>
+              <p className="text-xs text-text-secondary">Your institute profile is now fully active.</p>
+              <button
+                type="button"
+                onClick={() => setActiveSection('branding')}
+                className="px-5 py-2 bg-primary text-white font-bold text-xs rounded-xl mt-2"
+              >
+                Back to Settings
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -1080,13 +1150,15 @@ export default function SettingsView() {
       <ImageCropperModal
         isOpen={isLogoCropperOpen}
         imageSrc={logoToCrop}
-        title="Crop Institute Logo"
-        initialAspect="1:1"
+        aspectRatio={1}
+        onClose={() => setIsLogoCropperOpen(false)}
         onCropComplete={handleLogoCropComplete}
-        onClose={() => {
-          setIsLogoCropperOpen(false);
-          setLogoToCrop(null);
-        }}
+      />
+
+      {/* Interactive Teacher Permissions Modal */}
+      <TeacherPermissionsModal
+        isOpen={isPermissionsModalOpen}
+        onClose={() => setIsPermissionsModalOpen(false)}
       />
     </div>
   );

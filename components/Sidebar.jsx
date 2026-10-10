@@ -8,7 +8,7 @@ import {
   Settings, GraduationCap, Award, Contact,
   ShieldCheck, UserCheck, School, Sun, Moon, Zap,
   ChevronRight, ChevronLeft, Plus, FileText, Megaphone, X,
-  Building2, Calendar
+  Building2, Calendar, Sparkles
 } from 'lucide-react';
 
 function NavBtn({ icon: Icon, label, badge, active, onClick, iconColor, collapsed }) {
