@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSchoolStore } from '../lib/store';
 import {
   Printer, Download, Plus, Trash2, Calendar,
@@ -9,6 +9,23 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { getImageDataUrl } from '../lib/exportUtils';
+
+
+const STANDARD_ADMIT_SUBJECTS = [
+  'Mathematics',
+  'Science',
+  'Social Studies',
+  'English',
+  'Hindi',
+  'Computer',
+  'General Knowledge',
+  'Sanskrit',
+  'Drawing / Art',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Other'
+];
 
 export default function AdmitCardView() {
   const { students, settings, showToast } = useSchoolStore();
@@ -481,54 +498,105 @@ export default function AdmitCardView() {
 
         {/* 2. Timetable Management */}
         <div className="lg:col-span-2 bg-white p-5 rounded-2xl border border-border space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-text flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-emerald-600" />
-              2. Exam Time Table Schedule ({timetable.length} Subjects)
-            </h2>
-            <button
-              onClick={() => setIsAddingSubject(!isAddingSubject)}
-              className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{isAddingSubject ? 'Cancel' : 'Add Subject'}</span>
-            </button>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-text flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-emerald-600" />
+                2. Exam Time Table & Dates ({selectedClass === 'all' ? 'All Classes' : 'Class ' + selectedClass})
+              </h2>
+              <p className="text-[11px] text-text-secondary mt-0.5">
+                Class-wise schedule persisted automatically. Change exam dates, subjects, or timings below.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSaveClassSchedule}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                title="Save Schedule for this class"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Save Schedule</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAddingSubject(!isAddingSubject)}
+                className="px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{isAddingSubject ? 'Close' : 'Add Subject'}</span>
+              </button>
+            </div>
           </div>
 
           {isAddingSubject && (
-            <form onSubmit={handleAddSubject} className="p-3 bg-surface2 rounded-xl border border-border space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <input
-                  type="text"
-                  placeholder="Day (e.g. Day 6)"
-                  value={newDay}
-                  onChange={(e) => setNewDay(e.target.value)}
-                  className="px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold"
-                />
-                <input
-                  type="text"
-                  placeholder="Subject Name"
-                  value={newSubject}
-                  onChange={(e) => setNewSubject(e.target.value)}
-                  className="px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold"
-                />
-                <input
-                  type="text"
-                  placeholder="Timing (e.g. 09:30 AM - 12:30 PM)"
-                  value={newTiming}
-                  onChange={(e) => setNewTiming(e.target.value)}
-                  className="px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold"
-                />
+            <form onSubmit={handleAddSubject} className="p-3.5 bg-surface2/60 rounded-xl border border-border space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-bold text-text-secondary mb-1">Exam Date (DD/MM/YYYY)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 15/03/2026"
+                    value={newDay}
+                    onChange={(e) => setNewDay(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold text-text"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-text-secondary mb-1">Subject (Dropdown)</label>
+                  <select
+                    value={newSubject}
+                    onChange={(e) => setNewSubject(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold text-text"
+                  >
+                    {STANDARD_ADMIT_SUBJECTS.map((sub) => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                  {newSubject === 'Other' && (
+                    <input
+                      type="text"
+                      placeholder="Enter custom subject name"
+                      value={customSubjectName}
+                      onChange={(e) => setCustomSubjectName(e.target.value)}
+                      className="mt-1.5 w-full px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold text-text"
+                      required
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-text-secondary mb-1">Exam Timing</label>
+                  <input
+                    type="text"
+                    placeholder="09:30 AM - 12:30 PM"
+                    value={newTiming}
+                    onChange={(e) => setNewTiming(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white rounded-lg border border-border text-xs font-semibold text-text"
+                    required
+                  />
+                  <div className="flex gap-1.5 mt-1.5">
+                    {['09:00 AM - 12:00 PM', '09:30 AM - 12:30 PM', '01:30 PM - 04:30 PM'].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setNewTiming(t)}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-white hover:bg-surface2 border border-border text-text-secondary cursor-pointer"
+                      >
+                        {t.slice(0, 8)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               <button
                 type="submit"
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs"
+                className="px-4 py-1.5 rounded-lg bg-primary text-white font-bold text-xs cursor-pointer shadow-xs"
               >
-                Save Subject to Schedule
+                Add Subject to Schedule
               </button>
             </form>
           )}
-
           <div className="overflow-x-auto border border-border rounded-xl">
             <table className="w-full text-left text-xs">
               <thead className="bg-surface2 font-bold text-text-secondary border-b border-border">

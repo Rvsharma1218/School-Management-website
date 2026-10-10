@@ -6,9 +6,28 @@ import {
   Award, Plus, Search, Printer, Trash2, Edit,
   GraduationCap, Calendar, Percent, CheckCircle2,
   FileSpreadsheet, X, Save, Share2, ClipboardList, TrendingUp, Sparkles, ChevronRight, BarChart, Download, FileText,
-  Users
+  Users, Check, MessageCircle, AlertCircle
 } from 'lucide-react';
 import { exportExamResultsToExcel, exportExamResultsPDF, exportSingleResultPDF } from '../lib/exportUtils';
+
+
+const STANDARD_RESULT_SUBJECTS = [
+  'Mathematics',
+  'Science',
+  'Social Science',
+  'English',
+  'Hindi',
+  'Computer',
+  'Sanskrit',
+  'General Knowledge',
+  'Drawing / Art',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Economics',
+  'Accountancy',
+  'Other'
+];
 
 export default function ResultsView() {
   const {
@@ -37,6 +56,7 @@ export default function ResultsView() {
   const [modalStudentSearch, setModalStudentSearch] = useState('');
   const [examName, setExamName] = useState('Term Examination');
   const [passingMarks, setPassingMarks] = useState(33);
+  const [resultStatus, setResultStatus] = useState('AUTO'); // 'AUTO' | 'PASS' | 'FAIL' | 'PROMOTED'
   const [subjects, setSubjects] = useState([
     { subjectName: 'Mathematics', marks: '', totalMarks: 100 },
     { subjectName: 'Science', marks: '', totalMarks: 100 },
@@ -46,6 +66,8 @@ export default function ResultsView() {
   // Bulk Mark Entry Form State
   const [bulkClass, setBulkClass] = useState(isPrincipal ? (settings.schoolClasses?.[0] || '10th') : assignedClass);
   const [bulkExam, setBulkExam] = useState('Term Examination');
+  const [isDetailedBreakdownMode, setIsDetailedBreakdownMode] = useState(false);
+  const [savedStudentIds, setSavedStudentIds] = useState(new Set());
   
   // Multi-subject list for Bulk Mark Entry Desk
   const [bulkSubjects, setBulkSubjects] = useState([
@@ -55,7 +77,7 @@ export default function ResultsView() {
   ]);
   const [activeBulkSubjectId, setActiveBulkSubjectId] = useState('sub_1');
   
-  // markEntries: { [subjectId]: { [studentId]: { theory: '', practical: '', internal: '' } } }
+  // markEntries: { [subjectId]: { [studentId]: { marks: '', theory: '', practical: '', internal: '' } } }
   const [markEntries, setMarkEntries] = useState({});
 
   // Reset to teacher assigned class on mount
@@ -111,6 +133,8 @@ export default function ResultsView() {
     setModalStudentSearch('');
     setSelectedStudentId('');
     setExamName('Term Examination');
+    setPassingMarks(33);
+    setResultStatus('AUTO');
     setSubjects([
       { subjectName: 'Mathematics', marks: '', totalMarks: 100 },
       { subjectName: 'Science', marks: '', totalMarks: 100 },
@@ -129,6 +153,8 @@ export default function ResultsView() {
       if (c) setModalClassFilter(c);
     }
     setExamName(res.examName || 'Term Examination');
+    setPassingMarks(res.passingMarks || 33);
+    setResultStatus(res.status || 'AUTO');
     setSubjects(res.subjects && res.subjects.length > 0 ? [...res.subjects] : [
       { subjectName: 'Mathematics', marks: '', totalMarks: 100 },
       { subjectName: 'Science', marks: '', totalMarks: 100 },
@@ -161,15 +187,56 @@ export default function ResultsView() {
       id: editingResult?.id,
       studentId: selectedStudentId,
       examName,
+      passingMarks: Number(passingMarks) || 33,
+      status: resultStatus,
       subjects: subjects.map(s => ({
         subjectName: s.subjectName || 'Subject',
         marks: Number(s.marks) || 0,
-        totalMarks: Number(s.totalMarks) || 100
+        totalMarks: Number(s.totalMarks) || 100,
+        passingMarks: Number(s.passingMarks || passingMarks || 33),
+        theoryMarks: s.theoryMarks != null ? Number(s.theoryMarks) : 0,
+        practicalMarks: s.practicalMarks != null ? Number(s.practicalMarks) : 0,
+        internalMarks: s.internalMarks != null ? Number(s.internalMarks) : 0,
       }))
     };
 
     saveResult(payload);
+    showToast('Result saved successfully!', 'success');
     setIsModalOpen(false);
+  };
+
+  // WhatsApp Share handler
+  const handleWhatsAppShare = (res, stu) => {
+    const phone = stu?.mobile || stu?.parentPhone || stu?.phone || stu?.whatsappNumber || '';
+    const cleanDigits = String(phone).replace(/[^0-9]/g, '');
+    const totalObt = res.subjects?.reduce((a, s) => a + (Number(s.marks) || 0), 0) || 0;
+    const totalMax = res.subjects?.reduce((a, s) => a + (Number(s.totalMarks) || 100), 0) || 100;
+    const pct = Math.round((totalObt / totalMax) * 100);
+    const schoolName = settings.instituteName || settings.schoolName || 'School';
+    
+    const statusText = res.status === 'PROMOTED'
+      ? 'PROMOTED TO NEXT CLASS'
+      : res.status === 'PASS'
+      ? 'PASSED'
+      : res.status === 'FAIL'
+      ? 'NEEDS IMPROVEMENT / FAILED'
+      : (pct >= 33 ? 'PASSED' : 'NEEDS IMPROVEMENT / FAILED');
+
+    const textMsg = `*ACADEMIC RESULT - ${schoolName.toUpperCase()}*\n\n` +
+      `Dear Parent,\n` +
+      `Examination Result for *${stu?.name || 'Student'}* (${res.examName}):\n` +
+      `• Total Marks: *${totalObt} / ${totalMax}* (${pct}%)\n` +
+      `• Result Status: *${statusText}*\n\n` +
+      `Regards,\n${schoolName}`;
+
+    if (cleanDigits.length >= 10) {
+      const finalPhone = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
+      window.open(`https://wa.me/${finalPhone}?text=${encodeURIComponent(textMsg)}`, '_blank');
+      showToast(`Opening WhatsApp chat with ${stu?.name || 'student'} parent...`, 'info');
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(textMsg)}`, '_blank');
+      showToast(`No contact number registered for ${stu?.name || 'student'}. Choose contact in WhatsApp.`, 'info');
+    }
   };
 
   // Filter saved results
@@ -201,7 +268,7 @@ export default function ResultsView() {
       const totalMax = res.subjects.reduce((a, s) => a + (Number(s.totalMarks) || 100), 0);
       const pct = totalMax > 0 ? Math.round((totalMarksObt / totalMax) * 100) : 0;
       totalResultScores++;
-      if (pct >= 40) passedCount++;
+      if (res.status === 'PROMOTED' || res.status === 'PASS' || (res.status !== 'FAIL' && pct >= 40)) passedCount++;
 
       if (pct >= 90) gradeCounts['A+']++;
       else if (pct >= 75) gradeCounts['A']++;
@@ -224,12 +291,12 @@ export default function ResultsView() {
         const subMark = existing?.subjects?.find(sub => sub.subjectName === bs.name);
         if (subMark) {
           const total = subMark.marks;
-          const theory = Math.round(total * 0.8);
-          const practical = Math.round(total * 0.15);
-          const internal = total - theory - practical;
-          initial[bs.id][s.id] = { theory, practical, internal };
+          const theory = subMark.theoryMarks != null ? subMark.theoryMarks : Math.round(total * 0.8);
+          const practical = subMark.practicalMarks != null ? subMark.practicalMarks : Math.round(total * 0.15);
+          const internal = subMark.internalMarks != null ? subMark.internalMarks : (total - theory - practical);
+          initial[bs.id][s.id] = { marks: total, theory, practical, internal };
         } else {
-          initial[bs.id][s.id] = { theory: '', practical: '', internal: '' };
+          initial[bs.id][s.id] = { marks: '', theory: '', practical: '', internal: '' };
         }
       });
     });
@@ -237,16 +304,27 @@ export default function ResultsView() {
   }, [bulkClass, bulkExam, bulkSubjects.map(s => s.name).join(','), results]);
 
   const handleBulkMarkChange = (subjectId, studentId, field, val) => {
-    setMarkEntries(prev => ({
-      ...prev,
-      [subjectId]: {
-        ...(prev[subjectId] || {}),
-        [studentId]: {
-          ...(prev[subjectId]?.[studentId] || { theory: '', practical: '', internal: '' }),
-          [field]: val === '' ? '' : Math.max(0, Number(val))
-        }
+    setMarkEntries(prev => {
+      const prevEntry = prev[subjectId]?.[studentId] || { marks: '', theory: '', practical: '', internal: '' };
+      const parsedVal = val === '' ? '' : Math.max(0, Number(val));
+      const nextEntry = { ...prevEntry, [field]: parsedVal };
+
+      // In detailed mode, sync total marks
+      if (field === 'theory' || field === 'practical' || field === 'internal') {
+        const t = Number(nextEntry.theory) || 0;
+        const p = Number(nextEntry.practical) || 0;
+        const i = Number(nextEntry.internal) || 0;
+        nextEntry.marks = t + p + i;
       }
-    }));
+
+      return {
+        ...prev,
+        [subjectId]: {
+          ...(prev[subjectId] || {}),
+          [studentId]: nextEntry
+        }
+      };
+    });
   };
 
   const handleAddBulkSubject = () => {
@@ -272,7 +350,73 @@ export default function ResultsView() {
     setBulkSubjects(prev => prev.map(s => s.id === subId ? { ...s, [field]: val } : s));
   };
 
+  // Save a single student's marks directly from the table row
+  const handleSaveSingleStudent = (student) => {
+    const existing = results.find(r => r.studentId === student.id && r.examName === bulkExam);
+    let updatedSubjects = existing ? [...existing.subjects] : [];
+
+    bulkSubjects.forEach(bs => {
+      const entry = markEntries[bs.id]?.[student.id];
+      if (!entry) return;
+
+      const maxMarks = Number(bs.totalMarks) || 100;
+
+      if (isDetailedBreakdownMode) {
+        const theory = Number(entry.theory) || 0;
+        const practical = Number(entry.practical) || 0;
+        const internal = Number(entry.internal) || 0;
+        const total = theory + practical + internal;
+        if (theory === 0 && practical === 0 && internal === 0 && entry.theory === '' && entry.practical === '' && entry.internal === '') {
+          return;
+        }
+
+        const subIndex = updatedSubjects.findIndex(sub => sub.subjectName === bs.name);
+        const subData = {
+          subjectName: bs.name,
+          marks: total,
+          totalMarks: maxMarks,
+          theoryMarks: theory,
+          practicalMarks: practical,
+          internalMarks: internal
+        };
+        if (subIndex >= 0) updatedSubjects[subIndex] = subData;
+        else updatedSubjects.push(subData);
+      } else {
+        if (entry.marks === '' && entry.marks == null) return;
+        const total = Number(entry.marks) || 0;
+        const subIndex = updatedSubjects.findIndex(sub => sub.subjectName === bs.name);
+        const subData = {
+          subjectName: bs.name,
+          marks: total,
+          totalMarks: maxMarks,
+          theoryMarks: 0,
+          practicalMarks: 0,
+          internalMarks: 0
+        };
+        if (subIndex >= 0) updatedSubjects[subIndex] = subData;
+        else updatedSubjects.push(subData);
+      }
+    });
+
+    if (updatedSubjects.length > 0) {
+      saveResult({
+        id: existing?.id,
+        studentId: student.id,
+        examName: bulkExam,
+        subjects: updatedSubjects,
+        status: existing?.status || 'AUTO'
+      });
+      setSavedStudentIds(prev => new Set([...prev, student.id]));
+      showToast(`Marks saved for ${student.name}!`, 'success');
+    } else {
+      showToast(`No marks entered for ${student.name}`, 'info');
+    }
+  };
+
+  // Batch save all students in current class
   const handleSaveBulk = (isPublish = false) => {
+    const newlySaved = new Set(savedStudentIds);
+
     classStudents.forEach(s => {
       const existing = results.find(r => r.studentId === s.id && r.examName === bulkExam);
       let updatedSubjects = existing ? [...existing.subjects] : [];
@@ -281,21 +425,43 @@ export default function ResultsView() {
         const entry = markEntries[bs.id]?.[s.id];
         if (!entry) return;
 
-        const theory = Number(entry.theory) || 0;
-        const practical = Number(entry.practical) || 0;
-        const internal = Number(entry.internal) || 0;
-        const total = theory + practical + internal;
         const maxMarks = Number(bs.totalMarks) || 100;
 
-        if (theory === 0 && practical === 0 && internal === 0 && entry.theory === '' && entry.practical === '' && entry.internal === '') {
-          return;
-        }
+        if (isDetailedBreakdownMode) {
+          const theory = Number(entry.theory) || 0;
+          const practical = Number(entry.practical) || 0;
+          const internal = Number(entry.internal) || 0;
+          const total = theory + practical + internal;
 
-        const subIndex = updatedSubjects.findIndex(sub => sub.subjectName === bs.name);
-        if (subIndex >= 0) {
-          updatedSubjects[subIndex] = { subjectName: bs.name, marks: total, totalMarks: maxMarks };
+          if (theory === 0 && practical === 0 && internal === 0 && entry.theory === '' && entry.practical === '' && entry.internal === '') {
+            return;
+          }
+
+          const subIndex = updatedSubjects.findIndex(sub => sub.subjectName === bs.name);
+          const subData = {
+            subjectName: bs.name,
+            marks: total,
+            totalMarks: maxMarks,
+            theoryMarks: theory,
+            practicalMarks: practical,
+            internalMarks: internal
+          };
+          if (subIndex >= 0) updatedSubjects[subIndex] = subData;
+          else updatedSubjects.push(subData);
         } else {
-          updatedSubjects.push({ subjectName: bs.name, marks: total, totalMarks: maxMarks });
+          if (entry.marks === '' && entry.marks == null) return;
+          const total = Number(entry.marks) || 0;
+          const subIndex = updatedSubjects.findIndex(sub => sub.subjectName === bs.name);
+          const subData = {
+            subjectName: bs.name,
+            marks: total,
+            totalMarks: maxMarks,
+            theoryMarks: 0,
+            practicalMarks: 0,
+            internalMarks: 0
+          };
+          if (subIndex >= 0) updatedSubjects[subIndex] = subData;
+          else updatedSubjects.push(subData);
         }
       });
 
@@ -304,12 +470,15 @@ export default function ResultsView() {
           id: existing?.id,
           studentId: s.id,
           examName: bulkExam,
-          subjects: updatedSubjects
+          subjects: updatedSubjects,
+          status: existing?.status || 'AUTO'
         });
+        newlySaved.add(s.id);
       }
     });
 
-    showToast(isPublish ? "Marks published successfully for all subjects!" : "Marks saved successfully!", "success");
+    setSavedStudentIds(newlySaved);
+    showToast(isPublish ? "Marks published successfully for all students!" : "Marks saved successfully for all students!", "success");
   };
 
   const activeSubject = bulkSubjects.find(s => s.id === activeBulkSubjectId) || bulkSubjects[0];
@@ -320,51 +489,52 @@ export default function ResultsView() {
       <div className="flex items-center gap-2 border-b border-border pb-1 overflow-x-auto custom-scrollbar">
         <button
           onClick={() => setActiveTab('saved')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+          className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs rounded-xl cursor-pointer transition-all ${
             activeTab === 'saved'
-              ? 'bg-primary text-white shadow-xs'
+              ? 'bg-primary text-white shadow-sm'
               : 'text-text-secondary hover:text-text hover:bg-surface2'
           }`}
         >
-          <Award className="w-3.5 h-3.5" />
-          <span>Result Management</span>
+          <Award className="w-4 h-4" />
+          <span>Saved Results ({results.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('entry')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+          className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs rounded-xl cursor-pointer transition-all ${
             activeTab === 'entry'
-              ? 'bg-primary text-white shadow-xs'
+              ? 'bg-primary text-white shadow-sm'
               : 'text-text-secondary hover:text-text hover:bg-surface2'
           }`}
         >
-          <ClipboardList className="w-3.5 h-3.5" />
+          <ClipboardList className="w-4 h-4" />
           <span>Mark Entry Desk</span>
         </button>
       </div>
 
-      {activeTab === 'saved' ? (
-        /* ─── SAVED MARKSHEETS LIST TABLE VIEW ─── */
+      {/* ──────── TAB 1: SAVED RESULTS ──────── */}
+      {activeTab === 'saved' && (
         <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Header Actions */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl lg:text-2xl font-bold text-text tracking-tight">Result Management</h2>
-              <p className="text-xs text-text-secondary mt-0.5">Examination & Marksheet Register ({results.length} Records)</p>
+              <h2 className="text-xl font-black text-text tracking-tight">Academic Marksheets & Results</h2>
+              <p className="text-xs text-text-muted mt-0.5">Generate, print and share examination result cards for school & computer students.</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+            <div className="flex items-center gap-2 flex-wrap text-xs font-bold">
               <button
-                onClick={() => exportExamResultsPDF(results, students, settings)}
-                className="px-3.5 py-2 rounded-xl bg-surface2 hover:bg-primary/10 text-primary border border-border flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
-                title="Download consolidated results report PDF"
+                onClick={() => exportExamResultsPDF(filteredResults, students, settings)}
+                className="px-3 py-2 rounded-xl bg-surface2 hover:bg-surface2/80 text-text border border-border flex items-center gap-1.5 cursor-pointer transition-all"
+                title="Download consolidated PDF report"
               >
-                <Download className="w-3.5 h-3.5" />
+                <Download className="w-3.5 h-3.5 text-primary" />
                 <span>Export PDF</span>
               </button>
 
               <button
-                onClick={() => exportExamResultsToExcel(results, students, settings.instituteName)}
-                className="px-3.5 py-2 rounded-xl bg-surface2 hover:bg-emerald-50 text-emerald-700 border border-border flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                onClick={() => exportExamResultsToExcel(filteredResults, students, settings)}
+                className="px-3 py-2 rounded-xl bg-surface2 hover:bg-surface2/80 text-text border border-border flex items-center gap-1.5 cursor-pointer transition-all"
                 title="Export results spreadsheet to Excel"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
@@ -433,13 +603,14 @@ export default function ResultsView() {
                     <th className="py-3 px-4 text-center">Subjects</th>
                     <th className="py-3 px-4 text-right">Total Marks</th>
                     <th className="py-3 px-4 text-center">Percentage</th>
+                    <th className="py-3 px-4 text-center">Status</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border text-text font-medium">
                   {filteredResults.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="py-12 text-center text-text-muted text-xs">
+                      <td colSpan="7" className="py-12 text-center text-text-muted text-xs">
                         No result records found. Use 'Mark Entry Desk' or 'Single Entry' to enter marks.
                       </td>
                     </tr>
@@ -449,6 +620,21 @@ export default function ResultsView() {
                       const totalMarksObt = r.subjects?.reduce((a, s) => a + (Number(s.marks) || 0), 0) || 0;
                       const totalMax = r.subjects?.reduce((a, s) => a + (Number(s.totalMarks) || 100), 0) || 1;
                       const pct = Math.round((totalMarksObt / totalMax) * 100);
+
+                      const passCriteria = Number(r.passingMarks || 33);
+                      const failedSubs = r.subjects?.filter(sub => {
+                        const sMax = Number(sub.totalMarks) || 100;
+                        const sObt = Number(sub.marks) || 0;
+                        const minP = sub.passingMarks != null ? Number(sub.passingMarks) : Math.round(sMax * (passCriteria / 100));
+                        return sObt < minP;
+                      }) || [];
+                      const failCount = failedSubs.length;
+
+                      let finalStatus = 'PASS';
+                      if (r.status === 'PROMOTED') finalStatus = 'PROMOTED';
+                      else if (r.status === 'FAIL') finalStatus = 'FAIL';
+                      else if (r.status === 'PASS') finalStatus = 'PASS';
+                      else finalStatus = (failCount > 0 || pct < 40) ? 'FAIL' : 'PASS';
 
                       return (
                         <tr key={r.id} className="hover:bg-surface2/30 transition-colors">
@@ -474,8 +660,31 @@ export default function ResultsView() {
                               {pct}%
                             </span>
                           </td>
+                          <td className="py-3.5 px-4 text-center">
+                            {finalStatus === 'PROMOTED' ? (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                                PROMOTED
+                              </span>
+                            ) : finalStatus === 'PASS' ? (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                PASSED
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                                FAILED {failCount > 0 ? `(${failCount})` : ''}
+                              </span>
+                            )}
+                          </td>
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              {/* Direct WhatsApp Share */}
+                              <button
+                                onClick={() => handleWhatsAppShare(r, student)}
+                                className="p-1.5 rounded-lg bg-surface2 hover:bg-emerald-50 text-emerald-600 border border-border cursor-pointer transition-colors"
+                                title="Share Marksheet on WhatsApp"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                              </button>
                               <button
                                 onClick={async () => {
                                   await exportSingleResultPDF(r, student, settings);
@@ -518,21 +727,65 @@ export default function ResultsView() {
             </div>
           </div>
         </div>
-      ) : (
-        /* ─── BULK MARK ENTRY DESK (MULTI-SUBJECT) ─── */
+      )}
+
+      {/* ──────── TAB 2: BULK MARK ENTRY DESK ──────── */}
+      {activeTab === 'entry' && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          <div className="bg-white border border-border rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+          {/* Desk Header & Controls */}
+          <div className="bg-white border border-border rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
               <div>
-                <h3 className="font-bold text-base text-text">Bulk Mark Entry Desk</h3>
-                <p className="text-xs text-text-secondary mt-0.5">Enter theory, practical, and internal marks for multiple subjects.</p>
+                <h3 className="font-extrabold text-sm text-text flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-primary" />
+                  <span>Bulk Mark Entry Desk</span>
+                </h3>
+                <p className="text-[11px] text-text-muted mt-0.5">Quickly enter and save examination marks for all enrolled students.</p>
               </div>
-              <button
-                onClick={() => handleSaveBulk(true)}
-                className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md cursor-pointer transition-all active:scale-95"
-              >
-                Save & Publish Marks
-              </button>
+
+              {/* Mode Toggle & Save All Buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Mode Selector Toggle */}
+                <div className="flex items-center bg-surface2 p-1 rounded-xl border border-border text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setIsDetailedBreakdownMode(false)}
+                    className={`px-3 py-1 rounded-lg font-bold cursor-pointer transition-all ${
+                      !isDetailedBreakdownMode
+                        ? 'bg-white text-primary shadow-xs'
+                        : 'text-text-secondary hover:text-text'
+                    }`}
+                  >
+                    Direct Marks
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsDetailedBreakdownMode(true)}
+                    className={`px-3 py-1 rounded-lg font-bold cursor-pointer transition-all ${
+                      isDetailedBreakdownMode
+                        ? 'bg-white text-primary shadow-xs'
+                        : 'text-text-secondary hover:text-text'
+                    }`}
+                  >
+                    Detailed (Theory/Practical)
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => handleSaveBulk(false)}
+                  className="px-4 py-2 rounded-xl bg-surface2 hover:bg-primary/10 text-primary border border-border font-bold text-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save All</span>
+                </button>
+                <button
+                  onClick={() => handleSaveBulk(true)}
+                  className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs cursor-pointer shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Publish All</span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
@@ -608,7 +861,7 @@ export default function ResultsView() {
                 ))}
               </div>
 
-              {/* Active Subject Configuration (Editable Subject Name & Max Marks) */}
+              {/* Active Subject Configuration */}
               {activeSubject && (
                 <div className="p-3 bg-surface2/60 border border-border rounded-xl flex flex-wrap items-center gap-3 text-xs">
                   <div className="flex-1 min-w-[200px]">
@@ -649,66 +902,162 @@ export default function ResultsView() {
                 <thead>
                   <tr className="bg-surface2/60 border-b border-border text-text-secondary font-bold text-[10px] uppercase">
                     <th className="py-3 px-4">Student</th>
-                    <th className="py-3 px-4 text-center">Theory</th>
-                    <th className="py-3 px-4 text-center">Practical</th>
-                    <th className="py-3 px-4 text-center">Internal</th>
-                    <th className="py-3 px-4 text-right">Total / Max</th>
+                    {isDetailedBreakdownMode ? (
+                      <>
+                        <th className="py-3 px-4 text-center">Theory</th>
+                        <th className="py-3 px-4 text-center">Practical</th>
+                        <th className="py-3 px-4 text-center">Internal</th>
+                        <th className="py-3 px-4 text-right">Total / Max</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="py-3 px-4 text-center">Marks Obtained</th>
+                        <th className="py-3 px-4 text-center">Max Marks</th>
+                        <th className="py-3 px-4 text-center">Percentage</th>
+                      </>
+                    )}
+                    <th className="py-3 px-4 text-center">Row Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border text-text font-medium">
                   {classStudents.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="py-12 text-center text-text-muted text-xs">
+                      <td colSpan={isDetailedBreakdownMode ? 6 : 5} className="py-12 text-center text-text-muted text-xs">
                         No students enrolled in Class {bulkClass}.
                       </td>
                     </tr>
                   ) : (
                     classStudents.map(s => {
-                      const entry = markEntries[activeSubject?.id]?.[s.id] || { theory: '', practical: '', internal: '' };
-                      const total = (Number(entry.theory) || 0) + (Number(entry.practical) || 0) + (Number(entry.internal) || 0);
+                      const entry = markEntries[activeSubject?.id]?.[s.id] || { marks: '', theory: '', practical: '', internal: '' };
                       const max = activeSubject?.totalMarks || 100;
+                      const isSaved = savedStudentIds.has(s.id);
 
-                      return (
-                        <tr key={s.id} className="hover:bg-surface2/30 transition-colors">
-                          <td className="py-3 px-4 font-bold">
-                            <div>{s.name}</div>
-                            <div className="text-[9px] text-text-muted">Roll: {s.rollNumber || '-'} · ID: {s.studentId}</div>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <input
-                              type="number"
-                              min="0"
-                              value={entry.theory}
-                              onChange={e => handleBulkMarkChange(activeSubject?.id, s.id, 'theory', e.target.value)}
-                              placeholder="0"
-                              className="w-16 px-2 py-1 rounded-lg bg-surface2 border border-border text-center font-mono font-bold focus:outline-none focus:border-primary"
-                            />
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <input
-                              type="number"
-                              min="0"
-                              value={entry.practical}
-                              onChange={e => handleBulkMarkChange(activeSubject?.id, s.id, 'practical', e.target.value)}
-                              placeholder="0"
-                              className="w-16 px-2 py-1 rounded-lg bg-surface2 border border-border text-center font-mono font-bold focus:outline-none focus:border-primary"
-                            />
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <input
-                              type="number"
-                              min="0"
-                              value={entry.internal}
-                              onChange={e => handleBulkMarkChange(activeSubject?.id, s.id, 'internal', e.target.value)}
-                              placeholder="0"
-                              className="w-16 px-2 py-1 rounded-lg bg-surface2 border border-border text-center font-mono font-bold focus:outline-none focus:border-primary"
-                            />
-                          </td>
-                          <td className="py-3 px-4 text-right font-black text-primary font-mono text-sm">
-                            {total} / {max}
-                          </td>
-                        </tr>
-                      );
+                      if (isDetailedBreakdownMode) {
+                        const total = (Number(entry.theory) || 0) + (Number(entry.practical) || 0) + (Number(entry.internal) || 0);
+                        return (
+                          <tr key={s.id} className="hover:bg-surface2/30 transition-colors">
+                            <td className="py-3 px-4 font-bold">
+                              <div>{s.name}</div>
+                              <div className="text-[9px] text-text-muted">Roll: {s.rollNumber || '-'} · ID: {s.studentId}</div>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <input
+                                type="number"
+                                min="0"
+                                value={entry.theory}
+                                onChange={e => handleBulkMarkChange(activeSubject?.id, s.id, 'theory', e.target.value)}
+                                placeholder="0"
+                                className="w-16 px-2 py-1 rounded-lg bg-surface2 border border-border text-center font-mono font-bold focus:outline-none focus:border-primary"
+                              />
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <input
+                                type="number"
+                                min="0"
+                                value={entry.practical}
+                                onChange={e => handleBulkMarkChange(activeSubject?.id, s.id, 'practical', e.target.value)}
+                                placeholder="0"
+                                className="w-16 px-2 py-1 rounded-lg bg-surface2 border border-border text-center font-mono font-bold focus:outline-none focus:border-primary"
+                              />
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <input
+                                type="number"
+                                min="0"
+                                value={entry.internal}
+                                onChange={e => handleBulkMarkChange(activeSubject?.id, s.id, 'internal', e.target.value)}
+                                placeholder="0"
+                                className="w-16 px-2 py-1 rounded-lg bg-surface2 border border-border text-center font-mono font-bold focus:outline-none focus:border-primary"
+                              />
+                            </td>
+                            <td className="py-3 px-4 text-right font-black text-primary font-mono text-sm">
+                              {total} / {max}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleSaveSingleStudent(s)}
+                                className={`px-3 py-1 rounded-lg text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition-all active:scale-95 ${
+                                  isSaved
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200'
+                                    : 'bg-primary hover:bg-primary-dark text-white shadow-xs'
+                                }`}
+                                title="Save marks for this student row"
+                              >
+                                {isSaved ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-700" />
+                                    <span>Saved</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Save className="w-3.5 h-3.5" />
+                                    <span>Save</span>
+                                  </>
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      } else {
+                        // Direct Marks mode
+                        const currentObt = entry.marks !== '' ? Number(entry.marks) : '';
+                        const obtNum = Number(entry.marks) || 0;
+                        const subPct = max > 0 ? Math.round((obtNum / max) * 100) : 0;
+                        return (
+                          <tr key={s.id} className="hover:bg-surface2/30 transition-colors">
+                            <td className="py-3 px-4 font-bold">
+                              <div>{s.name}</div>
+                              <div className="text-[9px] text-text-muted">Roll: {s.rollNumber || '-'} · ID: {s.studentId}</div>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <input
+                                type="number"
+                                min="0"
+                                max={max}
+                                value={entry.marks}
+                                onChange={e => handleBulkMarkChange(activeSubject?.id, s.id, 'marks', e.target.value)}
+                                placeholder="0"
+                                className="w-24 px-3 py-1.5 rounded-lg bg-surface2 border-2 border-border font-bold text-center font-mono text-sm focus:border-primary focus:bg-white transition-colors"
+                              />
+                            </td>
+                            <td className="py-3 px-4 text-center font-bold text-text-muted font-mono">
+                              {max}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                subPct >= 33 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                              }`}>
+                                {subPct}%
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleSaveSingleStudent(s)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition-all active:scale-95 ${
+                                  isSaved
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200'
+                                    : 'bg-primary hover:bg-primary-dark text-white shadow-xs'
+                                }`}
+                                title="Save marks for this student row"
+                              >
+                                {isSaved ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-700" />
+                                    <span>Saved</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Save className="w-3.5 h-3.5" />
+                                    <span>Save</span>
+                                  </>
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      }
                     })
                   )}
                 </tbody>
@@ -718,7 +1067,7 @@ export default function ResultsView() {
         </div>
       )}
 
-      {/* Single Entry Modal (with editable Total Marks and Add Subject) */}
+      {/* ──────── SINGLE ENTRY MODAL ──────── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-card border border-border w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
@@ -732,7 +1081,7 @@ export default function ResultsView() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4 text-xs font-semibold">
-              {/* STEP 1: Filter and Select Student First */}
+              {/* STEP 1: Filter and Select Student */}
               <div className="p-4 rounded-2xl bg-surface2/60 border border-border space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-black uppercase tracking-wider text-text flex items-center gap-1.5">
@@ -750,7 +1099,7 @@ export default function ResultsView() {
                   )}
                 </div>
 
-                {/* Filter Controls: Student Type + Class/Course + Search */}
+                {/* Filter Controls */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div>
                     <label className="block text-[10px] text-text-muted mb-1 font-bold">Filter Type</label>
@@ -850,7 +1199,7 @@ export default function ResultsView() {
                 )}
               </div>
 
-              {/* STEP 2: Exam & Subjects */}
+              {/* STEP 2: Exam & Passing Configuration */}
               <div className="space-y-4 pt-1">
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -865,27 +1214,44 @@ export default function ResultsView() {
                     placeholder="e.g. Mid-Term Examination"
                     required
                   />
-                  {/* Passing Marks Threshold */}
-                  <div className="mt-3 p-3 rounded-xl bg-surface2/80 border border-border flex items-center justify-between gap-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-text">Passing Criteria (%)</label>
-                      <span className="text-[10px] text-text-muted">Minimum percentage required to pass</span>
+
+                  {/* Passing Marks & Result Status */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                    <div className="p-3 rounded-xl bg-surface2/80 border border-border flex items-center justify-between gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-text">Passing Criteria (%)</label>
+                        <span className="text-[10px] text-text-muted">Min score to pass</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={passingMarks}
+                          onChange={e => setPassingMarks(e.target.value)}
+                          className="w-14 px-2 py-1 rounded-lg bg-white border border-border text-center font-bold text-xs font-mono text-primary"
+                          required
+                        />
+                        <span className="text-xs font-bold text-text-muted">%</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={passingMarks}
-                        onChange={e => setPassingMarks(e.target.value)}
-                        className="w-16 px-2 py-1 rounded-lg bg-white border border-border text-center font-bold text-xs font-mono text-primary"
-                        required
-                      />
-                      <span className="text-xs font-bold text-text-muted">%</span>
+
+                    <div className="p-3 rounded-xl bg-surface2/80 border border-border">
+                      <label className="block text-[11px] font-bold text-text mb-1">Result Status</label>
+                      <select
+                        value={resultStatus}
+                        onChange={e => setResultStatus(e.target.value)}
+                        className="w-full px-2.5 py-1 rounded-lg bg-white border border-border text-text font-bold text-xs"
+                      >
+                        <option value="AUTO">Auto-Calculate (Standard)</option>
+                        <option value="PROMOTED">PROMOTED (Next Class)</option>
+                        <option value="PASS">PASS (Manual Override)</option>
+                        <option value="FAIL">FAIL (Manual Override)</option>
+                      </select>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                     {['1st Unit Test', 'Mid-Term Examination', 'Term Examination', 'Annual Examination'].map(tag => (
                       <button
                         key={tag}
@@ -899,31 +1265,63 @@ export default function ResultsView() {
                   </div>
                 </div>
 
+                {/* STEP 3: Subjects & Marks Entry */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-text-secondary font-bold">Step 3: Subjects & Marks</label>
-                    <button
-                      type="button"
-                      onClick={handleAddSubjectRow}
-                      className="text-[11px] text-primary font-bold hover:underline cursor-pointer flex items-center gap-1"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Subject</span>
-                    </button>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-text-secondary font-bold">Step 3: Subjects & Marks (Dropdown Selection)</label>
+                      <button
+                        type="button"
+                        onClick={handleAddSubjectRow}
+                        className="text-[11px] text-primary font-bold hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Subject</span>
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className="text-[10px] text-text-muted">Quick Add:</span>
+                      {['Mathematics', 'Science', 'English', 'Hindi', 'Social Science', 'Computer'].map(qSub => (
+                        <button
+                          key={qSub}
+                          type="button"
+                          onClick={() => {
+                            setSubjects(prev => [...prev, { subjectName: qSub, marks: '', totalMarks: 100 }]);
+                          }}
+                          className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-surface2 hover:bg-primary/10 text-text-secondary hover:text-primary border border-border cursor-pointer transition-colors"
+                        >
+                          + {qSub}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
                     {subjects.map((sub, idx) => (
                       <div key={idx} className="flex items-center gap-2 bg-surface2/40 p-2 rounded-xl border border-border">
                         <div className="flex-1">
-                          <input
-                            type="text"
-                            value={sub.subjectName}
-                            onChange={e => handleSubjectChange(idx, 'subjectName', e.target.value)}
-                            placeholder="Subject Name"
+                          <select
+                            value={STANDARD_RESULT_SUBJECTS.includes(sub.subjectName) ? sub.subjectName : 'Other'}
+                            onChange={e => {
+                              const val = e.target.value;
+                              handleSubjectChange(idx, 'subjectName', val === 'Other' ? '' : val);
+                            }}
                             className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-border text-text font-bold text-xs"
-                            required
-                          />
+                          >
+                            {STANDARD_RESULT_SUBJECTS.map(s => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                          {!STANDARD_RESULT_SUBJECTS.filter(s => s !== 'Other').includes(sub.subjectName) && (
+                            <input
+                              type="text"
+                              value={sub.subjectName}
+                              onChange={e => handleSubjectChange(idx, 'subjectName', e.target.value)}
+                              placeholder="Type custom subject name"
+                              className="mt-1 w-full px-2 py-1 rounded bg-white border border-border text-text text-xs"
+                              required
+                            />
+                          )}
                         </div>
                         <div className="w-20">
                           <input
@@ -963,25 +1361,58 @@ export default function ResultsView() {
                   </div>
                 </div>
 
-                {/* Score Summary Live Card */}
+                {/* Score Summary Live Card & Fail / Promoted Notice */}
                 {(() => {
                   const totalMax = subjects.reduce((a, s) => a + (Number(s.totalMarks) || 100), 0);
                   const totalObt = subjects.reduce((a, s) => a + (Number(s.marks) || 0), 0);
                   const pct = totalMax > 0 ? Math.round((totalObt / totalMax) * 100) : 0;
-                  const isPassed = pct >= 33;
+                  const passingCrit = Number(passingMarks) || 33;
+
+                  const failedSubs = subjects.filter(s => {
+                    const sMax = Number(s.totalMarks) || 100;
+                    const sObt = Number(s.marks) || 0;
+                    const minPass = s.passingMarks != null ? Number(s.passingMarks) : Math.round(sMax * (passingCrit / 100));
+                    return sObt < minPass;
+                  });
+                  const failCount = failedSubs.length;
+
+                  let displayStatus = 'PASS';
+                  if (resultStatus === 'PROMOTED') displayStatus = 'PROMOTED';
+                  else if (resultStatus === 'FAIL') displayStatus = 'FAIL';
+                  else if (resultStatus === 'PASS') displayStatus = 'PASS';
+                  else displayStatus = (failCount > 0 || pct < 40) ? 'FAIL' : 'PASS';
+
                   const grade = pct >= 90 ? 'A+' : pct >= 75 ? 'A' : pct >= 60 ? 'B' : pct >= 45 ? 'C' : pct >= 33 ? 'D' : 'F';
+
                   return (
-                    <div className="p-3 rounded-xl bg-surface2/60 border border-border flex items-center justify-between text-xs">
-                      <div>
-                        <span className="text-[10px] text-text-muted block">Score Preview</span>
-                        <span className="font-extrabold text-text">{totalObt} / {totalMax} Marks</span>
+                    <div className="space-y-2">
+                      <div className="p-3 rounded-xl bg-surface2/60 border border-border flex items-center justify-between text-xs">
+                        <div>
+                          <span className="text-[10px] text-text-muted block">Score Preview</span>
+                          <span className="font-extrabold text-text">{totalObt} / {totalMax} Marks</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-base font-black text-primary">{pct}% ({grade})</span>
+                          <span className={`block text-[10px] font-bold ${
+                            displayStatus === 'PROMOTED' ? 'text-amber-700' : displayStatus === 'PASS' ? 'text-emerald-600' : 'text-rose-600'
+                          }`}>
+                            {displayStatus === 'PROMOTED' ? 'Promoted to Next Class' : displayStatus === 'PASS' ? 'Passed' : `Failed (${failCount} Subj)`}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-base font-black text-primary">{pct}% ({grade})</span>
-                        <span className={`block text-[10px] font-bold ${isPassed ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {isPassed ? 'Passed' : 'Needs Improvement'}
-                        </span>
-                      </div>
+
+                      {/* Promoted Opportunity Alert */}
+                      {failCount > 0 && resultStatus !== 'PROMOTED' && (
+                        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-2 text-[11px]">
+                          <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-bold">Student has not passed {failCount} subject(s)</span> ({failedSubs.map(s => s.subjectName || 'Subject').join(', ')}).
+                            <p className="mt-0.5 text-[10px] text-amber-800">
+                              You can select <strong>PROMOTED (Next Class)</strong> in Result Status if granting grace promotion.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}

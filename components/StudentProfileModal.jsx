@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSchoolStore } from '../lib/store';
+import { exportSingleResultPDF, exportSingleAdmitCardPDF } from '../lib/exportUtils';
 import {
   X,
   User,
@@ -40,6 +41,25 @@ import {
   shareStudentFullReportNative
 } from '../lib/exportUtils';
 import { QRCodeSVG } from 'qrcode.react';
+
+
+const STANDARD_PROFILE_SUBJECTS = [
+  'Mathematics',
+  'Science',
+  'Social Science',
+  'English',
+  'Hindi',
+  'Computer',
+  'Sanskrit',
+  'General Knowledge',
+  'Drawing / Art',
+  'Physics',
+  'Chemistry',
+  'Biology',
+  'Economics',
+  'Accountancy',
+  'Other'
+];
 
 export default function StudentProfileModal({ student, onClose }) {
   const {
@@ -978,88 +998,126 @@ export default function StudentProfileModal({ student, onClose }) {
           )}
 
           {/* TAB 7: ADMIT CARD */}
-          {activeTab === 'admitcard' && (
-            <div className="flex flex-col items-center justify-center p-4 space-y-4">
-              <div className="w-full max-w-xl bg-card border-2 border-primary/40 rounded-2xl p-5 shadow-xl text-text-primary">
-                {/* Header */}
-                <div className="text-center border-b border-border pb-3 mb-3">
-                  <h4 className="font-black text-sm uppercase text-primary tracking-wide">{settings.instituteName}</h4>
-                  <p className="text-[11px] text-text-muted">{settings.address || 'Examination Hall Ticket'}</p>
-                  <span className="inline-block mt-1 px-3 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
-                    ANNUAL EXAMINATION ADMIT CARD • {settings.currentSession || '2026-27'}
-                  </span>
+          {/* TAB 7: ADMIT CARD (Dynamic Class Schedule & Official 1-Page A4 PDF) */}
+          {activeTab === 'admitcard' && (() => {
+            const classKey = student.className ? `school_admit_schedule_${student.className}` : 'school_admit_schedule_default';
+            let studentTimetable = [
+              { day: '15/03/2026', subject: 'Mathematics', timing: '09:30 AM - 12:30 PM' },
+              { day: '17/03/2026', subject: 'Science', timing: '09:30 AM - 12:30 PM' },
+              { day: '19/03/2026', subject: 'Social Studies', timing: '09:30 AM - 12:30 PM' },
+              { day: '21/03/2026', subject: 'English', timing: '09:30 AM - 12:30 PM' },
+              { day: '23/03/2026', subject: 'Hindi', timing: '09:30 AM - 12:30 PM' },
+              { day: '25/03/2026', subject: 'Computer', timing: '09:30 AM - 12:30 PM' },
+            ];
+
+            if (typeof window !== 'undefined') {
+              const saved = localStorage.getItem(classKey);
+              if (saved) {
+                try {
+                  const parsed = JSON.parse(saved);
+                  if (Array.isArray(parsed) && parsed.length > 0) studentTimetable = parsed;
+                } catch (e) {}
+              }
+            }
+
+            return (
+              <div className="flex flex-col items-center justify-center p-4 space-y-4">
+                <div className="w-full max-w-xl bg-card border-2 border-primary/40 rounded-2xl p-5 shadow-xl text-text-primary">
+                  {/* Header */}
+                  <div className="text-center border-b border-border pb-3 mb-3">
+                    <h4 className="font-black text-sm uppercase text-primary tracking-wide">{settings.instituteName || 'ACADEMIC INSTITUTION'}</h4>
+                    <p className="text-[11px] text-text-muted">{settings.address || 'Official Examination Hall Ticket'}</p>
+                    <span className="inline-block mt-1 px-3 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+                      ANNUAL EXAMINATION ADMIT CARD • {settings.currentSession || '2026-27'}
+                    </span>
+                  </div>
+
+                  {/* Student Info Grid with QR Code */}
+                  <div className="flex gap-3 text-xs bg-muted/40 p-3 rounded-xl mb-3 border border-border items-center">
+                    <div className="grid grid-cols-2 gap-2 flex-1">
+                      <div><span className="font-semibold text-text-muted">Student Name:</span> <span className="font-bold uppercase text-primary">{student.name}</span></div>
+                      <div><span className="font-semibold text-text-muted">Roll No:</span> <span className="font-bold">{student.rollNumber || 'N/A'}</span></div>
+                      <div><span className="font-semibold text-text-muted">Class & Sec:</span> <span className="font-bold">{student.className} {student.section || ''}</span></div>
+                      <div><span className="font-semibold text-text-muted">Father's Name:</span> <span className="font-bold">{student.fatherName || 'N/A'}</span></div>
+                      <div><span className="font-semibold text-text-muted">Admission No:</span> <span className="font-mono">{student.admissionNumber || student.studentId}</span></div>
+                      <div><span className="font-semibold text-text-muted">Aadhaar No:</span> <span className="font-bold text-indigo-900 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">{student.aadhaarNumber || student.aadharNumber || student.aadhaar || 'N/A'}</span></div>
+                    </div>
+                    <div className="p-1 bg-white border border-border rounded-lg flex flex-col items-center">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(`STUDENT ADMIT CARD | Name: ${student.name} | Roll: ${student.rollNumber || 'N/A'} | Class: ${student.className || ''} | Aadhaar: ${student.aadhaarNumber || 'N/A'}`)}`}
+                        alt="QR Code"
+                        className="w-14 h-14 object-contain"
+                      />
+                      <span className="text-[7px] text-text-muted font-bold mt-0.5">VERIFIED</span>
+                    </div>
+                  </div>
+
+                  {/* Timetable Snippet with Real Dates */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <h5 className="font-bold text-xs text-text-muted uppercase">Exam Schedule ({student.className ? 'Class ' + student.className : 'Standard'})</h5>
+                      <span className="text-[10px] text-emerald-600 font-bold">{studentTimetable.length} Subjects Scheduled</span>
+                    </div>
+                    <div className="border border-border rounded-xl overflow-hidden text-xs">
+                      <table className="w-full text-left">
+                        <thead className="bg-muted text-[11px] font-bold text-text-muted border-b border-border">
+                          <tr>
+                            <th className="p-2">Exam Date</th>
+                            <th className="p-2">Subject</th>
+                            <th className="p-2">Timing</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {studentTimetable.map((t, idx) => (
+                            <tr key={idx} className={idx % 2 === 1 ? 'bg-muted/20' : ''}>
+                              <td className="p-2 font-bold text-primary">{t.day || t.date}</td>
+                              <td className="p-2 font-semibold text-text">{t.subject}</td>
+                              <td className="p-2 text-text-muted">{t.timing}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Signatures */}
+                  <div className="flex justify-between items-end pt-4 border-t border-dashed border-border text-[10px] text-text-muted">
+                    <div className="text-center">
+                      <div className="w-24 border-b border-border mb-1"></div>
+                      <span>Candidate Sign</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-24 border-b border-border mb-1"></div>
+                      <span>Class Teacher Sign</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-24 border-b border-border mb-1"></div>
+                      <span className="font-bold text-text-primary">Principal Sign & Seal</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Student Info Grid with QR Code */}
-                <div className="flex gap-3 text-xs bg-muted/40 p-3 rounded-xl mb-3 border border-border items-center">
-                  <div className="grid grid-cols-2 gap-2 flex-1">
-                    <div><span className="font-semibold text-text-muted">Student Name:</span> <span className="font-bold uppercase text-primary">{student.name}</span></div>
-                    <div><span className="font-semibold text-text-muted">Roll No:</span> <span className="font-bold">{student.rollNumber || 'N/A'}</span></div>
-                    <div><span className="font-semibold text-text-muted">Class & Sec:</span> <span className="font-bold">{student.className} {student.section || ''}</span></div>
-                    <div><span className="font-semibold text-text-muted">Father's Name:</span> <span className="font-bold">{student.fatherName || 'N/A'}</span></div>
-                    <div><span className="font-semibold text-text-muted">Admission No:</span> <span className="font-mono">{student.admissionNumber || student.studentId}</span></div>
-                    <div><span className="font-semibold text-text-muted">Aadhaar No:</span> <span className="font-bold text-indigo-900 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">{student.aadhaarNumber || student.aadharNumber || student.aadhaar || 'N/A'}</span></div>
-                  </div>
-                  <div className="p-1 bg-white border border-border rounded-lg flex flex-col items-center">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(`STUDENT ADMIT CARD | Name: ${student.name} | Roll: ${student.rollNumber || 'N/A'} | Aadhaar: ${student.aadhaarNumber || 'N/A'}`)}`}
-                      alt="QR Code"
-                      className="w-14 h-14 object-contain"
-                    />
-                    <span className="text-[7px] text-text-muted font-bold mt-0.5">VERIFIED</span>
-                  </div>
-                </div>
-
-                {/* Timetable Snippet */}
-                <div className="mb-4">
-                  <h5 className="font-bold text-xs text-text-muted uppercase mb-1.5">Exam Timetable</h5>
-                  <div className="border border-border rounded-xl overflow-hidden text-xs">
-                    <table className="w-full text-left">
-                      <thead className="bg-muted text-[11px] font-bold text-text-muted border-b border-border">
-                        <tr>
-                          <th className="p-2">Subject</th>
-                          <th className="p-2">Date</th>
-                          <th className="p-2">Timing</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        <tr><td className="p-2 font-medium">Hindi</td><td className="p-2 text-text-muted">15-Oct-2026</td><td className="p-2 text-text-muted">09:00 AM - 12:00 PM</td></tr>
-                        <tr><td className="p-2 font-medium">English</td><td className="p-2 text-text-muted">17-Oct-2026</td><td className="p-2 text-text-muted">09:00 AM - 12:00 PM</td></tr>
-                        <tr><td className="p-2 font-medium">Mathematics</td><td className="p-2 text-text-muted">19-Oct-2026</td><td className="p-2 text-text-muted">09:00 AM - 12:00 PM</td></tr>
-                        <tr><td className="p-2 font-medium">Science</td><td className="p-2 text-text-muted">22-Oct-2026</td><td className="p-2 text-text-muted">09:00 AM - 12:00 PM</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Signatures */}
-                <div className="flex justify-between items-end pt-4 border-t border-dashed border-border text-[10px] text-text-muted">
-                  <div className="text-center">
-                    <div className="w-24 border-b border-border mb-1"></div>
-                    <span>Candidate Sign</span>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-24 border-b border-border mb-1"></div>
-                    <span>Class Teacher Sign</span>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-24 border-b border-border mb-1"></div>
-                    <span className="font-bold text-text-primary">Principal Sign</span>
-                  </div>
+                <div className="flex flex-wrap gap-3 justify-center">
+                  <button
+                    type="button"
+                    onClick={() => exportSingleAdmitCardPDF(student, settings, studentTimetable, 'ANNUAL EXAMINATION 2026')}
+                    className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Official Admit Card (A4 PDF)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-4 py-2.5 rounded-xl bg-surface2 hover:bg-surface2/80 text-text font-bold text-xs border border-border shadow-xs flex items-center gap-2 cursor-pointer transition-all"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print Browser Slip</span>
+                  </button>
                 </div>
               </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => window.print()}
-                  className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-md flex items-center gap-2 cursor-pointer"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>Print This Student Admit Card</span>
-                </button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
 
