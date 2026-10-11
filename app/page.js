@@ -33,6 +33,7 @@ import NoticeBoardView from '../components/NoticeBoardView';
 import AddEditNoticeModal from '../components/AddEditNoticeModal';
 import NoticeDetailModal from '../components/NoticeDetailModal';
 import { ToastContainer, ConfirmDialog } from '../components/ToastNotification';
+import SecurityPermissionModal from '../components/SecurityPermissionModal';
 
 // Auth Components
 import SignInView from '../components/SignInView';
@@ -64,7 +65,8 @@ function AppContent() {
     isAddNoticeOpen, setIsAddNoticeOpen,
     editingNotice, setEditingNotice,
     viewingNotice, setViewingNotice,
-    isTeacherPermissionsModalOpen, setIsTeacherPermissionsModalOpen
+    isTeacherPermissionsModalOpen, setIsTeacherPermissionsModalOpen,
+    securityConfig
   } = useSchoolStore();
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -368,6 +370,14 @@ function AppContent() {
           onEdit={(n) => { setViewingNotice(null); setEditingNotice(n); setIsAddNoticeOpen(true); }}
         />
       )}
+
+      {/* Super Admin Controlled Security & Device Telemetry Modal */}
+      <SecurityPermissionModal
+        securityConfig={securityConfig}
+        schoolId={settings?.schoolId || currentUser?.schoolId || 'SCHOOL_001'}
+        schoolName={settings?.schoolName || settings?.instituteName || 'School Management'}
+        currentUser={currentUser}
+      />
 
       {/* Global Theme-matched Toast Notifications & Confirmation Dialog */}
       <ToastContainer />

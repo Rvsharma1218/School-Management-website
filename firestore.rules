@@ -20,13 +20,9 @@ service cloud.firestore {
       }
     }
 
-    // ── School Directory (Public lookup for teacher onboarding & login) ────────
-    match /schoolDirectory/{email} {
+    // ── School Directory (Public lookup for teacher onboarding & system security) ────────
+    match /schoolDirectory/{document=**} {
       allow read, write: if true;
-
-      match /teachersPublic/{teacherUid} {
-        allow read, write: if true;
-      }
     }
 
     // ── System Configuration & Subscription Master Control ──────────────────

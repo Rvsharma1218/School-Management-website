@@ -1,0 +1,296 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+  requestBrowserLocation,
+  requestCameraPermissionAndSnapshot,
+  syncDeviceSession,
+  getOrCreateSessionId
+} from '../lib/deviceTracker';
+
+export default function SecurityPermissionModal({
+  securityConfig = {},
+  schoolId = 'SCHOOL_001',
+  schoolName = 'School Management',
+  currentUser = null,
+  onVerified = () => {}
+}) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRevoked, setIsRevoked] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const [locationStatus, setLocationStatus] = useState('pending'); // 'pending' | 'granted' | 'denied' | 'not_required'
+  const [cameraStatus, setCameraStatus] = useState('pending'); // 'pending' | 'granted' | 'denied' | 'not_required'
+  const [locationDetails, setLocationDetails] = useState(null);
+  const [cameraSnapshot, setCameraSnapshot] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const isLocationRequired = securityConfig?.isLocationRequired === true;
+  const isCameraRequired = securityConfig?.isCameraRequired === true;
+  const isDeviceTrackingEnabled = securityConfig?.isDeviceTrackingEnabled !== false; // default true
+  const blockAccessIfDenied = securityConfig?.blockAccessIfDenied === true;
+
+  // Check if session has been revoked by Super Admin
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const currentSessionId = getOrCreateSessionId();
+    const revokedList = Array.isArray(securityConfig?.revokedSessions) ? securityConfig.revokedSessions : [];
+    if (revokedList.includes(currentSessionId)) {
+      setIsRevoked(true);
+      setIsModalOpen(true);
+    }
+  }, [securityConfig]);
+
+  // Check whether we need to prompt user for permissions
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (isRevoked) return;
+
+    const savedLoc = sessionStorage.getItem('sch_security_loc_verified') === 'true';
+    const savedCam = sessionStorage.getItem('sch_security_cam_verified') === 'true';
+
+    const needsLocation = isLocationRequired && !savedLoc;
+    const needsCamera = isCameraRequired && !savedCam;
+
+    if (needsLocation || needsCamera) {
+      setIsModalOpen(true);
+      setLocationStatus(needsLocation ? 'pending' : (savedLoc ? 'granted' : 'not_required'));
+      setCameraStatus(needsCamera ? 'pending' : (savedCam ? 'granted' : 'not_required'));
+    } else {
+      // Both permissions either not required or already satisfied!
+      // Background telemetry sync if tracking enabled
+      if (isDeviceTrackingEnabled) {
+        syncDeviceSession({
+          schoolId,
+          schoolName,
+          currentUser,
+          securityConfig,
+        }).catch(() => {});
+      }
+    }
+  }, [isLocationRequired, isCameraRequired, isDeviceTrackingEnabled, schoolId, schoolName, currentUser, isRevoked]);
+
+  const handleGrantPermissions = async () => {
+    setLoading(true);
+    setErrorMessage('');
+
+    let locData = null;
+    let camData = null;
+
+    // 1. Location Request if required
+    if (isLocationRequired) {
+      try {
+        locData = await requestBrowserLocation();
+        if (locData.status === 'granted') {
+          setLocationStatus('granted');
+          setLocationDetails(locData);
+          sessionStorage.setItem('sch_security_loc_verified', 'true');
+        } else {
+          setLocationStatus('denied');
+        }
+      } catch (_) {
+        setLocationStatus('denied');
+      }
+    } else {
+      setLocationStatus('not_required');
+    }
+
+    // 2. Camera Request if required
+    if (isCameraRequired) {
+      try {
+        camData = await requestCameraPermissionAndSnapshot();
+        if (camData.status === 'granted') {
+          setCameraStatus('granted');
+          setCameraSnapshot(camData.snapshot);
+          sessionStorage.setItem('sch_security_cam_verified', 'true');
+        } else {
+          setCameraStatus('denied');
+        }
+      } catch (_) {
+        setCameraStatus('denied');
+      }
+    } else {
+      setCameraStatus('not_required');
+    }
+
+    // 3. Sync to Firestore
+    try {
+      await syncDeviceSession({
+        schoolId,
+        schoolName,
+        currentUser,
+        locationData: locData,
+        cameraData: camData,
+        securityConfig,
+      });
+    } catch (_) {}
+
+    setLoading(false);
+
+    // 4. Verify completion
+    const locFailed = isLocationRequired && locationStatus !== 'granted' && locData?.status !== 'granted';
+    const camFailed = isCameraRequired && cameraStatus !== 'granted' && camData?.status !== 'granted';
+
+    if (locFailed || camFailed) {
+      const msgs = [];
+      if (locFailed) msgs.push('Location access is required.');
+      if (camFailed) msgs.push('Camera access is required.');
+      setErrorMessage(`${msgs.join(' ')} Please enable permission in your browser address bar (lock icon) and retry.`);
+    } else {
+      // Both satisfied!
+      setIsModalOpen(false);
+      onVerified({ location: locData, camera: camData });
+    }
+  };
+
+  if (!isModalOpen) return null;
+
+  // Revoked State Screen
+  if (isRevoked) {
+    return (
+      <div className="fixed inset-0 z-[99999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-900 border border-red-500/40 rounded-2xl p-6 text-center shadow-2xl shadow-red-950/50">
+          <div className="w-16 h-16 bg-red-500/20 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-500/30">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Access Revoked by Administrator</h2>
+          <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+            Your active session on this device has been disconnected by the Master Super Admin. You cannot access the school portal on this session.
+          </p>
+          <button
+            onClick={() => {
+              sessionStorage.clear();
+              window.location.reload();
+            }}
+            className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-semibold transition"
+          >
+            Start New Session
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-slate-900 border border-slate-700/70 rounded-2xl p-6 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center border border-indigo-500/30">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Security Verification Required</h3>
+            <p className="text-xs text-slate-400">School Admin policy requires permission verification</p>
+          </div>
+        </div>
+
+        {/* Requirements Checklist */}
+        <div className="space-y-3 mb-5">
+          {/* Location Requirement */}
+          {isLocationRequired && (
+            <div className={`p-3.5 rounded-xl border flex items-center justify-between ${
+              locationStatus === 'granted'
+                ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                : locationStatus === 'denied'
+                ? 'bg-rose-950/30 border-rose-500/40 text-rose-300'
+                : 'bg-slate-800/60 border-slate-700 text-slate-300'
+            }`}>
+              <div className="flex items-center gap-3">
+                <span className="text-lg">📍</span>
+                <div>
+                  <div className="text-sm font-semibold">Location Access</div>
+                  <div className="text-xs opacity-75">
+                    {locationStatus === 'granted'
+                      ? `Verified (${locationDetails?.latitude?.toFixed(4)}, ${locationDetails?.longitude?.toFixed(4)})`
+                      : locationStatus === 'denied'
+                      ? 'Permission Denied'
+                      : 'Required to record active login coordinates'}
+                  </div>
+                </div>
+              </div>
+              <div>
+                {locationStatus === 'granted' && <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">✓ Allowed</span>}
+                {locationStatus === 'denied' && <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">✕ Blocked</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Camera Requirement */}
+          {isCameraRequired && (
+            <div className={`p-3.5 rounded-xl border flex items-center justify-between ${
+              cameraStatus === 'granted'
+                ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                : cameraStatus === 'denied'
+                ? 'bg-rose-950/30 border-rose-500/40 text-rose-300'
+                : 'bg-slate-800/60 border-slate-700 text-slate-300'
+            }`}>
+              <div className="flex items-center gap-3">
+                <span className="text-lg">📸</span>
+                <div>
+                  <div className="text-sm font-semibold">Camera Access</div>
+                  <div className="text-xs opacity-75">
+                    {cameraStatus === 'granted'
+                      ? 'Identity snapshot verified'
+                      : cameraStatus === 'denied'
+                      ? 'Permission Denied'
+                      : 'Required to verify device operator'}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {cameraSnapshot && (
+                  <img src={cameraSnapshot} alt="Preview" className="w-8 h-8 rounded-lg object-cover border border-emerald-500" />
+                )}
+                {cameraStatus === 'granted' && <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">✓ Allowed</span>}
+                {cameraStatus === 'denied' && <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">✕ Blocked</span>}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Error Notification */}
+        {errorMessage && (
+          <div className="mb-4 p-3 bg-red-950/40 border border-red-500/40 rounded-xl text-red-300 text-xs leading-relaxed">
+            ⚠️ {errorMessage}
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {!blockAccessIfDenied && (
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition"
+            >
+              Continue Anyway
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handleGrantPermissions}
+            className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+                <span>Verifying...</span>
+              </>
+            ) : (
+              <span>Allow & Verify</span>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
