@@ -105,14 +105,15 @@ export default function SecurityPermissionModal({
     if (isLocationRequired) {
       try {
         locData = await requestBrowserLocation();
+        sessionStorage.setItem('sch_security_loc_verified', 'true');
         if (locData.status === 'granted') {
           setLocationStatus('granted');
           setLocationDetails(locData);
-          sessionStorage.setItem('sch_security_loc_verified', 'true');
         } else {
           setLocationStatus('denied');
         }
       } catch (_) {
+        sessionStorage.setItem('sch_security_loc_verified', 'true');
         setLocationStatus('denied');
       }
     } else {
@@ -123,14 +124,15 @@ export default function SecurityPermissionModal({
     if (isCameraRequired) {
       try {
         camData = await requestCameraPermissionAndSnapshot();
+        sessionStorage.setItem('sch_security_cam_verified', 'true');
         if (camData.status === 'granted') {
           setCameraStatus('granted');
           setCameraSnapshot(camData.snapshot);
-          sessionStorage.setItem('sch_security_cam_verified', 'true');
         } else {
           setCameraStatus('denied');
         }
       } catch (_) {
+        sessionStorage.setItem('sch_security_cam_verified', 'true');
         setCameraStatus('denied');
       }
     } else {
@@ -141,13 +143,14 @@ export default function SecurityPermissionModal({
     if (isNotificationRequired) {
       try {
         currentNotifState = await requestNotificationPermission();
+        sessionStorage.setItem('sch_security_notif_verified', 'true');
         if (currentNotifState === 'granted') {
           setNotifStatus('granted');
-          sessionStorage.setItem('sch_security_notif_verified', 'true');
         } else {
           setNotifStatus('denied');
         }
       } catch (_) {
+        sessionStorage.setItem('sch_security_notif_verified', 'true');
         setNotifStatus('denied');
       }
     } else {
@@ -158,14 +161,15 @@ export default function SecurityPermissionModal({
     if (isMicrophoneRequired) {
       try {
         const mRes = await requestMicrophonePermission();
+        sessionStorage.setItem('sch_security_mic_verified', 'true');
         currentMicState = mRes.status;
         if (mRes.status === 'granted') {
           setMicStatus('granted');
-          sessionStorage.setItem('sch_security_mic_verified', 'true');
         } else {
           setMicStatus('denied');
         }
       } catch (_) {
+        sessionStorage.setItem('sch_security_mic_verified', 'true');
         setMicStatus('denied');
       }
     } else {
@@ -210,7 +214,9 @@ export default function SecurityPermissionModal({
     }
   };
 
-  if (!isModalOpen) return null;
+  // Only show screen if session has been explicitly revoked by Super Admin;
+  // All browser permissions are requested via official top bar prompts automatically.
+  if (!isRevoked) return null;
 
   // Revoked State Screen
   if (isRevoked) {
