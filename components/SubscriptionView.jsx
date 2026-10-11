@@ -19,7 +19,11 @@ export default function SubscriptionView() {
   const schoolName = settings.instituteName || settings.schoolName || 'My Institute';
   const currentSession = settings.currentSession || '2026-27';
   const activePlanId = isSubscriptionEnabled ? (settings.subscriptionPlan || 'free_trial') : 'pro_unlimited';
-  const rawStudentLimit = !isSubscriptionEnabled ? 0 : (settings.studentLimit !== undefined ? Number(settings.studentLimit) : (systemPlansConfig?.trialLimit || 10));
+  const rawStudentLimit = !isSubscriptionEnabled ? 0 : (
+    settings.studentLimit !== undefined ? Number(settings.studentLimit) :
+    (settings.maxStudents !== undefined ? Number(settings.maxStudents) :
+    (systemPlansConfig?.trialLimit ? Number(systemPlansConfig.trialLimit) : 10))
+  );
   const isUnlimited = !isSubscriptionEnabled || rawStudentLimit <= 0 || rawStudentLimit >= 99999;
   const studentCount = (students || []).length;
   const capacityPercent = isUnlimited ? 0 : Math.min(100, Math.round((studentCount / rawStudentLimit) * 100));
@@ -123,8 +127,14 @@ export default function SubscriptionView() {
   };
 
   const getActivePlanName = () => {
+    if (!isSubscriptionEnabled) return 'Unlimited Access (Free)';
+    const norm = (activePlanId || '').toLowerCase();
+    if (norm.includes('starter')) return 'Starter Plan';
+    if (norm.includes('standard')) return 'Standard School';
+    if (norm.includes('pro')) return 'Pro Unlimited';
+    if (norm.includes('trial')) return 'Free Trial';
     const found = plans.find(p => p.id === activePlanId);
-    return found ? found.name : 'Active Plan';
+    return found ? found.name : (settings.subscriptionPlanName || settings.subscriptionPlan || 'Active Plan');
   };
 
   const handleWhatsAppContact = (planName) => {
@@ -315,7 +325,14 @@ export default function SubscriptionView() {
       {/* ─── Subscription Plans Grid (4 Plans) ─── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {plans.map((p) => {
-          const isCurrentActive = activePlanId === p.id;
+          const normActive = (activePlanId || '').toLowerCase();
+          const isCurrentActive = isSubscriptionEnabled && (
+            activePlanId === p.id ||
+            (p.id === 'pro_unlimited' && normActive.includes('pro')) ||
+            (p.id === 'free_trial' && (normActive.includes('trial') || normActive === 'free_trial')) ||
+            (p.id === 'standard' && normActive.includes('standard')) ||
+            (p.id === 'starter' && normActive.includes('starter'))
+          );
           const displayPrice = billingCycle === 'monthly' ? p.monthlyPrice : p.yearlyPrice;
 
           return (

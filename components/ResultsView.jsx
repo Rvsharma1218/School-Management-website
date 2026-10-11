@@ -214,13 +214,20 @@ export default function ResultsView() {
     const pct = Math.round((totalObt / totalMax) * 100);
     const schoolName = settings.instituteName || settings.schoolName || 'School';
     
+    const passCriteria = Number(res.passingMarks || 33);
+    const failedSubs = res.subjects?.filter(sub => {
+      const sMax = Number(sub.totalMarks) || 100;
+      const sObt = Number(sub.marks) || 0;
+      const minP = sub.passingMarks != null ? Number(sub.passingMarks) : Math.round(sMax * (passCriteria / 100));
+      return sObt < minP;
+    }) || [];
+    const failCount = failedSubs.length;
+
     const statusText = res.status === 'PROMOTED'
       ? 'PROMOTED TO NEXT CLASS'
-      : res.status === 'PASS'
-      ? 'PASSED'
-      : res.status === 'FAIL'
+      : (failCount > 0 || pct < passCriteria || res.status === 'FAIL')
       ? 'NEEDS IMPROVEMENT / FAILED'
-      : (pct >= 33 ? 'PASSED' : 'NEEDS IMPROVEMENT / FAILED');
+      : 'PASSED';
 
     const textMsg = `*ACADEMIC RESULT - ${schoolName.toUpperCase()}*\n\n` +
       `Dear Parent,\n` +
@@ -268,7 +275,17 @@ export default function ResultsView() {
       const totalMax = res.subjects.reduce((a, s) => a + (Number(s.totalMarks) || 100), 0);
       const pct = totalMax > 0 ? Math.round((totalMarksObt / totalMax) * 100) : 0;
       totalResultScores++;
-      if (res.status === 'PROMOTED' || res.status === 'PASS' || (res.status !== 'FAIL' && pct >= 40)) passedCount++;
+      const passCriteria = Number(res.passingMarks || 33);
+      const failedSubs = res.subjects?.filter(sub => {
+        const sMax = Number(sub.totalMarks) || 100;
+        const sObt = Number(sub.marks) || 0;
+        const minP = sub.passingMarks != null ? Number(sub.passingMarks) : Math.round(sMax * (passCriteria / 100));
+        return sObt < minP;
+      }) || [];
+
+      if (res.status === 'PROMOTED' || (res.status !== 'FAIL' && failedSubs.length === 0 && pct >= passCriteria)) {
+        passedCount++;
+      }
 
       if (pct >= 90) gradeCounts['A+']++;
       else if (pct >= 75) gradeCounts['A']++;
@@ -632,9 +649,8 @@ export default function ResultsView() {
 
                       let finalStatus = 'PASS';
                       if (r.status === 'PROMOTED') finalStatus = 'PROMOTED';
-                      else if (r.status === 'FAIL') finalStatus = 'FAIL';
-                      else if (r.status === 'PASS') finalStatus = 'PASS';
-                      else finalStatus = (failCount > 0 || pct < 40) ? 'FAIL' : 'PASS';
+                      else if (failCount > 0 || pct < passCriteria || r.status === 'FAIL') finalStatus = 'FAIL';
+                      else finalStatus = 'PASS';
 
                       return (
                         <tr key={r.id} className="hover:bg-surface2/30 transition-colors">
@@ -1378,9 +1394,8 @@ export default function ResultsView() {
 
                   let displayStatus = 'PASS';
                   if (resultStatus === 'PROMOTED') displayStatus = 'PROMOTED';
-                  else if (resultStatus === 'FAIL') displayStatus = 'FAIL';
-                  else if (resultStatus === 'PASS') displayStatus = 'PASS';
-                  else displayStatus = (failCount > 0 || pct < 40) ? 'FAIL' : 'PASS';
+                  else if (failCount > 0 || pct < passingCrit || resultStatus === 'FAIL') displayStatus = 'FAIL';
+                  else displayStatus = 'PASS';
 
                   const grade = pct >= 90 ? 'A+' : pct >= 75 ? 'A' : pct >= 60 ? 'B' : pct >= 45 ? 'C' : pct >= 33 ? 'D' : 'F';
 

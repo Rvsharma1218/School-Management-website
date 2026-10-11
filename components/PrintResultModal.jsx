@@ -27,9 +27,9 @@ export default function PrintResultModal({ result: propResult, student: propStud
   const obt = rawSubjects.reduce((sum, s) => sum + (Number(s.marks) || 0), 0);
   const pct = total > 0 ? ((obt / total) * 100).toFixed(1) : '0.0';
   const grade = Number(pct) >= 90 ? 'A+' : Number(pct) >= 80 ? 'A' : Number(pct) >= 70 ? 'B+' : Number(pct) >= 60 ? 'B' : Number(pct) >= 50 ? 'C' : Number(pct) >= 40 ? 'D' : 'F';
-  const isPass = Number(pct) >= 40;
-
   const passingCriteria = Number(result.passingMarks || 33);
+  const isPass = Number(pct) >= passingCriteria;
+
   const failedSubjects = rawSubjects.filter(s => {
     const sMax = Number(s.totalMarks) || 100;
     const sObt = Number(s.marks) || 0;
@@ -41,12 +41,10 @@ export default function PrintResultModal({ result: propResult, student: propStud
   let finalStatus = 'PASS';
   if (result.status === 'PROMOTED') {
     finalStatus = 'PROMOTED';
-  } else if (result.status === 'FAIL') {
+  } else if (failCount > 0 || !isPass || result.status === 'FAIL') {
     finalStatus = 'FAIL';
-  } else if (result.status === 'PASS') {
-    finalStatus = 'PASS';
   } else {
-    finalStatus = (failCount > 0 || !isPass) ? 'FAIL' : 'PASS';
+    finalStatus = 'PASS';
   }
 
   const handlePrint = () => {

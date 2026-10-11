@@ -635,7 +635,18 @@ export default function StudentProfileModal({ student, onClose }) {
                   const total = res.subjects.reduce((sum, s) => sum + Number(s.totalMarks || 100), 0);
                   const obt = res.subjects.reduce((sum, s) => sum + Number(s.marks || 0), 0);
                   const pct = total > 0 ? Math.round((obt / total) * 100) : 0;
-                  const isPassed = pct >= 33;
+                  const passCriteria = Number(res.passingMarks || 33);
+                  const failedSubs = (res.subjects || []).filter(sub => {
+                    const sMax = Number(sub.totalMarks) || 100;
+                    const sObt = Number(sub.marks) || 0;
+                    const minP = sub.passingMarks != null ? Number(sub.passingMarks) : Math.round(sMax * (passCriteria / 100));
+                    return sObt < minP;
+                  });
+                  const failCount = failedSubs.length;
+                  let finalStatus = 'PASS';
+                  if (res.status === 'PROMOTED') finalStatus = 'PROMOTED';
+                  else if (failCount > 0 || pct < passCriteria || res.status === 'FAIL') finalStatus = 'FAIL';
+                  else finalStatus = 'PASS';
                   const grade = pct >= 90 ? 'A+' : pct >= 75 ? 'A' : pct >= 60 ? 'B' : pct >= 45 ? 'C' : pct >= 33 ? 'D' : 'F';
                   return (
                     <div key={res.id} className="p-4 rounded-xl bg-surface2/40 border border-border space-y-3 hover:border-primary/40 transition-all">
@@ -649,8 +660,8 @@ export default function StudentProfileModal({ student, onClose }) {
                         <div className="flex items-center gap-3">
                           <div className="text-right">
                             <span className="text-xs font-black text-primary">{pct}% ({grade})</span>
-                            <div className={`text-[10px] font-bold ${isPassed ? 'text-emerald-600' : 'text-rose-600'}`}>
-                              {isPassed ? 'Passed' : 'Needs Improvement'}
+                            <div className={`text-[10px] font-bold ${finalStatus === 'PROMOTED' ? 'text-amber-600' : finalStatus === 'PASS' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {finalStatus === 'PROMOTED' ? 'Promoted' : finalStatus === 'PASS' ? 'Passed' : `Failed (${failCount} Subj)`}
                             </div>
                           </div>
                           <div className="flex items-center gap-1 pl-2 border-l border-border">
