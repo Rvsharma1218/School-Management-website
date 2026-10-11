@@ -8,7 +8,8 @@ import {
   Settings, GraduationCap, Award, Contact,
   ShieldCheck, UserCheck, School, Sun, Moon, Zap,
   ChevronRight, ChevronLeft, Plus, FileText, Megaphone, X,
-  Building2, Calendar, Sparkles
+  Building2, Calendar, Sparkles,
+  HelpCircle
 } from 'lucide-react';
 
 function NavBtn({ icon: Icon, label, badge, active, onClick, iconColor, collapsed }) {
@@ -58,7 +59,8 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
     settings, stats, currentUser, themeMode, toggleTheme, teacherPermissions,
     setIsAddStudentOpen, currentTeacher, currentPath, navigate,
     unreadNoticeCount,
-    isTeacherPermissionsModalOpen, setIsTeacherPermissionsModalOpen
+    isTeacherPermissionsModalOpen, setIsTeacherPermissionsModalOpen,
+    isHelpFeedbackOpen, setIsHelpFeedbackOpen
   } = useSchoolStore();
 
   if (!currentUser) return null;
@@ -174,6 +176,7 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
               <NavBtn icon={QrCode} label="QR Scanner" active={currentPath === '/qrscanner'} onClick={() => nav('qrscanner')} collapsed={collapsed} />
               <NavBtn icon={UserCheck} label="User Management" active={currentPath === '/users'} onClick={() => nav('users')} collapsed={collapsed} />
               <NavBtn icon={Settings} label="System Settings" active={currentPath === '/settings'} onClick={() => nav('settings')} collapsed={collapsed} />
+              <NavBtn icon={HelpCircle} label="Help & Feedback" active={isHelpFeedbackOpen} onClick={() => { setIsHelpFeedbackOpen(true); if (onClose) onClose(); }} collapsed={collapsed} />
               <NavBtn icon={Sparkles} label="Subscription & Plans" badge="All Access" active={currentPath === '/subscription'} onClick={() => nav('subscription')} collapsed={collapsed} />
             </>
           )}

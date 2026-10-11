@@ -36,6 +36,7 @@ import { ToastContainer, ConfirmDialog } from '../components/ToastNotification';
 import SecurityPermissionModal from '../components/SecurityPermissionModal';
 import NotificationHistoryModal from '../components/NotificationHistoryModal';
 import AudioVoiceNoteModal from '../components/AudioVoiceNoteModal';
+import HelpAndFeedbackModal from '../components/HelpAndFeedbackModal';
 
 // Auth Components
 import SignInView from '../components/SignInView';
@@ -68,6 +69,7 @@ function AppContent() {
     editingNotice, setEditingNotice,
     viewingNotice, setViewingNotice,
     isTeacherPermissionsModalOpen, setIsTeacherPermissionsModalOpen,
+    isHelpFeedbackOpen, setIsHelpFeedbackOpen,
     securityConfig,
     showToast,
     logout
@@ -81,13 +83,16 @@ function AppContent() {
   useEffect(() => {
     const handleOpenNotifHistory = () => setIsNotifHistoryOpen(true);
     const handleOpenAudioModal = () => setIsAudioModalOpen(true);
+    const handleOpenHelpFeedback = () => setIsHelpFeedbackOpen(true);
     window.addEventListener('school_open_notification_history', handleOpenNotifHistory);
     window.addEventListener('school_open_audio_modal', handleOpenAudioModal);
+    window.addEventListener('school_open_help_feedback', handleOpenHelpFeedback);
     return () => {
       window.removeEventListener('school_open_notification_history', handleOpenNotifHistory);
       window.removeEventListener('school_open_audio_modal', handleOpenAudioModal);
+      window.removeEventListener('school_open_help_feedback', handleOpenHelpFeedback);
     };
-  }, []);
+  }, [setIsHelpFeedbackOpen]);
 
   const prevModalOpenRef = React.useRef(false);
 
@@ -411,6 +416,12 @@ function AppContent() {
         onSave={() => {
           showToast('✓ Voice response recorded successfully!', 'success');
         }}
+      />
+
+      {/* Help and Feedback Modal (Exact app design) */}
+      <HelpAndFeedbackModal
+        isOpen={isHelpFeedbackOpen}
+        onClose={() => setIsHelpFeedbackOpen(false)}
       />
 
       {/* Global Theme-matched Toast Notifications & Confirmation Dialog */}

@@ -19,7 +19,8 @@ export default function SettingsView() {
     exportAllDataJson,
     importAllDataJson,
     showToast,
-    teacherPermissions
+    teacherPermissions,
+    setIsHelpFeedbackOpen
   } = useSchoolStore();
 
   const [activeSection, setActiveSection] = useState('branding'); // 'branding' | 'academic' | 'language' | 'subscription' | 'support' | 'backup' | 'wizard'
@@ -1156,6 +1157,14 @@ export default function SettingsView() {
                     Need assistance? Connect with our dedicated support executive instantly.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsHelpFeedbackOpen(true)}
+                  className="px-4 py-2 rounded-2xl bg-[#121212] hover:bg-[#1f1f1f] text-white border border-[#333333] text-xs font-bold flex items-center gap-2 cursor-pointer shadow-sm transition-all"
+                >
+                  <HelpCircle className="w-4 h-4 text-teal-400" />
+                  <span>Help & Feedback Suite</span>
+                </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

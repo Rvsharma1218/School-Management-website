@@ -6,7 +6,7 @@ import {
   Menu, Search, Plus, CreditCard, Clock, Calendar, ShieldCheck,
   UserCheck, Bell, ChevronDown, User, Settings, Key, LogOut, X, ShieldAlert,
   Wifi, WifiOff, RefreshCw, CheckCircle2, AlertCircle, ArrowLeft,
-  Receipt, Eye, GraduationCap, ArrowRight
+  Receipt, Eye, GraduationCap, ArrowRight, HelpCircle
 } from 'lucide-react';
 
 export default function Header({ onMenuClick }) {
@@ -36,7 +36,8 @@ export default function Header({ onMenuClick }) {
     setViewingNotice,
     markNoticeAsRead,
     markAllNoticesAsRead,
-    showToast
+    showToast,
+    setIsHelpFeedbackOpen
   } = useSchoolStore();
 
   const [mounted, setMounted] = useState(false);
@@ -754,6 +755,16 @@ export default function Header({ onMenuClick }) {
           )}
         </div>
 
+        {/* Quick Help and Feedback Trigger */}
+        <button
+          type="button"
+          onClick={() => setIsHelpFeedbackOpen(true)}
+          className="p-2 rounded-xl bg-[#eff4ff] hover:bg-[#dce9ff] text-[#464553] hover:text-[#0b1c30] transition-colors relative cursor-pointer border border-[#c8c4d5]/50 shadow-2xs"
+          title="Help and feedback (FAQs, Support, Reports)"
+        >
+          <HelpCircle className="w-4.5 h-4.5 text-[#1f108e]" />
+        </button>
+
         {/* User Info Profile Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
@@ -812,6 +823,14 @@ export default function Header({ onMenuClick }) {
                 >
                   <Key className="w-4 h-4 text-primary" />
                   <span>Change Password</span>
+                </button>
+
+                <button
+                  onClick={() => { setIsDropdownOpen(false); setIsHelpFeedbackOpen(true); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-surface2 hover:text-text text-left transition-colors cursor-pointer"
+                >
+                  <HelpCircle className="w-4 h-4 text-primary" />
+                  <span>Help and feedback</span>
                 </button>
 
                 <div className="border-t border-border my-1" />
