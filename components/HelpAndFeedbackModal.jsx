@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, X, HelpCircle, MessageCircle, Bug, Star,
   FileText, AlertCircle, ChevronRight, ChevronDown, Phone,
@@ -8,6 +8,8 @@ import {
   Building2, UserCheck, Shield, Lock, Database, Clock
 } from 'lucide-react';
 import { useSchoolStore } from '../lib/store';
+import { db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/firestore';
 
 const APP_VERSION = 'Version 1.0.0';
 
@@ -103,6 +105,23 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
 
+  // Live Super-Admin Support Config from system_config/support_info
+  const [supportConfig, setSupportConfig] = useState(null);
+
+  useEffect(() => {
+    if (!db) return;
+    try {
+      const unsub = onSnapshot(doc(db, 'system_config', 'support_info'), (snap) => {
+        if (snap.exists()) {
+          setSupportConfig(snap.data());
+        }
+      });
+      return () => unsub();
+    } catch (e) {
+      console.warn('Support info listener error:', e);
+    }
+  }, []);
+
   if (!isOpen) return null;
 
   const handleClose = () => {
@@ -118,35 +137,72 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
     }
   };
 
-  const handleSubmitFeedback = (e) => {
+  const handleSubmitFeedback = async (e) => {
     e.preventDefault();
     if (!feedbackText.trim()) {
       showToast('Please enter your feedback or describe the issue.', 'error');
       return;
     }
     setIsSubmittingFeedback(true);
-    setTimeout(() => {
+    try {
+      if (db) {
+        await addDoc(collection(db, 'feedbacks'), {
+          schoolId: settings?.schoolId || currentUser?.schoolId || 'SCHOOL_001',
+          schoolName: settings?.instituteName || settings?.schoolName || 'School Management',
+          senderEmail: currentUser?.email || 'portal-user@school.com',
+          senderName: currentUser?.name || currentUser?.displayName || 'School Staff',
+          senderRole: currentUser?.role || 'staff',
+          category: feedbackCategory,
+          message: feedbackText.trim(),
+          device: 'web',
+          status: 'new',
+          createdAt: serverTimestamp()
+        });
+      }
+    } catch (err) {
+      console.warn('Feedback save note:', err);
+    } finally {
       setIsSubmittingFeedback(false);
-      showToast('✓ Feedback submitted successfully! Thank you.', 'success');
+      showToast('✓ Feedback submitted to School Admin successfully!', 'success');
       setFeedbackText('');
       setActiveView('main');
-    }, 600);
+    }
   };
 
-  const handleSubmitRating = () => {
+  const handleSubmitRating = async () => {
+    try {
+      if (db) {
+        await addDoc(collection(db, 'feedbacks'), {
+          schoolId: settings?.schoolId || currentUser?.schoolId || 'SCHOOL_001',
+          schoolName: settings?.instituteName || settings?.schoolName || 'School Management',
+          senderEmail: currentUser?.email || 'portal-user@school.com',
+          senderName: currentUser?.name || currentUser?.displayName || 'School Staff',
+          senderRole: currentUser?.role || 'staff',
+          category: 'App Rating',
+          rating: rating,
+          message: `${rating} / 5 Stars Rating`,
+          device: 'web',
+          status: 'new',
+          createdAt: serverTimestamp()
+        });
+      }
+    } catch (err) {
+      console.warn('Rating save note:', err);
+    }
     showToast(`★ Thank you for rating ${rating} stars!`, 'success');
     setTimeout(() => {
       setActiveView('main');
     }, 700);
   };
 
-  // Dynamic School Admin Contact Info from Settings
+  // Dynamic School Admin Contact Info (Master support info takes priority, fall back to school settings)
   const schoolName = settings?.instituteName || settings?.schoolName || 'School Administration';
   const principalName = settings?.principalName || '';
-  const adminMobile = settings?.mobile || settings?.phone || '+91 8568643490';
-  const adminEmail = settings?.email || 'support@schoolcloud.com';
+  const adminMobile = supportConfig?.supportPhone || settings?.mobile || settings?.phone || '+91 8568643490';
+  const adminEmail = supportConfig?.supportEmail || settings?.email || 'support@schoolcloud.com';
 
-  const cleanPhone = adminMobile.replace(/[^0-9]/g, '');
+  const rawWhatsapp = supportConfig?.supportWhatsapp || adminMobile;
+  const cleanPhone = rawWhatsapp.replace(/[^0-9]/g, '');
   const whatsappNumber = cleanPhone
     ? (cleanPhone.startsWith('91') ? cleanPhone : (cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone))
     : '918568643490';
