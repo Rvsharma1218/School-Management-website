@@ -416,17 +416,6 @@ export default function SettingsView() {
               </div>
             ))}
           </div>
-
-          {/* Cloud Storage Status Card */}
-          <div className="bg-gradient-to-br from-primary/5 to-indigo-500/5 dark:from-primary/10 dark:to-indigo-500/10 border border-primary/20 rounded-3xl p-4 shadow-sm">
-            <div className="flex items-center gap-2.5 text-primary">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-xs font-black uppercase tracking-wider">Cloud Live Sync</span>
-            </div>
-            <p className="text-[11px] text-text-secondary mt-1.5 leading-relaxed">
-              All settings are real-time synced between your Android/iOS mobile app and web console.
-            </p>
-          </div>
         </div>
 
         {/* --- Right Column: Active Content Canvas --- */}

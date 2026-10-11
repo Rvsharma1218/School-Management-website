@@ -4,16 +4,17 @@ import React, { useState } from 'react';
 import {
   ArrowLeft, X, HelpCircle, MessageCircle, Bug, Star,
   FileText, AlertCircle, ChevronRight, ChevronDown, Phone,
-  Mail, ExternalLink, CheckCircle2, ShieldCheck, Search, Send
+  Mail, ExternalLink, CheckCircle2, ShieldCheck, Search, Send,
+  Building2, UserCheck, Shield, Lock, Database, Clock
 } from 'lucide-react';
 import { useSchoolStore } from '../lib/store';
 
-const APP_VERSION = 'Version 2.3000.1049978204.263700';
+const APP_VERSION = 'Version 1.0.0';
 
 const FAQS = [
   {
     q: 'How does offline mode sync with the website?',
-    a: 'The portal works seamlessly offline using indexed browser caching. As soon as an active internet connection is detected, all registered students, recorded fee payments, and attendance rolls automatically sync to the Firebase cloud database in real-time.'
+    a: 'The portal works seamlessly offline using indexed browser caching. As soon as an active internet connection is detected, all registered students, recorded fee payments, and attendance rolls automatically sync to the secure cloud database in real-time.'
   },
   {
     q: 'How do I add a signature and make it transparent?',
@@ -37,8 +38,51 @@ const FAQS = [
   }
 ];
 
+const TERMS_AND_POLICIES = [
+  {
+    title: '1. Educational Scope & Authorized Licensing',
+    icon: Building2,
+    content: 'The School Management Cloud portal and companion applications are provisioned exclusively for academic administration, student records management, fee accounting, and institutional operations. Access is strictly granted to verified school principals, designated administrators, faculty teachers, and authorized operational staff.'
+  },
+  {
+    title: '2. 100% Institutional Data Ownership & Student Privacy',
+    icon: ShieldCheck,
+    content: 'All information entered into this platform—including student demographic profiles, parent contact numbers, photographs, attendance registers, examination marks, and fee transaction histories—remains the 100% exclusive property of your institution. We never sell, lease, monetize, or disclose student records or institutional data to third-party commercial entities, data brokers, or advertising networks under any circumstances.'
+  },
+  {
+    title: '3. End-to-End Cryptography & Data Protection',
+    icon: Lock,
+    content: 'All communication across web and mobile clients is protected using Transport Layer Security (TLS 1.3). Database snapshots and cloud backups are encrypted at rest using enterprise-grade AES-256 standards in secured datacenters. Offline cached stores on devices remain sandboxed and locked behind administrative session authentication.'
+  },
+  {
+    title: '4. Role-Based Access Controls & Staff Governance',
+    icon: UserCheck,
+    content: 'The Principal / Administrator holds autonomous authority over faculty account provisioning, class assignments, and granular teacher permissions (e.g. enabling or restricting fee ledger access). Each staff member is personally accountable for safeguarding their login credentials and session tokens.'
+  },
+  {
+    title: '5. Financial Records & Audit Trail Integrity',
+    icon: Shield,
+    content: 'Digital fee receipts, partial payment records, discount concessions, dues carried forward, and student month ledgers are chronologically preserved with immutable timestamps. The system enforces strict audit trails to prevent ledger tampering and maintain institutional financial integrity.'
+  },
+  {
+    title: '6. Data Portability & Unrestricted Export Rights',
+    icon: Database,
+    content: 'Your educational institution holds the unrestricted right to export a complete, portable JSON database backup and Excel records of all students, fee registers, and academic results at any time without fees, penalties, or vendor lock-in.'
+  },
+  {
+    title: '7. Offline Continuity & System Availability SLA',
+    icon: Clock,
+    content: 'The application architecture implements local offline persistence, ensuring zero disruption to attendance taking, fee recording, and student searches during internet outages. Background synchronization executes automatically upon internet reconnection, targeting 99.9% cloud operational uptime.'
+  },
+  {
+    title: '8. Account Termination & Full Data Purge Guarantee',
+    icon: FileText,
+    content: 'In the event of service discontinuation requested by the verified School Administrator, all institutional cloud records, photo assets, and backups will be permanently and irreversibly purged from our cloud servers within 30 days following confirmed handover of the final database export.'
+  }
+];
+
 export default function HelpAndFeedbackModal({ isOpen, onClose }) {
-  const { showToast, currentUser, settings } = useSchoolStore();
+  const { showToast, currentUser, settings, navigate } = useSchoolStore();
 
   // Active view: 'main' | 'help' | 'contact' | 'feedback' | 'rate' | 'terms' | 'channels'
   const [activeView, setActiveView] = useState('main');
@@ -46,6 +90,9 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
   // FAQ search & expanded state
   const [faqSearch, setFaqSearch] = useState('');
   const [expandedFaq, setExpandedFaq] = useState(null);
+
+  // Expanded term state
+  const [expandedTerm, setExpandedTerm] = useState(null);
 
   // Feedback form state
   const [feedbackCategory, setFeedbackCategory] = useState('Technical Issue');
@@ -55,8 +102,6 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
   // Rating state
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
-  const [ratingComment, setRatingComment] = useState('');
-  const [isRated, setIsRated] = useState(false);
 
   if (!isOpen) return null;
 
@@ -82,20 +127,29 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
     setIsSubmittingFeedback(true);
     setTimeout(() => {
       setIsSubmittingFeedback(false);
-      showToast('✓ Feedback submitted successfully! Our team will review it.', 'success');
+      showToast('✓ Feedback submitted successfully! Thank you.', 'success');
       setFeedbackText('');
       setActiveView('main');
     }, 600);
   };
 
   const handleSubmitRating = () => {
-    setIsRated(true);
     showToast(`★ Thank you for rating ${rating} stars!`, 'success');
     setTimeout(() => {
       setActiveView('main');
-      setIsRated(false);
-    }, 900);
+    }, 700);
   };
+
+  // Dynamic School Admin Contact Info from Settings
+  const schoolName = settings?.instituteName || settings?.schoolName || 'School Administration';
+  const principalName = settings?.principalName || '';
+  const adminMobile = settings?.mobile || settings?.phone || '+91 8568643490';
+  const adminEmail = settings?.email || 'support@schoolcloud.com';
+
+  const cleanPhone = adminMobile.replace(/[^0-9]/g, '');
+  const whatsappNumber = cleanPhone
+    ? (cleanPhone.startsWith('91') ? cleanPhone : (cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone))
+    : '918568643490';
 
   const filteredFaqs = FAQS.filter(
     f => f.q.toLowerCase().includes(faqSearch.toLowerCase()) || f.a.toLowerCase().includes(faqSearch.toLowerCase())
@@ -307,17 +361,40 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
           )}
 
           {/* ========================================================================= */}
-          {/* SUBVIEW 2: CONTACT US */}
+          {/* SUBVIEW 2: CONTACT US (DYNAMIC SCHOOL ADMIN INFO) */}
           {/* ========================================================================= */}
           {activeView === 'contact' && (
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3.5">
+              {/* Institution Identity Card */}
+              <div className="p-3 bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase font-bold text-teal-400 tracking-wider">School Administration</p>
+                  <p className="text-xs font-bold text-white truncate mt-0.5">{schoolName}</p>
+                  {principalName && (
+                    <p className="text-[11px] text-[#8E8E8E] truncate">Principal: {principalName}</p>
+                  )}
+                </div>
+                {currentUser?.role === 'principal' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleClose();
+                      navigate('/settings');
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-bold text-teal-400 hover:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 rounded-lg border border-teal-500/30 transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    Edit in Settings
+                  </button>
+                )}
+              </div>
+
               <p className="text-xs text-[#8E8E8E] leading-relaxed">
-                Connect directly with our dedicated technical support representatives:
+                Reach out directly to school administration & helpline support:
               </p>
 
               {/* WhatsApp Live */}
               <a
-                href="https://wa.me/918568643490?text=Hello%20School%20Support%20Team%2C%20I%20need%20assistance%20with%20my%20school%20management%20portal."
+                href={`https://wa.me/${whatsappNumber}?text=Hello%20${encodeURIComponent(schoolName)}%2C%20I%20need%20assistance%20with%20school%20management.`}
                 target="_blank"
                 rel="noreferrer"
                 className="p-3.5 rounded-2xl bg-[#1E1E1E] border border-[#2A2A2A] hover:border-emerald-500/50 flex items-center gap-3.5 group transition-all cursor-pointer block"
@@ -331,7 +408,7 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
                     <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-normal">Instant</span>
                   </div>
                   <div className="text-[11px] text-[#8E8E8E] mt-0.5">
-                    +91 8568643490 / +91 8603481865
+                    {adminMobile}
                   </div>
                 </div>
                 <ExternalLink className="w-4 h-4 text-[#8E8E8E] group-hover:text-white" />
@@ -339,7 +416,7 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
 
               {/* Direct Helpline */}
               <a
-                href="tel:+918568643490"
+                href={`tel:${cleanPhone || '8568643490'}`}
                 className="p-3.5 rounded-2xl bg-[#1E1E1E] border border-[#2A2A2A] hover:border-blue-500/50 flex items-center gap-3.5 group transition-all cursor-pointer block"
               >
                 <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold flex-shrink-0 group-hover:scale-105 transition-transform">
@@ -347,10 +424,10 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">
-                    Voice Helpline
+                    Helpline Voice Call
                   </div>
                   <div className="text-[11px] text-[#8E8E8E] mt-0.5">
-                    8568643490 (10:00 AM - 07:00 PM)
+                    {adminMobile} (Office Hours)
                   </div>
                 </div>
                 <ExternalLink className="w-4 h-4 text-[#8E8E8E] group-hover:text-white" />
@@ -358,7 +435,7 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
 
               {/* Email Support */}
               <a
-                href="mailto:support@schoolcloud.com"
+                href={`mailto:${adminEmail}?subject=${encodeURIComponent(schoolName)}%20Support%20Inquiry`}
                 className="p-3.5 rounded-2xl bg-[#1E1E1E] border border-[#2A2A2A] hover:border-amber-500/50 flex items-center gap-3.5 group transition-all cursor-pointer block"
               >
                 <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold flex-shrink-0 group-hover:scale-105 transition-transform">
@@ -366,10 +443,10 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors">
-                    Email Desk
+                    Official Email Desk
                   </div>
-                  <div className="text-[11px] text-[#8E8E8E] mt-0.5">
-                    support@schoolcloud.com
+                  <div className="text-[11px] text-[#8E8E8E] mt-0.5 truncate">
+                    {adminEmail}
                   </div>
                 </div>
                 <ExternalLink className="w-4 h-4 text-[#8E8E8E] group-hover:text-white" />
@@ -494,39 +571,48 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
           )}
 
           {/* ========================================================================= */}
-          {/* SUBVIEW 5: TERMS AND PRIVACY POLICY */}
+          {/* SUBVIEW 5: TERMS AND PRIVACY POLICY (COMPREHENSIVE) */}
           {/* ========================================================================= */}
           {activeView === 'terms' && (
-            <div className="p-4 space-y-4 max-h-[62vh] overflow-y-auto pr-1 text-xs text-[#A0A0A0]">
-              <div className="bg-[#1E1E1E] p-3.5 rounded-2xl border border-[#2A2A2A] space-y-1.5">
-                <h3 className="font-bold text-white text-[13px] flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-teal-400" />
-                  <span>1. Data Ownership & Institution Rights</span>
-                </h3>
-                <p className="leading-relaxed">
-                  All educational records, student admissions, fee histories, marks, and faculty profiles belong 100% exclusively to your registered school. No information is sold, rented, or shared with third-party advertisers.
+            <div className="p-4 space-y-3 max-h-[62vh] overflow-y-auto pr-1 text-xs">
+              <div className="p-3 bg-teal-500/10 border border-teal-500/20 rounded-2xl mb-1">
+                <p className="text-[11px] font-bold text-teal-300">
+                  School Cloud • Institutional Terms of Service & Privacy Policy
+                </p>
+                <p className="text-[10px] text-[#A0A0A0] mt-0.5">
+                  Effective Session 2026-27 • Governs all authorized school tenants, administrators, and staff.
                 </p>
               </div>
 
-              <div className="bg-[#1E1E1E] p-3.5 rounded-2xl border border-[#2A2A2A] space-y-1.5">
-                <h3 className="font-bold text-white text-[13px] flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-teal-400" />
-                  <span>2. Privacy & Encryption Standards</span>
-                </h3>
-                <p className="leading-relaxed">
-                  All data in transit is protected using modern TLS 1.3 encryption. Cloud snapshots are securely guarded in enterprise-grade Firestore datacenters with strict cryptographic access control.
-                </p>
-              </div>
-
-              <div className="bg-[#1E1E1E] p-3.5 rounded-2xl border border-[#2A2A2A] space-y-1.5">
-                <h3 className="font-bold text-white text-[13px] flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-teal-400" />
-                  <span>3. Local Offline Storage & Privacy</span>
-                </h3>
-                <p className="leading-relaxed">
-                  Offline files, cached student photographs, and temporary ledger state remain stored strictly inside the browser’s sandboxed local database and are only accessible through authorized login.
-                </p>
-              </div>
+              {TERMS_AND_POLICIES.map((policy, idx) => {
+                const IconComponent = policy.icon;
+                const isExp = expandedTerm === idx;
+                return (
+                  <div
+                    key={idx}
+                    className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl overflow-hidden transition-all"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedTerm(isExp ? null : idx)}
+                      className="w-full p-3.5 text-left flex items-start justify-between gap-3 cursor-pointer group"
+                    >
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <IconComponent className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                        <span className="font-bold text-white text-xs leading-snug group-hover:text-teal-300 transition-colors">
+                          {policy.title}
+                        </span>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-[#8E8E8E] flex-shrink-0 transition-transform ${isExp ? 'rotate-180 text-teal-400' : ''}`} />
+                    </button>
+                    {isExp && (
+                      <div className="px-3.5 pb-3.5 text-[11.5px] text-[#A8A8A8] leading-relaxed border-t border-[#262626] pt-2.5">
+                        {policy.content}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -562,7 +648,7 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
         {/* --- Divider --- */}
         <div className="border-t border-[#262626]" />
 
-        {/* --- Footer Version Text (Exact match from screenshot) --- */}
+        {/* --- Footer Version Text (Version 1.0.0) --- */}
         <div className="py-4 px-4 text-center select-none bg-[#121212] flex-shrink-0">
           <p className="text-[13px] font-medium text-[#888888] tracking-tight">
             {APP_VERSION}
