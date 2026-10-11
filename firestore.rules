@@ -29,5 +29,10 @@ service cloud.firestore {
     match /system_config/{document=**} {
       allow read, write: if true;
     }
+
+    // ── License Keys Master Control ───────────────────────────────────────────
+    match /licenseKeys/{document=**} {
+      allow read, write: if true;
+    }
   }
 }

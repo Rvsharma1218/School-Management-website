@@ -112,12 +112,20 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
   useEffect(() => {
     if (!db) return;
     try {
-      const unsub = onSnapshot(doc(db, 'system_config', 'support_info'), (snap) => {
+      const unsubDir = onSnapshot(doc(db, 'schoolDirectory', 'support_info'), (snap) => {
         if (snap.exists()) {
           setSupportConfig(snap.data());
         }
       });
-      return () => unsub();
+      const unsubSys = onSnapshot(doc(db, 'system_config', 'support_info'), (snap) => {
+        if (snap.exists()) {
+          setSupportConfig(prev => prev || snap.data());
+        }
+      });
+      return () => {
+        unsubDir();
+        unsubSys();
+      };
     } catch (e) {
       console.warn('Support info listener error:', e);
     }

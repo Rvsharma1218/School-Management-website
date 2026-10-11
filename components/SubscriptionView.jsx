@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useSchoolStore } from '../lib/store';
+import { useSchoolStore, getActiveSchoolId } from '../lib/store';
+import { db } from '../lib/firebase';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import {
   Sparkles, CheckCircle2, ShieldCheck, Zap, Crown,
   Headphones, ArrowRight, Check,
@@ -156,38 +158,64 @@ export default function SubscriptionView() {
     }
 
     try {
-      if (cleanKey.startsWith('STARTER')) {
-        await updateSettings?.({
-          subscriptionPlan: 'starter',
-          subscriptionPlanName: 'Starter Plan',
-          studentLimit: 50,
-          maxStudents: 50,
-          subscriptionStatus: 'active',
-        });
-        showToast('✓ Starter Plan (50 Students) activated successfully!', 'success');
-      } else if (cleanKey.startsWith('STANDARD')) {
-        await updateSettings?.({
-          subscriptionPlan: 'standard',
-          subscriptionPlanName: 'Standard School',
-          studentLimit: 200,
-          maxStudents: 200,
-          subscriptionStatus: 'active',
-        });
-        showToast('✓ Standard School Plan (200 Students) activated successfully!', 'success');
-      } else if (cleanKey.startsWith('PRO') || cleanKey.startsWith('UNLIMITED')) {
-        await updateSettings?.({
-          subscriptionPlan: 'pro_unlimited',
-          subscriptionPlanName: 'Pro Unlimited',
-          studentLimit: 0,
-          maxStudents: -1,
-          subscriptionStatus: 'active',
-        });
-        showToast('✓ Pro Unlimited Plan activated successfully!', 'success');
-      } else {
+      showToast('Verifying license key with database...', 'info', 2000);
+
+      // 1. Check primary licenseKeys collection
+      let docSnap = null;
+      try {
+        const snap = await getDoc(doc(db, 'licenseKeys', cleanKey));
+        if (snap.exists()) docSnap = snap;
+      } catch (_) {}
+
+      // 2. Check schoolDirectory backup collection
+      if (!docSnap || !docSnap.exists()) {
+        try {
+          const snap = await getDoc(doc(db, 'schoolDirectory', 'system_license_keys', 'keys', cleanKey));
+          if (snap.exists()) docSnap = snap;
+        } catch (_) {}
+      }
+
+      if (!docSnap || !docSnap.exists()) {
         showToast('Invalid License Key. Contact administrator for a valid key.', 'error');
         return;
       }
 
+      const keyData = docSnap.data();
+      if (keyData.status === 'used') {
+        showToast('This License Key has already been redeemed by a school.', 'error');
+        return;
+      }
+
+      // Valid active key!
+      const planId = keyData.planId === 'pro' ? 'pro_unlimited' : keyData.planId;
+      const planName = keyData.planName || 'Pro Unlimited';
+      const studentLimit = keyData.maxStudents === -1 ? 0 : (keyData.maxStudents || 50);
+      const maxStudents = keyData.maxStudents || -1;
+      const activeSchool = getActiveSchoolId?.() || 'SCHOOL_001';
+
+      await updateSettings?.({
+        subscriptionPlan: planId,
+        subscriptionPlanName: planName,
+        studentLimit: studentLimit,
+        maxStudents: maxStudents,
+        subscriptionStatus: 'active',
+      });
+
+      // Mark key as redeemed
+      const updatePayload = {
+        status: 'used',
+        usedBySchoolId: activeSchool,
+        usedAt: serverTimestamp(),
+      };
+
+      try {
+        await setDoc(doc(db, 'licenseKeys', cleanKey), updatePayload, { merge: true });
+      } catch (_) {}
+      try {
+        await setDoc(doc(db, 'schoolDirectory', 'system_license_keys', 'keys', cleanKey), updatePayload, { merge: true });
+      } catch (_) {}
+
+      showToast(`✓ ${planName} activated successfully!`, 'success');
       setIsLicenseModalOpen(false);
       setLicenseKeyInput('');
     } catch (err) {
