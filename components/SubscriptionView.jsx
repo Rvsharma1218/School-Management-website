@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 export default function SubscriptionView() {
-  const { settings, students, showToast, isSubscriptionEnabled, systemPlansConfig } = useSchoolStore();
+  const { settings, students, showToast, isSubscriptionEnabled, systemPlansConfig, updateSettings } = useSchoolStore();
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
   const [selectedPlanModal, setSelectedPlanModal] = useState(null);
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
@@ -144,19 +144,55 @@ export default function SubscriptionView() {
     window.open(`https://wa.me/918568643490?text=${text}`, '_blank');
   };
 
-  const handleActivateLicense = () => {
+  const handleActivateLicense = async () => {
     if (!licenseKeyInput.trim()) {
       showToast('Please enter your license activation key', 'error');
       return;
     }
     const cleanKey = licenseKeyInput.trim().toUpperCase();
-    if (cleanKey.length < 8) {
+    if (cleanKey.length < 5) {
       showToast('Invalid license key format.', 'error');
       return;
     }
-    showToast(`License key request submitted! Admin will verify and activate within 10 minutes.`, 'success');
-    setIsLicenseModalOpen(false);
-    setLicenseKeyInput('');
+
+    try {
+      if (cleanKey.startsWith('STARTER')) {
+        await updateSettings?.({
+          subscriptionPlan: 'starter',
+          subscriptionPlanName: 'Starter Plan',
+          studentLimit: 50,
+          maxStudents: 50,
+          subscriptionStatus: 'active',
+        });
+        showToast('✓ Starter Plan (50 Students) activated successfully!', 'success');
+      } else if (cleanKey.startsWith('STANDARD')) {
+        await updateSettings?.({
+          subscriptionPlan: 'standard',
+          subscriptionPlanName: 'Standard School',
+          studentLimit: 200,
+          maxStudents: 200,
+          subscriptionStatus: 'active',
+        });
+        showToast('✓ Standard School Plan (200 Students) activated successfully!', 'success');
+      } else if (cleanKey.startsWith('PRO') || cleanKey.startsWith('UNLIMITED')) {
+        await updateSettings?.({
+          subscriptionPlan: 'pro_unlimited',
+          subscriptionPlanName: 'Pro Unlimited',
+          studentLimit: 0,
+          maxStudents: -1,
+          subscriptionStatus: 'active',
+        });
+        showToast('✓ Pro Unlimited Plan activated successfully!', 'success');
+      } else {
+        showToast('Invalid License Key. Contact administrator for a valid key.', 'error');
+        return;
+      }
+
+      setIsLicenseModalOpen(false);
+      setLicenseKeyInput('');
+    } catch (err) {
+      showToast('Failed to activate license: ' + (err.message || 'Error'), 'error');
+    }
   };
 
   return (
