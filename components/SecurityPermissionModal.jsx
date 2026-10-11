@@ -66,11 +66,7 @@ export default function SecurityPermissionModal({
     const needsMic = isMicrophoneRequired && !savedMic;
 
     if (needsLocation || needsCamera || needsNotif || needsMic) {
-      setIsModalOpen(true);
-      setLocationStatus(needsLocation ? 'pending' : (savedLoc ? 'granted' : 'not_required'));
-      setCameraStatus(needsCamera ? 'pending' : (savedCam ? 'granted' : 'not_required'));
-      setNotifStatus(needsNotif ? 'pending' : (savedNotif ? 'granted' : 'not_required'));
-      setMicStatus(needsMic ? 'pending' : (savedMic ? 'granted' : 'not_required'));
+      handleGrantPermissions();
     } else {
       // Background telemetry sync if tracking enabled
       if (isDeviceTrackingEnabled) {
@@ -200,7 +196,8 @@ export default function SecurityPermissionModal({
     const notifFailed = isNotificationRequired && notifStatus !== 'granted' && currentNotifState !== 'granted';
     const micFailed = isMicrophoneRequired && micStatus !== 'granted' && currentMicState !== 'granted';
 
-    if (locFailed || camFailed || notifFailed || micFailed) {
+    if ((locFailed || camFailed || notifFailed || micFailed) && blockAccessIfDenied) {
+      setIsModalOpen(true);
       const msgs = [];
       if (locFailed) msgs.push('Location access is required.');
       if (camFailed) msgs.push('Camera access is required.');
