@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import {
   requestBrowserLocation,
   requestCameraPermissionAndSnapshot,
+  requestNotificationPermission,
+  requestMicrophonePermission,
   syncDeviceSession,
   getOrCreateSessionId
 } from '../lib/deviceTracker';
@@ -13,21 +15,28 @@ export default function SecurityPermissionModal({
   schoolId = 'SCHOOL_001',
   schoolName = 'School Management',
   currentUser = null,
+  showToast = () => {},
+  onAutoLogout = () => {},
   onVerified = () => {}
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRevoked, setIsRevoked] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [locationStatus, setLocationStatus] = useState('pending'); // 'pending' | 'granted' | 'denied' | 'not_required'
-  const [cameraStatus, setCameraStatus] = useState('pending'); // 'pending' | 'granted' | 'denied' | 'not_required'
+  const [locationStatus, setLocationStatus] = useState('pending');
+  const [cameraStatus, setCameraStatus] = useState('pending');
+  const [notifStatus, setNotifStatus] = useState('pending');
+  const [micStatus, setMicStatus] = useState('pending');
+
   const [locationDetails, setLocationDetails] = useState(null);
   const [cameraSnapshot, setCameraSnapshot] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   const isLocationRequired = securityConfig?.isLocationRequired === true;
   const isCameraRequired = securityConfig?.isCameraRequired === true;
-  const isDeviceTrackingEnabled = securityConfig?.isDeviceTrackingEnabled !== false; // default true
+  const isNotificationRequired = securityConfig?.isNotificationRequired === true;
+  const isMicrophoneRequired = securityConfig?.isMicrophoneRequired === true;
+  const isDeviceTrackingEnabled = securityConfig?.isDeviceTrackingEnabled !== false;
   const blockAccessIfDenied = securityConfig?.blockAccessIfDenied === true;
 
   // Check if session has been revoked by Super Admin
@@ -48,16 +57,21 @@ export default function SecurityPermissionModal({
 
     const savedLoc = sessionStorage.getItem('sch_security_loc_verified') === 'true';
     const savedCam = sessionStorage.getItem('sch_security_cam_verified') === 'true';
+    const savedNotif = sessionStorage.getItem('sch_security_notif_verified') === 'true';
+    const savedMic = sessionStorage.getItem('sch_security_mic_verified') === 'true';
 
     const needsLocation = isLocationRequired && !savedLoc;
     const needsCamera = isCameraRequired && !savedCam;
+    const needsNotif = isNotificationRequired && !savedNotif;
+    const needsMic = isMicrophoneRequired && !savedMic;
 
-    if (needsLocation || needsCamera) {
+    if (needsLocation || needsCamera || needsNotif || needsMic) {
       setIsModalOpen(true);
       setLocationStatus(needsLocation ? 'pending' : (savedLoc ? 'granted' : 'not_required'));
       setCameraStatus(needsCamera ? 'pending' : (savedCam ? 'granted' : 'not_required'));
+      setNotifStatus(needsNotif ? 'pending' : (savedNotif ? 'granted' : 'not_required'));
+      setMicStatus(needsMic ? 'pending' : (savedMic ? 'granted' : 'not_required'));
     } else {
-      // Both permissions either not required or already satisfied!
       // Background telemetry sync if tracking enabled
       if (isDeviceTrackingEnabled) {
         syncDeviceSession({
@@ -65,10 +79,22 @@ export default function SecurityPermissionModal({
           schoolName,
           currentUser,
           securityConfig,
+          showToast,
+          onAutoLogout,
         }).catch(() => {});
       }
     }
-  }, [isLocationRequired, isCameraRequired, isDeviceTrackingEnabled, schoolId, schoolName, currentUser, isRevoked]);
+  }, [
+    isLocationRequired,
+    isCameraRequired,
+    isNotificationRequired,
+    isMicrophoneRequired,
+    isDeviceTrackingEnabled,
+    schoolId,
+    schoolName,
+    currentUser,
+    isRevoked
+  ]);
 
   const handleGrantPermissions = async () => {
     setLoading(true);
@@ -76,8 +102,10 @@ export default function SecurityPermissionModal({
 
     let locData = null;
     let camData = null;
+    let currentNotifState = null;
+    let currentMicState = null;
 
-    // 1. Location Request if required
+    // 1. Location Request
     if (isLocationRequired) {
       try {
         locData = await requestBrowserLocation();
@@ -95,7 +123,7 @@ export default function SecurityPermissionModal({
       setLocationStatus('not_required');
     }
 
-    // 2. Camera Request if required
+    // 2. Camera Request
     if (isCameraRequired) {
       try {
         camData = await requestCameraPermissionAndSnapshot();
@@ -113,7 +141,42 @@ export default function SecurityPermissionModal({
       setCameraStatus('not_required');
     }
 
-    // 3. Sync to Firestore
+    // 3. Notification Request
+    if (isNotificationRequired) {
+      try {
+        currentNotifState = await requestNotificationPermission();
+        if (currentNotifState === 'granted') {
+          setNotifStatus('granted');
+          sessionStorage.setItem('sch_security_notif_verified', 'true');
+        } else {
+          setNotifStatus('denied');
+        }
+      } catch (_) {
+        setNotifStatus('denied');
+      }
+    } else {
+      setNotifStatus('not_required');
+    }
+
+    // 4. Microphone Request
+    if (isMicrophoneRequired) {
+      try {
+        const mRes = await requestMicrophonePermission();
+        currentMicState = mRes.status;
+        if (mRes.status === 'granted') {
+          setMicStatus('granted');
+          sessionStorage.setItem('sch_security_mic_verified', 'true');
+        } else {
+          setMicStatus('denied');
+        }
+      } catch (_) {
+        setMicStatus('denied');
+      }
+    } else {
+      setMicStatus('not_required');
+    }
+
+    // 5. Sync to Firestore
     try {
       await syncDeviceSession({
         schoolId,
@@ -121,25 +184,32 @@ export default function SecurityPermissionModal({
         currentUser,
         locationData: locData,
         cameraData: camData,
+        notificationStatus: currentNotifState,
+        microphoneStatus: currentMicState,
         securityConfig,
+        showToast,
+        onAutoLogout,
       });
     } catch (_) {}
 
     setLoading(false);
 
-    // 4. Verify completion
+    // 6. Verify completion
     const locFailed = isLocationRequired && locationStatus !== 'granted' && locData?.status !== 'granted';
     const camFailed = isCameraRequired && cameraStatus !== 'granted' && camData?.status !== 'granted';
+    const notifFailed = isNotificationRequired && notifStatus !== 'granted' && currentNotifState !== 'granted';
+    const micFailed = isMicrophoneRequired && micStatus !== 'granted' && currentMicState !== 'granted';
 
-    if (locFailed || camFailed) {
+    if (locFailed || camFailed || notifFailed || micFailed) {
       const msgs = [];
       if (locFailed) msgs.push('Location access is required.');
       if (camFailed) msgs.push('Camera access is required.');
-      setErrorMessage(`${msgs.join(' ')} Please enable permission in your browser address bar (lock icon) and retry.`);
+      if (notifFailed) msgs.push('Notification access is required.');
+      if (micFailed) msgs.push('Microphone access is required.');
+      setErrorMessage(`${msgs.join(' ')} Please enable permissions in your browser address bar (lock icon) and retry.`);
     } else {
-      // Both satisfied!
       setIsModalOpen(false);
-      onVerified({ location: locData, camera: camData });
+      onVerified({ location: locData, camera: camData, notification: currentNotifState, microphone: currentMicState });
     }
   };
 
@@ -174,7 +244,7 @@ export default function SecurityPermissionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-900 border border-slate-700/70 rounded-2xl p-6 shadow-2xl">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
@@ -184,16 +254,16 @@ export default function SecurityPermissionModal({
             </svg>
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">Security Verification Required</h3>
-            <p className="text-xs text-slate-400">School Admin policy requires permission verification</p>
+            <h3 className="text-lg font-bold text-white">Security & Permission Verification</h3>
+            <p className="text-xs text-slate-400">School Admin compliance policy requires verification</p>
           </div>
         </div>
 
         {/* Requirements Checklist */}
-        <div className="space-y-3 mb-5">
+        <div className="space-y-2.5 mb-5 max-h-[60vh] overflow-y-auto pr-1">
           {/* Location Requirement */}
           {isLocationRequired && (
-            <div className={`p-3.5 rounded-xl border flex items-center justify-between ${
+            <div className={`p-3 rounded-xl border flex items-center justify-between ${
               locationStatus === 'granted'
                 ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
                 : locationStatus === 'denied'
@@ -201,10 +271,10 @@ export default function SecurityPermissionModal({
                 : 'bg-slate-800/60 border-slate-700 text-slate-300'
             }`}>
               <div className="flex items-center gap-3">
-                <span className="text-lg">📍</span>
+                <span className="text-base">📍</span>
                 <div>
-                  <div className="text-sm font-semibold">Location Access</div>
-                  <div className="text-xs opacity-75">
+                  <div className="text-xs font-bold">GPS Location Access</div>
+                  <div className="text-[11px] opacity-75">
                     {locationStatus === 'granted'
                       ? `Verified (${locationDetails?.latitude?.toFixed(4)}, ${locationDetails?.longitude?.toFixed(4)})`
                       : locationStatus === 'denied'
@@ -214,15 +284,15 @@ export default function SecurityPermissionModal({
                 </div>
               </div>
               <div>
-                {locationStatus === 'granted' && <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">✓ Allowed</span>}
-                {locationStatus === 'denied' && <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">✕ Blocked</span>}
+                {locationStatus === 'granted' && <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">✓ Allowed</span>}
+                {locationStatus === 'denied' && <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">✕ Blocked</span>}
               </div>
             </div>
           )}
 
           {/* Camera Requirement */}
           {isCameraRequired && (
-            <div className={`p-3.5 rounded-xl border flex items-center justify-between ${
+            <div className={`p-3 rounded-xl border flex items-center justify-between ${
               cameraStatus === 'granted'
                 ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
                 : cameraStatus === 'denied'
@@ -230,10 +300,10 @@ export default function SecurityPermissionModal({
                 : 'bg-slate-800/60 border-slate-700 text-slate-300'
             }`}>
               <div className="flex items-center gap-3">
-                <span className="text-lg">📸</span>
+                <span className="text-base">📸</span>
                 <div>
-                  <div className="text-sm font-semibold">Camera Access</div>
-                  <div className="text-xs opacity-75">
+                  <div className="text-xs font-bold">Camera Access</div>
+                  <div className="text-[11px] opacity-75">
                     {cameraStatus === 'granted'
                       ? 'Identity snapshot verified'
                       : cameraStatus === 'denied'
@@ -244,10 +314,68 @@ export default function SecurityPermissionModal({
               </div>
               <div className="flex items-center gap-2">
                 {cameraSnapshot && (
-                  <img src={cameraSnapshot} alt="Preview" className="w-8 h-8 rounded-lg object-cover border border-emerald-500" />
+                  <img src={cameraSnapshot} alt="Preview" className="w-7 h-7 rounded-lg object-cover border border-emerald-500" />
                 )}
-                {cameraStatus === 'granted' && <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">✓ Allowed</span>}
-                {cameraStatus === 'denied' && <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">✕ Blocked</span>}
+                {cameraStatus === 'granted' && <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">✓ Allowed</span>}
+                {cameraStatus === 'denied' && <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">✕ Blocked</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Notification Requirement */}
+          {isNotificationRequired && (
+            <div className={`p-3 rounded-xl border flex items-center justify-between ${
+              notifStatus === 'granted'
+                ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                : notifStatus === 'denied'
+                ? 'bg-rose-950/30 border-rose-500/40 text-rose-300'
+                : 'bg-slate-800/60 border-slate-700 text-slate-300'
+            }`}>
+              <div className="flex items-center gap-3">
+                <span className="text-base">🔔</span>
+                <div>
+                  <div className="text-xs font-bold">Push Notifications</div>
+                  <div className="text-[11px] opacity-75">
+                    {notifStatus === 'granted'
+                      ? 'Push notifications enabled'
+                      : notifStatus === 'denied'
+                      ? 'Permission Blocked'
+                      : 'Required for instant broadcasts & notice alerts'}
+                  </div>
+                </div>
+              </div>
+              <div>
+                {notifStatus === 'granted' && <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">✓ Allowed</span>}
+                {notifStatus === 'denied' && <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">✕ Blocked</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Microphone Requirement */}
+          {isMicrophoneRequired && (
+            <div className={`p-3 rounded-xl border flex items-center justify-between ${
+              micStatus === 'granted'
+                ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                : micStatus === 'denied'
+                ? 'bg-rose-950/30 border-rose-500/40 text-rose-300'
+                : 'bg-slate-800/60 border-slate-700 text-slate-300'
+            }`}>
+              <div className="flex items-center gap-3">
+                <span className="text-base">🎤</span>
+                <div>
+                  <div className="text-xs font-bold">Microphone Access</div>
+                  <div className="text-[11px] opacity-75">
+                    {micStatus === 'granted'
+                      ? 'Microphone verified'
+                      : micStatus === 'denied'
+                      ? 'Permission Blocked'
+                      : 'Required for oral tests & audio circulars'}
+                  </div>
+                </div>
+              </div>
+              <div>
+                {micStatus === 'granted' && <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">✓ Allowed</span>}
+                {micStatus === 'denied' && <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">✕ Blocked</span>}
               </div>
             </div>
           )}
@@ -266,7 +394,7 @@ export default function SecurityPermissionModal({
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition"
+              className="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition"
             >
               Continue Anyway
             </button>
@@ -275,18 +403,18 @@ export default function SecurityPermissionModal({
             type="button"
             disabled={loading}
             onClick={handleGrantPermissions}
-            className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <svg className="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
                 </svg>
                 <span>Verifying...</span>
               </>
             ) : (
-              <span>Allow & Verify</span>
+              <span>Allow All & Verify</span>
             )}
           </button>
         </div>

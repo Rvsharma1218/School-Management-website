@@ -66,7 +66,9 @@ function AppContent() {
     editingNotice, setEditingNotice,
     viewingNotice, setViewingNotice,
     isTeacherPermissionsModalOpen, setIsTeacherPermissionsModalOpen,
-    securityConfig
+    securityConfig,
+    showToast,
+    logout
   } = useSchoolStore();
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
@@ -377,6 +379,8 @@ function AppContent() {
         schoolId={settings?.schoolId || currentUser?.schoolId || 'SCHOOL_001'}
         schoolName={settings?.schoolName || settings?.instituteName || 'School Management'}
         currentUser={currentUser}
+        showToast={showToast}
+        onAutoLogout={logout}
       />
 
       {/* Global Theme-matched Toast Notifications & Confirmation Dialog */}
