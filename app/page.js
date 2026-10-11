@@ -34,6 +34,8 @@ import AddEditNoticeModal from '../components/AddEditNoticeModal';
 import NoticeDetailModal from '../components/NoticeDetailModal';
 import { ToastContainer, ConfirmDialog } from '../components/ToastNotification';
 import SecurityPermissionModal from '../components/SecurityPermissionModal';
+import NotificationHistoryModal from '../components/NotificationHistoryModal';
+import AudioVoiceNoteModal from '../components/AudioVoiceNoteModal';
 
 // Auth Components
 import SignInView from '../components/SignInView';
@@ -73,6 +75,19 @@ function AppContent() {
 
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isNotifHistoryOpen, setIsNotifHistoryOpen] = useState(false);
+  const [isAudioModalOpen, setIsAudioModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenNotifHistory = () => setIsNotifHistoryOpen(true);
+    const handleOpenAudioModal = () => setIsAudioModalOpen(true);
+    window.addEventListener('school_open_notification_history', handleOpenNotifHistory);
+    window.addEventListener('school_open_audio_modal', handleOpenAudioModal);
+    return () => {
+      window.removeEventListener('school_open_notification_history', handleOpenNotifHistory);
+      window.removeEventListener('school_open_audio_modal', handleOpenAudioModal);
+    };
+  }, []);
 
   const prevModalOpenRef = React.useRef(false);
 
@@ -381,6 +396,21 @@ function AppContent() {
         currentUser={currentUser}
         showToast={showToast}
         onAutoLogout={logout}
+      />
+
+      {/* Device Notifications History Modal */}
+      <NotificationHistoryModal
+        isOpen={isNotifHistoryOpen}
+        onClose={() => setIsNotifHistoryOpen(false)}
+      />
+
+      {/* Oral Voice Note & Viva Recording Modal */}
+      <AudioVoiceNoteModal
+        isOpen={isAudioModalOpen}
+        onClose={() => setIsAudioModalOpen(false)}
+        onSave={() => {
+          showToast('✓ Voice response recorded successfully!', 'success');
+        }}
       />
 
       {/* Global Theme-matched Toast Notifications & Confirmation Dialog */}
