@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSchoolStore, getActiveSchoolId } from '../lib/store';
 import { db } from '../lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import {
   Sparkles, CheckCircle2, ShieldCheck, Zap, Crown,
   Headphones, ArrowRight, Check,
@@ -17,6 +17,17 @@ export default function SubscriptionView() {
   const [selectedPlanModal, setSelectedPlanModal] = useState(null);
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
   const [licenseKeyInput, setLicenseKeyInput] = useState('');
+  const [supportConfig, setSupportConfig] = useState(null);
+
+  useEffect(() => {
+    if (!db) return;
+    try {
+      const unsub = onSnapshot(doc(db, 'schoolDirectory', 'support_info'), (snap) => {
+        if (snap.exists()) setSupportConfig(snap.data());
+      });
+      return () => unsub();
+    } catch (_) {}
+  }, []);
 
   const schoolName = settings.instituteName || settings.schoolName || 'My Institute';
   const currentSession = settings.currentSession || '2026-27';
@@ -139,11 +150,18 @@ export default function SubscriptionView() {
     return found ? found.name : (settings.subscriptionPlanName || settings.subscriptionPlan || 'Active Plan');
   };
 
+  const helplinePhone = supportConfig?.supportPhone || settings.mobile || settings.phone || '+91 8568643490';
+  const cleanPhone = helplinePhone.replace(/[^0-9]/g, '');
+  const helplineWhatsapp = supportConfig?.supportWhatsapp || helplinePhone;
+  const cleanWhatsapp = helplineWhatsapp.replace(/[^0-9]/g, '');
+  const fullWhatsapp = cleanWhatsapp.startsWith('91') ? cleanWhatsapp : (cleanWhatsapp.length === 10 ? `91${cleanWhatsapp}` : cleanWhatsapp);
+  const upiId = supportConfig?.supportUpi || supportConfig?.upiId || `${cleanPhone || '8568643490'}@upi`;
+
   const handleWhatsAppContact = (planName) => {
     const text = encodeURIComponent(
       `Hello Admin, I want to activate/upgrade the "${planName || 'Standard School'}" plan for ${schoolName}. School ID: ${settings.schoolId || 'N/A'}. Please guide me with payment details.`
     );
-    window.open(`https://wa.me/918568643490?text=${text}`, '_blank');
+    window.open(`https://wa.me/${fullWhatsapp || '918568643490'}?text=${text}`, '_blank');
   };
 
   const handleActivateLicense = async () => {
@@ -359,30 +377,40 @@ export default function SubscriptionView() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+        <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={() => setBillingCycle('monthly')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              billingCycle === 'monthly'
-                ? 'bg-[#1f108e] text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            onClick={() => setIsLicenseModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs shadow-sm flex items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02]"
           >
-            Monthly
+            <KeyRound className="w-3.5 h-3.5 text-slate-950" />
+            <span>Redeem License Key</span>
           </button>
-          <button
-            onClick={() => setBillingCycle('yearly')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-              billingCycle === 'yearly'
-                ? 'bg-[#1f108e] text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <span>Annual (12 Months)</span>
-            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-slate-900">
-              SAVE 25%
-            </span>
-          </button>
+
+          <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                billingCycle === 'monthly'
+                  ? 'bg-[#1f108e] text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('yearly')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                billingCycle === 'yearly'
+                  ? 'bg-[#1f108e] text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>Annual (12 Months)</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-slate-900">
+                SAVE 25%
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -602,11 +630,11 @@ export default function SubscriptionView() {
 
         <div className="flex items-center gap-3">
           <a
-            href="tel:8568643490"
+            href={`tel:${cleanPhone || '8568643490'}`}
             className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-[#0b1c30] border border-slate-300 text-xs font-bold flex items-center gap-2 cursor-pointer transition-colors shadow-xs"
           >
             <PhoneCall className="w-3.5 h-3.5 text-[#1f108e]" />
-            <span>Call: 8568643490</span>
+            <span>Call: {helplinePhone}</span>
           </a>
           <button
             onClick={() => handleWhatsAppContact('Quick Inquiry')}
@@ -667,7 +695,7 @@ export default function SubscriptionView() {
                   <span>Direct UPI Transfer (0% Gateway Charges):</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                  UPI ID: <strong className="text-slate-900 font-mono font-bold">8568643490@upi</strong> or pay using PhonePe / Google Pay / Paytm, then send the payment screenshot on WhatsApp.
+                  UPI ID: <strong className="text-slate-900 font-mono font-bold">{upiId}</strong> or pay using PhonePe / Google Pay / Paytm, then send the payment screenshot on WhatsApp.
                 </p>
               </div>
             )}
