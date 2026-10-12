@@ -5,7 +5,7 @@ import { useSchoolStore, getStudentMonthLedger } from '../lib/store';
 import {
   X, ChevronLeft, ChevronRight, Save, Calendar, CreditCard,
   Receipt, Printer, MessageSquare, CheckCircle, Clock, AlertCircle,
-  IndianRupee, Sparkles, SlidersHorizontal, Trash2, ArrowRight
+  IndianRupee, Sparkles, SlidersHorizontal, Trash2, ArrowRight, RotateCcw
 } from 'lucide-react';
 import { openWhatsAppFeeReminder, exportReceiptPDF } from '../lib/exportUtils';
 
@@ -267,12 +267,50 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
     showToast("Fee Structure saved! Monthly fees & previous dues auto-apply to all months.", "success");
   };
 
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Reset Fee Particulars for current month to defaults
+  const handleResetParticulars = () => {
+    const fs = currentStudent.feeStructure || {};
+    const defaultTuition = (fs.tuitionFee !== undefined && fs.tuitionFee !== '' && fs.tuitionFee !== null && Number(fs.tuitionFee) > 0)
+      ? String(fs.tuitionFee)
+      : (currentStudent.monthlyFee && Number(currentStudent.monthlyFee) > 0 ? String(currentStudent.monthlyFee) : '');
+    const defaultTransport = (fs.transportFee !== undefined && fs.transportFee !== '' && fs.transportFee !== null) ? String(fs.transportFee) : '';
+    const defaultGame = (fs.gameFee !== undefined && fs.gameFee !== '' && fs.gameFee !== null) ? String(fs.gameFee) : '';
+
+    setParticulars({
+      admissionFee: '',
+      tuitionFee: defaultTuition,
+      examinationFee: '',
+      previousDues: String(currentMonthData.previousDue || 0),
+      gameFee: defaultGame,
+      reAdmissionFee: '',
+      developmentFee: '',
+      schoolId: '',
+      tieBagBelt: '',
+      backDues: '',
+      transportFee: defaultTransport,
+      otherFee: '',
+      lateFine: ''
+    });
+
+    const currentMonthly = { ...(currentStudent.monthlyParticulars || {}) };
+    delete currentMonthly[monthKey];
+
+    const updatedStudent = {
+      ...currentStudent,
+      monthlyParticulars: currentMonthly
+    };
+    updateStudent(currentStudent.id, updatedStudent);
+    setShowResetConfirm(false);
+    showToast(`Fee particulars for ${monthYearLabel} reset to default tuition!`, "success");
+  };
+
   // Save Monthly Particulars
   const handleSaveParticulars = (e) => {
     e.preventDefault();
     const numericParticulars = {};
     for (const [k, v] of Object.entries(particulars)) {
-      if (k === 'previousDues') continue; // dynamic from rolling ledger
       if (v !== '' && v !== null && v !== undefined) {
         numericParticulars[k] = Number(v) || 0;
       }
@@ -676,22 +714,69 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
                   Previous Dues is automatically pulled from the preceding month's balance. Customize for {monthYearLabel}.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleSaveParticulars}
-                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>Save Fee Particulars</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowResetConfirm(true)}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-[#334155] transition-colors"
+                  title="Reset particulars to default fee"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Reset Fee</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveParticulars}
+                  className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Save Fee Particulars</span>
+                </button>
+              </div>
             </div>
+
+            {/* Reset Fee Confirmation Modal */}
+            {showResetConfirm && (
+              <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-400">
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-white">Reset Fee Particulars?</h4>
+                      <p className="text-[11px] text-slate-400">{monthYearLabel}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Kya aap {monthYearLabel} ke extra fee heads ko reset karna chahte hain? Regular monthly fees aur previous dues ledger se restore ho jayenge.
+                  </p>
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowResetConfirm(false)}
+                      className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                    >
+                      No, Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetParticulars}
+                      className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-sm"
+                    >
+                      Yes, Reset Fee
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
               {[
                 { label: 'Admission Fee', key: 'admissionFee' },
                 { label: 'Tuition Fee', key: 'tuitionFee' },
                 { label: 'Examination Fee', key: 'examinationFee' },
-                { label: 'Previous Dues (Auto-Rolled)', key: 'previousDues', readOnly: true, highlight: true },
+                { label: 'Previous Dues (Carry/Initial)', key: 'previousDues', readOnly: false, highlight: true },
                 { label: 'Game Fee', key: 'gameFee' },
                 { label: 'Re-Admission Fee', key: 'reAdmissionFee' },
                 { label: 'Development Fee', key: 'developmentFee' },

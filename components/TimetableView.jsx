@@ -66,7 +66,23 @@ export default function TimetableView() {
   const [newTime, setNewTime] = useState('09:00 AM - 09:45 AM');
   const [newRoom, setNewRoom] = useState('101');
   const [currentTimeStr, setCurrentTimeStr] = useState('');
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const PRESET_TIME_SLOTS = [
+    '09:00 AM - 09:45 AM',
+    '09:45 AM - 10:30 AM',
+    '10:45 AM - 11:30 AM',
+    '11:30 AM - 12:15 PM',
+    '12:45 PM - 01:30 PM',
+    '01:30 PM - 02:15 PM',
+    '02:15 PM - 03:00 PM',
+    '03:00 PM - 03:45 PM',
+  ];
+
+  const handleOpenAdd = () => {
+    const existingCount = (timetable[activeDay] || []).length;
+    const defaultSlot = PRESET_TIME_SLOTS[existingCount % PRESET_TIME_SLOTS.length] || '09:00 AM - 09:45 AM';
+    setNewTime(defaultSlot);
+    setIsAdding(true);
+  };
 
   useEffect(() => {
     try {
@@ -509,7 +525,27 @@ export default function TimetableView() {
                   className="px-3 py-2 bg-white rounded-lg border border-border text-xs font-semibold"
                 />
               </div>
-              <div className="flex gap-2">
+
+              {/* Quick 1-Click Preset Time Chips */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <span className="text-[10px] font-bold text-text-secondary uppercase">Quick Time Slots:</span>
+                {PRESET_TIME_SLOTS.map((slot) => (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => setNewTime(slot)}
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
+                      newTime === slot
+                        ? 'bg-primary text-white border-primary shadow-xs'
+                        : 'bg-white text-text hover:bg-primary/10 border-border'
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-2 pt-1">
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-bold text-xs cursor-pointer shadow-sm"
@@ -527,7 +563,7 @@ export default function TimetableView() {
             </form>
           ) : (
             <button
-              onClick={() => setIsAdding(true)}
+              onClick={handleOpenAdd}
               className="px-4 py-2.5 rounded-xl border border-dashed border-primary text-primary hover:bg-primary/5 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all"
             >
               <Plus className="w-4 h-4" />
