@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useSchoolStore } from '../lib/store';
+import { t } from '../lib/translations';
 import {
   Menu, Search, Plus, CreditCard, Clock, Calendar, ShieldCheck,
   UserCheck, Bell, ChevronDown, User, Settings, Key, LogOut, X, ShieldAlert,
   Wifi, WifiOff, RefreshCw, CheckCircle2, AlertCircle, ArrowLeft,
-  Receipt, Eye, GraduationCap, ArrowRight, HelpCircle
+  Receipt, Eye, GraduationCap, ArrowRight, HelpCircle, Languages
 } from 'lucide-react';
 
 export default function Header({ onMenuClick }) {
@@ -37,7 +38,9 @@ export default function Header({ onMenuClick }) {
     markNoticeAsRead,
     markAllNoticesAsRead,
     showToast,
-    setIsHelpFeedbackOpen
+    setIsHelpFeedbackOpen,
+    updateSettings,
+    teacherPermissions
   } = useSchoolStore();
 
   const [mounted, setMounted] = useState(false);
@@ -115,22 +118,28 @@ export default function Header({ onMenuClick }) {
 
   if (!currentUser) return null;
 
+  const lang = settings?.appLanguage || 'en';
+
   const viewTitles = {
-    '/dashboard': 'Dashboard',
-    '/notices': 'Notice Board & Circulars',
-    '/students': 'Student Directory',
-    '/fees': 'Fees & Collections',
-    '/attendance': 'Daily Attendance',
-    '/results': 'Exam Results',
-    '/idcards': 'ID Cards Studio',
-    '/teachers': 'Faculty Management',
-    '/reports': 'Report Center',
-    '/qrscanner': 'QR Scanner',
-    '/settings': 'System Settings',
-    '/users': 'User Account Management',
-    '/profile': 'My Account Profile',
-    '/setup': 'Initial Setup Wizard',
-    '/access-denied': 'Access Restrained'
+    '/dashboard': t('dashboard', lang),
+    '/notices': t('notices', lang),
+    '/students': t('students', lang),
+    '/fees': t('fees', lang),
+    '/attendance': t('attendance', lang),
+    '/results': t('results', lang),
+    '/classes': t('classes', lang),
+    '/timetable': t('timetable', lang),
+    '/idcards': t('idcards', lang),
+    '/admitcards': t('admitcards', lang),
+    '/teachers': t('teachers', lang),
+    '/reports': t('reports', lang),
+    '/qrscanner': lang === 'hi' ? 'QR स्कैनर' : 'QR Scanner',
+    '/settings': t('settings', lang),
+    '/users': lang === 'hi' ? 'यूज़र अकाउंट्स' : 'User Account Management',
+    '/profile': t('profile', lang),
+    '/subscription': t('subscription', lang),
+    '/setup': lang === 'hi' ? 'सेटअप विज़ार्ड' : 'Initial Setup Wizard',
+    '/access-denied': lang === 'hi' ? 'अनुमति अस्वीकृत' : 'Access Restrained'
   };
 
   const isPrincipal = currentUser.role === 'principal';
@@ -595,13 +604,15 @@ export default function Header({ onMenuClick }) {
         )}
 
         {/* Add Student */}
-        <button
-          onClick={() => setIsAddStudentOpen(true)}
-          className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="hidden lg:inline">Add Student</span>
-        </button>
+        {(isPrincipal || teacherPermissions?.canAddStudents !== false) && (
+          <button
+            onClick={() => setIsAddStudentOpen(true)}
+            className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden lg:inline">{lang === 'hi' ? 'छात्र जोड़ें' : 'Add Student'}</span>
+          </button>
+        )}
 
         {/* Firebase Sync Status Indicator */}
         {(() => {
@@ -755,6 +766,21 @@ export default function Header({ onMenuClick }) {
           )}
         </div>
 
+        {/* Quick Language Switcher Toggle */}
+        <button
+          type="button"
+          onClick={() => {
+            const nextLang = lang === 'hi' ? 'en' : 'hi';
+            updateSettings({ appLanguage: nextLang });
+            showToast(nextLang === 'hi' ? 'पोर्टल भाषा हिन्दी में बदल दी गई है' : 'Display language switched to English', 'success');
+          }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#eff4ff] hover:bg-[#dce9ff] text-[#1f108e] transition-all cursor-pointer border border-[#c8c4d5]/50 shadow-2xs font-extrabold text-xs"
+          title={lang === 'hi' ? 'अंग्रेज़ी भाषा में बदलें (Switch to English)' : 'Switch to Hindi (हिन्दी भाषा चुनें)'}
+        >
+          <Languages className="w-4 h-4 text-[#1f108e]" />
+          <span className="font-bold text-[11px]">{lang === 'hi' ? 'हिन्दी' : 'English'}</span>
+        </button>
+
         {/* Quick Help and Feedback Trigger */}
         <button
           type="button"
@@ -826,11 +852,28 @@ export default function Header({ onMenuClick }) {
                 </button>
 
                 <button
+                  onClick={() => {
+                    const nextLang = lang === 'hi' ? 'en' : 'hi';
+                    updateSettings({ appLanguage: nextLang });
+                    showToast(nextLang === 'hi' ? 'पोर्टल भाषा हिन्दी में बदल दी गई है' : 'Display language switched to English', 'success');
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-surface2 hover:text-text text-left transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Languages className="w-4 h-4 text-primary" />
+                    <span>{lang === 'hi' ? 'भाषा (Language)' : 'Portal Language'}</span>
+                  </div>
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary uppercase">
+                    {lang === 'hi' ? 'हिन्दी' : 'English'}
+                  </span>
+                </button>
+
+                <button
                   onClick={() => { setIsDropdownOpen(false); setIsHelpFeedbackOpen(true); }}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-surface2 hover:text-text text-left transition-colors cursor-pointer"
                 >
                   <HelpCircle className="w-4 h-4 text-primary" />
-                  <span>Help and feedback</span>
+                  <span>{lang === 'hi' ? 'सहायता एवं फ़ीडबैक' : 'Help and feedback'}</span>
                 </button>
 
                 <div className="border-t border-border my-1" />

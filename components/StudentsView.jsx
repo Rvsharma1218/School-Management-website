@@ -35,6 +35,7 @@ export default function StudentsView() {
     setIsPromoteModalOpen,
     whatsAppReminderData,
     setWhatsAppReminderData,
+    teacherPermissions,
     showToast
   } = useSchoolStore();
 
@@ -225,16 +226,18 @@ export default function StudentsView() {
           >
             Export PDF
           </button>
-          <button
-            onClick={() => {
-              setEditingStudent(null);
-              setIsAddStudentOpen(true);
-            }}
-            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add New Student</span>
-          </button>
+          {(isPrincipal || teacherPermissions?.canAddStudents !== false) && (
+            <button
+              onClick={() => {
+                setEditingStudent(null);
+                setIsAddStudentOpen(true);
+              }}
+              className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Student</span>
+            </button>
+          )}
         </div>
       </div>
 

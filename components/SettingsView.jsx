@@ -322,7 +322,7 @@ export default function SettingsView() {
         { id: 'branding', label: 'School Profile', icon: Building2, desc: 'Name, Logo & Contact Info' },
         { id: 'signatures', label: 'Official Signatures & School Seal', icon: FileSignature, desc: 'Principal Sign & School Stamp' },
         { id: 'academic', label: 'Academic & Classes', icon: GraduationCap, desc: 'Classes, Sessions & Batches' },
-        { id: 'language', label: 'Language (भाषा)', icon: Languages, desc: 'Portal Display Language' },
+        { id: 'language', label: 'Portal Language', icon: Languages, desc: 'Portal Display Language' },
       ]
     },
     {
@@ -1028,7 +1028,7 @@ export default function SettingsView() {
                 <div>
                   <h2 className="text-base font-bold text-text flex items-center gap-2">
                     <Languages className="w-5 h-5 text-primary" />
-                    <span>System Display Language (पोर्टल भाषा)</span>
+                    <span>{formData.appLanguage === 'hi' ? 'पोर्टल प्रदर्शन भाषा' : 'System Display Language'}</span>
                   </h2>
                   <p className="text-xs text-text-secondary mt-0.5">
                     Select your preferred interface language for teacher and principal views.

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useSchoolStore } from '../lib/store';
+import { t } from '../lib/translations';
 import {
   LayoutDashboard, Users, UserPlus, CalendarCheck,
   CreditCard, AlertCircle, FileSpreadsheet, QrCode,
@@ -117,82 +118,88 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
 
         {/* ── Scrollable Nav Menu List ── */}
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+          {(() => {
+            const lang = settings?.appLanguage || 'en';
+            return (
+              <>
+                {/* Core Operations */}
+                <SectionLabel collapsed={collapsed}>{lang === 'hi' ? 'मुख्य मेनू' : 'Main Menu'}</SectionLabel>
+                <NavBtn icon={LayoutDashboard} label={t('dashboard', lang)} active={currentPath === '/dashboard'} onClick={() => nav('dashboard')} collapsed={collapsed} />
 
-          {/* Core Operations */}
-          <SectionLabel collapsed={collapsed}>Main Menu</SectionLabel>
-          <NavBtn icon={LayoutDashboard} label="Dashboard" active={currentPath === '/dashboard'} onClick={() => nav('dashboard')} collapsed={collapsed} />
+                {/* Academic Management */}
+                <SectionLabel collapsed={collapsed}>{lang === 'hi' ? 'अकादमिक प्रबंधन' : 'Academic'}</SectionLabel>
+                {(isPrincipal || teacherPermissions?.canPostNotices !== false) && (
+                  <NavBtn icon={Megaphone} label={t('notices', lang)} badge={unreadNoticeCount > 0 ? `${unreadNoticeCount} new` : undefined} active={currentPath === '/notices'} onClick={() => nav('notices')} collapsed={collapsed} />
+                )}
+                {(isPrincipal || teacherPermissions?.canViewStudents !== false) && (
+                  <NavBtn icon={Users} label={t('students', lang)} badge={stats.totalStudents} active={currentPath === '/students'} onClick={() => nav('students')} collapsed={collapsed} />
+                )}
+                {(isPrincipal || teacherPermissions?.canMarkAttendance !== false) && (
+                  <NavBtn icon={CalendarCheck} label={t('attendance', lang)} active={currentPath === '/attendance'} onClick={() => nav('attendance')} collapsed={collapsed} />
+                )}
+                {(isPrincipal || teacherPermissions?.canEnterResults !== false) && (
+                  <NavBtn icon={Award} label={t('results', lang)} active={currentPath === '/results'} onClick={() => nav('results')} collapsed={collapsed} />
+                )}
+                {(isPrincipal || teacherPermissions?.canManageClasses !== false) && (
+                  <NavBtn icon={Building2} label={t('classes', lang)} active={currentPath === '/classes'} onClick={() => nav('classes')} collapsed={collapsed} />
+                )}
+                {(isPrincipal || teacherPermissions?.canManageTimetable !== false) && (
+                  <NavBtn icon={Calendar} label={t('timetable', lang)} active={currentPath === '/timetable'} onClick={() => nav('timetable')} collapsed={collapsed} />
+                )}
+                {(isPrincipal || teacherPermissions?.canViewIdCards !== false) && (
+                  <NavBtn icon={Contact} label={t('idcards', lang)} active={currentPath === '/idcards'} onClick={() => nav('idcards')} collapsed={collapsed} />
+                )}
+                {(isPrincipal || teacherPermissions?.canViewAdmitCards !== false) && (
+                  <NavBtn icon={FileText} label={t('admitcards', lang)} active={currentPath === '/admitcards'} onClick={() => nav('admitcards')} collapsed={collapsed} />
+                )}
+                {!isPrincipal && teacherPermissions?.canCollectFees && (
+                  <NavBtn icon={CreditCard} label={t('fees', lang)} active={currentPath === '/fees'} onClick={() => nav('fees')} collapsed={collapsed} />
+                )}
+                {!isPrincipal && teacherPermissions?.canExportReports && (
+                  <NavBtn icon={FileSpreadsheet} label={t('reports', lang)} active={currentPath === '/reports'} onClick={() => nav('reports')} collapsed={collapsed} />
+                )}
 
-          {/* Academic Management */}
-          <SectionLabel collapsed={collapsed}>Academic</SectionLabel>
-          {(isPrincipal || teacherPermissions?.canPostNotices !== false) && (
-            <NavBtn icon={Megaphone} label="Notice Board" badge={unreadNoticeCount > 0 ? `${unreadNoticeCount} new` : undefined} active={currentPath === '/notices'} onClick={() => nav('notices')} collapsed={collapsed} />
-          )}
-          {(isPrincipal || teacherPermissions?.canViewStudents !== false) && (
-            <NavBtn icon={Users} label="Students Directory" badge={stats.totalStudents} active={currentPath === '/students'} onClick={() => nav('students')} collapsed={collapsed} />
-          )}
-          {(isPrincipal || teacherPermissions?.canMarkAttendance !== false) && (
-            <NavBtn icon={CalendarCheck} label="Daily Attendance" active={currentPath === '/attendance'} onClick={() => nav('attendance')} collapsed={collapsed} />
-          )}
-          {(isPrincipal || teacherPermissions?.canEnterResults !== false) && (
-            <NavBtn icon={Award} label="Exam Results" active={currentPath === '/results'} onClick={() => nav('results')} collapsed={collapsed} />
-          )}
-          {(isPrincipal || teacherPermissions?.canManageClasses !== false) && (
-            <NavBtn icon={Building2} label="Classes & Sections" active={currentPath === '/classes'} onClick={() => nav('classes')} collapsed={collapsed} />
-          )}
-          {(isPrincipal || teacherPermissions?.canManageTimetable !== false) && (
-            <NavBtn icon={Calendar} label="Class Timetable" active={currentPath === '/timetable'} onClick={() => nav('timetable')} collapsed={collapsed} />
-          )}
-          {(isPrincipal || teacherPermissions?.canViewIdCards !== false) && (
-            <NavBtn icon={Contact} label="ID Cards Studio" active={currentPath === '/idcards'} onClick={() => nav('idcards')} collapsed={collapsed} />
-          )}
-          {(isPrincipal || teacherPermissions?.canViewAdmitCards !== false) && (
-            <NavBtn icon={FileText} label="Admit Cards" active={currentPath === '/admitcards'} onClick={() => nav('admitcards')} collapsed={collapsed} />
-          )}
-          {!isPrincipal && teacherPermissions?.canCollectFees && (
-            <NavBtn icon={CreditCard} label="Fee Collections" active={currentPath === '/fees'} onClick={() => nav('fees')} collapsed={collapsed} />
-          )}
-          {!isPrincipal && teacherPermissions?.canExportReports && (
-            <NavBtn icon={FileSpreadsheet} label="Reports & Docs" active={currentPath === '/reports'} onClick={() => nav('reports')} collapsed={collapsed} />
-          )}
+                {/* Administrative / Principal Only */}
+                {isPrincipal && (
+                  <>
+                    <SectionLabel collapsed={collapsed}>{lang === 'hi' ? 'प्रशासन' : 'Administration'}</SectionLabel>
+                    <NavBtn icon={CreditCard} label={t('fees', lang)} badge={stats.defaultersCount > 0 ? `${stats.defaultersCount} dues` : undefined} active={currentPath === '/fees'} onClick={() => nav('fees')} collapsed={collapsed} />
+                    <NavBtn icon={GraduationCap} label={t('teachers', lang)} active={currentPath === '/teachers'} onClick={() => nav('teachers')} collapsed={collapsed} />
+                    <NavBtn
+                      icon={ShieldCheck}
+                      label={t('teacherAccess', lang)}
+                      badge="Roles"
+                      active={currentPath === '/teacher-access' || isTeacherPermissionsModalOpen}
+                      onClick={() => {
+                        setIsTeacherPermissionsModalOpen(true);
+                        if (onClose) onClose();
+                      }}
+                      collapsed={collapsed}
+                    />
+                    <NavBtn icon={FileSpreadsheet} label={t('reports', lang)} active={currentPath === '/reports'} onClick={() => nav('reports')} collapsed={collapsed} />
+                    <NavBtn icon={QrCode} label="QR Scanner" active={currentPath === '/qrscanner'} onClick={() => nav('qrscanner')} collapsed={collapsed} />
+                    <NavBtn icon={UserCheck} label="User Management" active={currentPath === '/users'} onClick={() => nav('users')} collapsed={collapsed} />
+                    <NavBtn icon={Settings} label={t('settings', lang)} active={currentPath === '/settings'} onClick={() => nav('settings')} collapsed={collapsed} />
+                    <NavBtn icon={HelpCircle} label={t('helpSupport', lang)} active={isHelpFeedbackOpen} onClick={() => { setIsHelpFeedbackOpen(true); if (onClose) onClose(); }} collapsed={collapsed} />
+                    <NavBtn icon={Sparkles} label={t('subscription', lang)} badge="All Access" active={currentPath === '/subscription'} onClick={() => nav('subscription')} collapsed={collapsed} />
+                  </>
+                )}
 
-          {/* Administrative / Principal Only */}
-          {isPrincipal && (
-            <>
-              <SectionLabel collapsed={collapsed}>Administration</SectionLabel>
-              <NavBtn icon={CreditCard} label="Fee Collections" badge={stats.defaultersCount > 0 ? `${stats.defaultersCount} dues` : undefined} active={currentPath === '/fees'} onClick={() => nav('fees')} collapsed={collapsed} />
-              <NavBtn icon={GraduationCap} label="Faculty & Teachers" active={currentPath === '/teachers'} onClick={() => nav('teachers')} collapsed={collapsed} />
-              <NavBtn
-                icon={ShieldCheck}
-                label="Teacher Access"
-                badge="Roles"
-                active={currentPath === '/teacher-access' || isTeacherPermissionsModalOpen}
-                onClick={() => {
-                  setIsTeacherPermissionsModalOpen(true);
-                  if (onClose) onClose();
-                }}
-                collapsed={collapsed}
-              />
-              <NavBtn icon={FileSpreadsheet} label="Reports & Docs" active={currentPath === '/reports'} onClick={() => nav('reports')} collapsed={collapsed} />
-              <NavBtn icon={QrCode} label="QR Scanner" active={currentPath === '/qrscanner'} onClick={() => nav('qrscanner')} collapsed={collapsed} />
-              <NavBtn icon={UserCheck} label="User Management" active={currentPath === '/users'} onClick={() => nav('users')} collapsed={collapsed} />
-              <NavBtn icon={Settings} label="System Settings" active={currentPath === '/settings'} onClick={() => nav('settings')} collapsed={collapsed} />
-              <NavBtn icon={HelpCircle} label="Help & Feedback" active={isHelpFeedbackOpen} onClick={() => { setIsHelpFeedbackOpen(true); if (onClose) onClose(); }} collapsed={collapsed} />
-              <NavBtn icon={Sparkles} label="Subscription & Plans" badge="All Access" active={currentPath === '/subscription'} onClick={() => nav('subscription')} collapsed={collapsed} />
-            </>
-          )}
-
-          {/* Action Button at bottom */}
-          {!collapsed && isPrincipal && (
-            <div className="pt-4 px-1">
-              <button
-                onClick={() => setIsAddStudentOpen(true)}
-                className="w-full py-2.5 px-3 rounded-xl bg-[#1f108e] hover:bg-[#0f0069] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add New Student</span>
-              </button>
-            </div>
-          )}
+                {/* Action Button at bottom */}
+                {!collapsed && (isPrincipal || teacherPermissions?.canAddStudents) && (
+                  <div className="pt-4 px-1">
+                    <button
+                      onClick={() => setIsAddStudentOpen(true)}
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#1f108e] hover:bg-[#0f0069] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>{lang === 'hi' ? 'नया छात्र जोड़ें' : 'Add New Student'}</span>
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* ── User & Theme Footer ── */}

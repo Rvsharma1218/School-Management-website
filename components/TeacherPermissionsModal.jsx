@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSchoolStore, defaultTeacherPermissions } from '../lib/store';
+import { t } from '../lib/translations';
 import {
   Shield, X, Check, Users, UserPlus, Building2,
   CalendarCheck, Award, FileText, Contact, Calendar,
@@ -9,9 +10,11 @@ import {
 } from 'lucide-react';
 
 export default function TeacherPermissionsModal({ isOpen, onClose }) {
-  const { teacherPermissions, updateTeacherPermissions, showToast } = useSchoolStore();
+  const { teacherPermissions, updateTeacherPermissions, settings, showToast } = useSchoolStore();
   const [perms, setPerms] = useState(defaultTeacherPermissions);
   const [isSaving, setIsSaving] = useState(false);
+
+  const lang = settings?.appLanguage || 'en';
 
   useEffect(() => {
     if (teacherPermissions) {
@@ -87,7 +90,7 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
     onClose();
   };
 
-  const renderToggleRow = (key, label, hindiLabel, icon, iconBg, iconColor) => {
+  const renderToggleRow = (key, label, desc, icon, iconBg, iconColor) => {
     const IconComponent = icon;
     const isChecked = !!perms[key];
 
@@ -106,11 +109,11 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
               <span>{label}</span>
               {isChecked && (
                 <span className="text-[9px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded">
-                  Enabled
+                  {t('enabled', lang)}
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-text-secondary truncate">{hindiLabel}</div>
+            <div className="text-[11px] text-text-secondary truncate">{desc}</div>
           </div>
         </div>
 
@@ -140,8 +143,8 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-extrabold text-base leading-tight">Teacher Role Access & Permissions</h3>
-              <p className="text-xs text-white/75 mt-0.5">शिक्षक लॉगिन अनुमति (ON / OFF नियंत्रण)</p>
+              <h3 className="font-extrabold text-base leading-tight">{t('teacherPermTitle', lang)}</h3>
+              <p className="text-xs text-white/75 mt-0.5">{t('teacherPermSubtitle', lang)}</p>
             </div>
           </div>
           <button
@@ -156,7 +159,8 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
         <div className="bg-[#EEF2FF] border-b border-[#C7D2FE] p-4 flex-shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="text-xs text-[#1E3A8A]">
-              <span className="font-bold">नियम:</span> शिक्षक जब अपने ID से लॉगिन करेंगे तो कौन-कौन से मॉड्यूल चालू रहेंगे।
+              <span className="font-bold">{lang === 'hi' ? 'नियम:' : 'Rule:'} </span>
+              {t('teacherPermRule', lang)}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[11px] font-bold text-slate-500 mr-1">Presets:</span>
@@ -165,21 +169,21 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
                 onClick={() => applyPreset('standard')}
                 className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-[#1E3A8A] border border-[#C7D2FE] hover:bg-[#1E3A8A] hover:text-white transition-all cursor-pointer shadow-2xs"
               >
-                Standard
+                {t('presetStandard', lang)}
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('all')}
                 className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition-all cursor-pointer shadow-2xs"
               >
-                Grant All
+                {t('presetAll', lang)}
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('minimal')}
                 className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white text-amber-700 border border-amber-200 hover:bg-amber-600 hover:text-white transition-all cursor-pointer shadow-2xs"
               >
-                Minimal
+                {t('presetMinimal', lang)}
               </button>
             </div>
           </div>
@@ -190,58 +194,58 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
           {/* Section 1: Students & Classes */}
           <div>
             <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2.5 flex items-center gap-1.5">
-              <span>विद्यार्थी एवं कक्षाएं (Students & Classes)</span>
+              <span>{t('secStudentsClasses', lang)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {renderToggleRow('canViewStudents', 'Student Directory', 'छात्र सूची व प्रोफ़ाइल देखना', Users, 'bg-blue-50', 'text-blue-600')}
-              {renderToggleRow('canAddStudents', 'Add / Edit Students', 'नए छात्र जोड़ना या एडिट करना', UserPlus, 'bg-sky-50', 'text-sky-600')}
-              {renderToggleRow('canManageClasses', 'Classes & Sections', 'कक्षाएं व सेक्शन प्रबंधन', Building2, 'bg-teal-50', 'text-teal-600')}
+              {renderToggleRow('canViewStudents', t('permViewStudents', lang), t('permViewStudentsDesc', lang), Users, 'bg-blue-50', 'text-blue-600')}
+              {renderToggleRow('canAddStudents', t('permAddStudents', lang), t('permAddStudentsDesc', lang), UserPlus, 'bg-sky-50', 'text-sky-600')}
+              {renderToggleRow('canManageClasses', t('permManageClasses', lang), t('permManageClassesDesc', lang), Building2, 'bg-teal-50', 'text-teal-600')}
             </div>
           </div>
 
           {/* Section 2: Attendance */}
           <div>
             <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2.5 flex items-center gap-1.5">
-              <span>उपस्थिति मॉड्यूल (Attendance)</span>
+              <span>{t('secAttendance', lang)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {renderToggleRow('canMarkAttendance', 'Student Attendance', 'दैनिक छात्र उपस्थिति दर्ज करना', CalendarCheck, 'bg-purple-50', 'text-purple-600')}
-              {renderToggleRow('canMarkTeacherAtt', 'Teacher Attendance', 'शिक्षक उपस्थिति मॉड्यूल का एक्सेस', CalendarCheck, 'bg-emerald-50', 'text-emerald-600')}
+              {renderToggleRow('canMarkAttendance', t('permMarkAttendance', lang), t('permMarkAttendanceDesc', lang), CalendarCheck, 'bg-purple-50', 'text-purple-600')}
+              {renderToggleRow('canMarkTeacherAtt', t('permMarkTeacherAtt', lang), t('permMarkTeacherAttDesc', lang), CalendarCheck, 'bg-emerald-50', 'text-emerald-600')}
             </div>
           </div>
 
           {/* Section 3: Exams & Credentials */}
           <div>
             <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2.5 flex items-center gap-1.5">
-              <span>परीक्षा, परिणाम व कार्ड (Exams & Credentials)</span>
+              <span>{t('secExams', lang)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {renderToggleRow('canEnterResults', 'Exam Results & Marks', 'विद्यार्थी परीक्षा परिणाम व अंक', Award, 'bg-orange-50', 'text-orange-600')}
-              {renderToggleRow('canViewAdmitCards', 'Admit Cards Studio', 'परीक्षा प्रवेश पत्र देखना व प्रिंट', FileText, 'bg-indigo-50', 'text-indigo-600')}
-              {renderToggleRow('canViewIdCards', 'Student ID Cards', 'विद्यार्थी पहचान पत्र जनरेट करना', Contact, 'bg-cyan-50', 'text-cyan-600')}
+              {renderToggleRow('canEnterResults', t('permEnterResults', lang), t('permEnterResultsDesc', lang), Award, 'bg-orange-50', 'text-orange-600')}
+              {renderToggleRow('canViewAdmitCards', t('permViewAdmitCards', lang), t('permViewAdmitCardsDesc', lang), FileText, 'bg-indigo-50', 'text-indigo-600')}
+              {renderToggleRow('canViewIdCards', t('permViewIdCards', lang), t('permViewIdCardsDesc', lang), Contact, 'bg-cyan-50', 'text-cyan-600')}
             </div>
           </div>
 
           {/* Section 4: Routine & Notice */}
           <div>
             <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2.5 flex items-center gap-1.5">
-              <span>अकादमिक एवं सूचना (Academic & Notice)</span>
+              <span>{t('secAcademicNotice', lang)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {renderToggleRow('canManageTimetable', 'Class Timetable', 'स्कूल समय सारणी (रूटीन)', Calendar, 'bg-amber-50', 'text-amber-600')}
-              {renderToggleRow('canPostNotices', 'Notice Board', 'सूचनाएं देखना व नए नोटिस डालना', Megaphone, 'bg-yellow-50', 'text-yellow-600')}
+              {renderToggleRow('canManageTimetable', t('permManageTimetable', lang), t('permManageTimetableDesc', lang), Calendar, 'bg-amber-50', 'text-amber-600')}
+              {renderToggleRow('canPostNotices', t('permPostNotices', lang), t('permPostNoticesDesc', lang), Megaphone, 'bg-yellow-50', 'text-yellow-600')}
             </div>
           </div>
 
           {/* Section 5: Finance & Admin */}
           <div>
             <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2.5 flex items-center gap-1.5">
-              <span>वित्त एवं प्रशासन (Finance & Administration)</span>
+              <span>{t('secFinanceAdmin', lang)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {renderToggleRow('canCollectFees', 'Fee Collection & Dues', 'छात्रों से फीस जमा करना व रसीदें', CreditCard, 'bg-fuchsia-50', 'text-fuchsia-600')}
-              {renderToggleRow('canExportReports', 'Reports & Data Export', 'Excel व PDF रिपोर्ट्स डाउनलोड', FileSpreadsheet, 'bg-sky-50', 'text-sky-600')}
-              {renderToggleRow('canViewTransport', 'Transport Module', 'बस व परिवहन रूट्स की जानकारी', Bus, 'bg-teal-50', 'text-teal-600')}
+              {renderToggleRow('canCollectFees', t('permCollectFees', lang), t('permCollectFeesDesc', lang), CreditCard, 'bg-fuchsia-50', 'text-fuchsia-600')}
+              {renderToggleRow('canExportReports', t('permExportReports', lang), t('permExportReportsDesc', lang), FileSpreadsheet, 'bg-sky-50', 'text-sky-600')}
+              {renderToggleRow('canViewTransport', t('permViewTransport', lang), t('permViewTransportDesc', lang), Bus, 'bg-teal-50', 'text-teal-600')}
             </div>
           </div>
         </div>
@@ -253,7 +257,7 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
           >
-            Cancel
+            {t('cancel', lang)}
           </button>
           <button
             type="button"
@@ -266,7 +270,7 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
             ) : (
               <>
                 <Check className="w-4 h-4" />
-                <span>Save Permissions (अनुमति सुरक्षित करें)</span>
+                <span>{t('savePermissions', lang)}</span>
               </>
             )}
           </button>

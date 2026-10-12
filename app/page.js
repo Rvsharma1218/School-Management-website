@@ -52,6 +52,7 @@ function AppContent() {
     currentPath,
     currentUser,
     settings,
+    teacherPermissions,
     navigate,
     isAddStudentOpen, setIsAddStudentOpen,
     editingStudent, setEditingStudent,
@@ -238,18 +239,56 @@ function AppContent() {
       return;
     }
 
-    // 3. Block restricted teacher modules
-    const adminPaths = ['/users', '/teachers', '/settings', '/fees', '/reports'];
-    if (currentUser.role === 'teacher' && adminPaths.includes(currentPath)) {
-      navigate('/access-denied');
-      return;
+    // 3. Dynamic teacher permission access routing
+    if (currentUser.role === 'teacher') {
+      const strictlyAdmin = ['/users', '/teachers', '/settings', '/subscription'];
+      if (strictlyAdmin.includes(currentPath)) {
+        navigate('/access-denied');
+        return;
+      }
+      if (currentPath === '/fees' && !teacherPermissions?.canCollectFees) {
+        navigate('/access-denied');
+        return;
+      }
+      if (currentPath === '/reports' && !teacherPermissions?.canExportReports) {
+        navigate('/access-denied');
+        return;
+      }
+      if (currentPath === '/students' && teacherPermissions?.canViewStudents === false) {
+        navigate('/access-denied');
+        return;
+      }
+      if (currentPath === '/attendance' && teacherPermissions?.canMarkAttendance === false) {
+        navigate('/access-denied');
+        return;
+      }
+      if (currentPath === '/results' && teacherPermissions?.canEnterResults === false) {
+        navigate('/access-denied');
+        return;
+      }
+      if (currentPath === '/classes' && teacherPermissions?.canManageClasses === false) {
+        navigate('/access-denied');
+        return;
+      }
+      if (currentPath === '/timetable' && teacherPermissions?.canManageTimetable === false) {
+        navigate('/access-denied');
+        return;
+      }
+      if (currentPath === '/idcards' && teacherPermissions?.canViewIdCards === false) {
+        navigate('/access-denied');
+        return;
+      }
+      if (currentPath === '/admitcards' && teacherPermissions?.canViewAdmitCards === false) {
+        navigate('/access-denied');
+        return;
+      }
     }
 
     // 4. Default route redirect
     if (currentPath === '/' || currentPath === '/setup') {
       navigate('/dashboard');
     }
-  }, [currentUser, currentPath]);
+  }, [currentUser, currentPath, teacherPermissions]);
 
   // ── Render 1: Public full-screen auth routes
   const isPublicRoute = ['/signin', '/signup', '/forgot-password'].includes(currentPath);
@@ -300,7 +339,7 @@ function AppContent() {
               />
             )}
             {currentPath === '/students' && <StudentsView />}
-            {currentPath === '/fees' && (currentUser.role === 'principal' ? <FeesView /> : <AccessDeniedView />)}
+            {currentPath === '/fees' && ((currentUser.role === 'principal' || teacherPermissions?.canCollectFees) ? <FeesView /> : <AccessDeniedView />)}
             {currentPath === '/attendance' && <AttendanceView />}
             {currentPath === '/results' && <ResultsView />}
             {currentPath === '/idcards' && <IdCardView />}
@@ -308,9 +347,9 @@ function AppContent() {
             {currentPath === '/timetable' && <TimetableView />}
             {currentPath === '/classes' && <ClassesView />}
             {currentPath === '/teachers' && <TeachersView />}
-            {currentPath === '/reports' && <ReportsView />}
-            {currentPath === '/documents' && <ReportsView />}
-            {currentPath === '/import-export' && <ReportsView />}
+            {currentPath === '/reports' && ((currentUser.role === 'principal' || teacherPermissions?.canExportReports) ? <ReportsView /> : <AccessDeniedView />)}
+            {currentPath === '/documents' && ((currentUser.role === 'principal' || teacherPermissions?.canExportReports) ? <ReportsView /> : <AccessDeniedView />)}
+            {currentPath === '/import-export' && ((currentUser.role === 'principal' || teacherPermissions?.canExportReports) ? <ReportsView /> : <AccessDeniedView />)}
             {currentPath === '/qrscanner' && <QrScannerView />}
             {currentPath === '/settings' && <SettingsView />}
             {currentPath === '/subscription' && <SubscriptionView />}
@@ -341,14 +380,14 @@ function AppContent() {
           onClose={() => setViewingStudentProfile(null)}
         />
       )}
-      {collectFeeStudent && currentUser?.role === 'principal' && (
+      {collectFeeStudent && (currentUser?.role === 'principal' || teacherPermissions?.canCollectFees) && (
         <CollectFeeModal
           isOpen={!!collectFeeStudent}
           student={collectFeeStudent}
           onClose={() => setCollectFeeStudent(null)}
         />
       )}
-      {feeDetailStudent && currentUser?.role === 'principal' && (
+      {feeDetailStudent && (currentUser?.role === 'principal' || teacherPermissions?.canCollectFees) && (
         <StudentFeeDetailModal
           isOpen={!!feeDetailStudent}
           student={feeDetailStudent}

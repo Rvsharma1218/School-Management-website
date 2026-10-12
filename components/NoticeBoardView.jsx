@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useSchoolStore } from '../lib/store';
+import { t } from '../lib/translations';
 import {
   Megaphone, FileText, Plus, Search, Pin, Calendar,
   Clock, Eye, Image as ImageIcon, CheckCircle2,
@@ -21,7 +22,9 @@ const CATEGORY_STYLES = {
 };
 
 export default function NoticeBoardView({ onOpenPublish, onOpenView, onOpenEdit }) {
-  const { notices, currentUser, markAllNoticesAsRead, deleteNotice, publishNotice, confirmAction } = useSchoolStore();
+  const { notices, currentUser, markAllNoticesAsRead, deleteNotice, publishNotice, confirmAction, teacherPermissions, settings } = useSchoolStore();
+
+  const lang = settings?.appLanguage || 'en';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -117,13 +120,13 @@ export default function NoticeBoardView({ onOpenPublish, onOpenView, onOpenEdit 
             </button>
           )}
 
-          {isPrincipal && (
+          {(isPrincipal || teacherPermissions?.canPostNotices !== false) && (
             <button
               onClick={onOpenPublish}
               className="px-5 py-2.5 rounded-xl bg-white hover:bg-[#eff4ff] text-[#1f108e] font-black text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer hover:scale-102"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Publish Notice</span>
+              <span>{t('publishNotice', lang)}</span>
             </button>
           )}
         </div>

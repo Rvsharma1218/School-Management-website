@@ -4,6 +4,7 @@ import TeacherPermissionsModal from './TeacherPermissionsModal';
 
 import React, { useState } from 'react';
 import { useSchoolStore, getNextTeacherId, getActiveSchoolId } from '../lib/store';
+import { t } from '../lib/translations';
 import { exportFacultyToExcel, exportFacultyPDF } from '../lib/exportUtils';
 import {
   GraduationCap,
@@ -158,7 +159,7 @@ export default function TeachersView() {
             title="Configure teacher login access (ON / OFF switches)"
           >
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Role Access (अनुमति)</span>
+            <span>{t('teacherAccess', settings?.appLanguage || 'en')}</span>
           </button>
 
           <button
