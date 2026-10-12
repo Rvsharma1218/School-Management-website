@@ -405,33 +405,42 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
               <div className={`inline-flex items-center gap-1.5 border px-3 py-0.5 rounded font-bold text-[10.5px] ${
                 balanceDue <= 0
                   ? 'border-emerald-700 bg-emerald-50 text-emerald-900'
-                  : 'border-blue-700 bg-blue-50 text-blue-900'
+                  : 'border-rose-700 bg-rose-50 text-rose-900'
               }`}>
                 <span className="font-mono">☑</span>
                 <span>
                   {balanceDue <= 0
                     ? `FULL PAID: ₹${totalPaidAfter.toLocaleString('en-IN')} Cleared (Paid ₹${amountPaid.toLocaleString('en-IN')} on ${paymentDateLong} via ${payment.paymentMode || 'Cash'})`
-                    : `Paid ₹${amountPaid.toLocaleString('en-IN')} on ${paymentDateLong} via ${payment.paymentMode || 'Cash'}`}
+                    : `PARTIAL PAYMENT: ₹${amountPaid.toLocaleString('en-IN')} Received | Balance Due: ₹${balanceDue.toLocaleString('en-IN')} (${paymentDateLong} via ${payment.paymentMode || 'Cash'})`}
                 </span>
               </div>
             </div>
 
-            {/* Signature Area */}
+            {/* Signature & Stamp Area */}
             <div className="flex justify-between items-end pt-3 pb-1 text-[10.5px]">
               <div className="font-semibold text-slate-800">
                 Class Teacher Sign.
               </div>
               <div className="text-right">
-                {(settings.principalSignature || settings.signatureUrl || settings.signaturePath || settings.signature) && (
-                  <div className="flex justify-end mb-1">
+                <div className="flex items-end justify-end gap-3 mb-1">
+                  {(settings.schoolStamp || settings.stampUrl || settings.sealUrl) && (
+                    <img
+                      src={settings.schoolStamp || settings.stampUrl || settings.sealUrl}
+                      alt="Official Stamp"
+                      className="h-10 w-10 object-contain"
+                      style={{ mixBlendMode: 'multiply' }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  )}
+                  {(settings.principalSignature || settings.signatureUrl || settings.signaturePath || settings.signature) && (
                     <img
                       src={settings.principalSignature || settings.signatureUrl || settings.signaturePath || settings.signature}
                       alt="Authorized Signature"
                       className="h-9 max-h-9 w-auto object-contain"
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
-                  </div>
-                )}
+                  )}
+                </div>
                 <div className="font-bold uppercase text-slate-900 tracking-tight">
                   FOR {settings.instituteName || 'MY SCHOOL & COMPUTER INSTITUTE'}
                 </div>

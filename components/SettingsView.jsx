@@ -48,8 +48,8 @@ export default function SettingsView() {
     signatureUrl: settings.signatureUrl || settings.principalSignature || '',
     rawSignature: settings.rawSignature || '',
     signatureColorMode: settings.signatureColorMode || 'white',
-    schoolStamp: settings.schoolStamp || settings.stampUrl || '',
-    stampUrl: settings.stampUrl || settings.schoolStamp || '',
+    schoolStamp: settings.schoolStamp || settings.stampUrl || settings.sealUrl || '',
+    stampUrl: settings.stampUrl || settings.schoolStamp || settings.sealUrl || '',
     currentSession: settings.currentSession || settings.academicYear || '2026-27',
     academicYear: settings.academicYear || settings.currentSession || '2026-27',
     appLanguage: settings.appLanguage || 'en',
@@ -87,8 +87,8 @@ export default function SettingsView() {
         signatureUrl: settings.signatureUrl || settings.principalSignature || prev.signatureUrl || '',
         rawSignature: settings.rawSignature || prev.rawSignature || '',
         signatureColorMode: settings.signatureColorMode || prev.signatureColorMode || 'white',
-        schoolStamp: settings.schoolStamp || settings.stampUrl || prev.schoolStamp || '',
-        stampUrl: settings.stampUrl || settings.schoolStamp || prev.stampUrl || '',
+        schoolStamp: settings.schoolStamp || settings.stampUrl || settings.sealUrl || prev.schoolStamp || '',
+        stampUrl: settings.stampUrl || settings.schoolStamp || settings.sealUrl || prev.stampUrl || '',
         currentSession: settings.currentSession || settings.academicYear || prev.currentSession || '2026-27',
         academicYear: settings.academicYear || settings.currentSession || prev.academicYear || '2026-27',
         appLanguage: settings.appLanguage || prev.appLanguage || 'en',
@@ -776,6 +776,7 @@ export default function SettingsView() {
                             src={formData.schoolStamp}
                             alt="School Seal"
                             className="max-h-full max-w-full object-contain filter contrast-125"
+                            style={{ mixBlendMode: 'multiply' }}
                           />
                         </div>
                       ) : (
@@ -857,7 +858,7 @@ export default function SettingsView() {
                   <div className="flex flex-col items-center gap-2 text-center">
                     <div className="w-20 h-20 rounded-2xl border border-dashed border-border/80 flex items-center justify-center p-1 bg-surface2/30">
                       {formData.schoolStamp ? (
-                        <img src={formData.schoolStamp} alt="Seal Preview" className="max-h-full max-w-full object-contain" />
+                        <img src={formData.schoolStamp} alt="Seal Preview" className="max-h-full max-w-full object-contain" style={{ mixBlendMode: 'multiply' }} />
                       ) : (
                         <span className="text-[10px] text-text-secondary italic">Stamp Area</span>
                       )}

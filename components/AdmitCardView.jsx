@@ -911,11 +911,12 @@ export default function AdmitCardView() {
                         <span className="text-[#1E3A8A] font-black uppercase tracking-wider text-[8.5px]">
                           Principal / Controller of Exam
                         </span>
-                        {(settings.schoolStamp || settings.stampUrl) && (
+                        {(settings.schoolStamp || settings.stampUrl || settings.sealUrl) && (
                           <img
-                            src={settings.schoolStamp || settings.stampUrl}
+                            src={settings.schoolStamp || settings.stampUrl || settings.sealUrl}
                             alt="Stamp"
                             className="h-9 w-9 object-contain mt-1"
+                            style={{ mixBlendMode: 'multiply' }}
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         )}

@@ -395,11 +395,12 @@ export default function IdCardView() {
                         PROPERTY OF {settings.instituteName || "MISSION NAVODAYA PUBLIC SCHOOL"}
                       </span>
                       <div className="relative flex items-center justify-end">
-                        {settings.schoolStamp || settings.stampUrl ? (
+                        {settings.schoolStamp || settings.stampUrl || settings.sealUrl ? (
                           <img
-                            src={settings.schoolStamp || settings.stampUrl}
+                            src={settings.schoolStamp || settings.stampUrl || settings.sealUrl}
                             alt="Stamp"
                             className="absolute -top-7 right-16 h-9 w-9 object-contain pointer-events-none opacity-85"
+                            style={{ mixBlendMode: 'multiply' }}
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         ) : null}
