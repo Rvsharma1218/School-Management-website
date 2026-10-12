@@ -61,6 +61,9 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
   const [studentSearch, setStudentSearch] = useState('');
 
   useEffect(() => {
+    if (isOpen) {
+      setCurrentDate(new Date());
+    }
     if (student?.id) {
       setSelectedStudentId(student.id);
       if (!isFeeDetailSelectorOpen) {
@@ -244,29 +247,6 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
     setCurrentDate(d);
   };
 
-  // Save Recurring Fee Structure
-  const handleSaveStructure = (e) => {
-    e.preventDefault();
-    const tFee = Number(feeStructure.tuitionFee) || 0;
-    const trFee = Number(feeStructure.transportFee) || 0;
-    const gFee = Number(feeStructure.gameFee) || 0;
-    const totalMonthly = tFee + trFee + gFee;
-
-    const updatedStudent = {
-      ...currentStudent,
-      monthlyFee: totalMonthly,
-      feeStructure: {
-        tuitionFee: tFee,
-        transportFee: trFee,
-        gameFee: gFee,
-        lateFinePerDay: Number(feeStructure.lateFinePerDay) || 0,
-        dueDay: Number(feeStructure.dueDay) || 10
-      }
-    };
-    updateStudent(currentStudent.id, updatedStudent);
-    showToast("Fee Structure saved! Monthly fees & previous dues auto-apply to all months.", "success");
-  };
-
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Reset Fee Particulars for current month to defaults
@@ -316,9 +296,17 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
       }
     }
 
+    const tFee = Number(particulars.tuitionFee) || Number(currentStudent.monthlyFee) || 0;
     const currentMonthly = currentStudent.monthlyParticulars || {};
     const updatedStudent = {
       ...currentStudent,
+      monthlyFee: tFee,
+      feeStructure: {
+        ...(currentStudent.feeStructure || {}),
+        tuitionFee: tFee,
+        transportFee: Number(particulars.transportFee) || 0,
+        gameFee: Number(particulars.gameFee) || 0,
+      },
       monthlyParticulars: {
         ...currentMonthly,
         [monthKey]: {
@@ -616,92 +604,6 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
             </div>
           </div>
 
-          {/* ── 1. Set Recurring Default Fee Structure ── */}
-          <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 space-y-3">
-            <div className="flex items-center justify-between border-b border-[#334155] pb-3">
-              <div>
-                <h4 className="font-bold text-sm text-white flex items-center gap-2">
-                  <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
-                  <span>Fee Structure</span>
-                </h4>
-                <p className="text-[11px] text-slate-400">
-                  Set once — Tuition/Transport/Game auto-populate every next month with rolling previous dues.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleSaveStructure}
-                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>Save Fee Structure</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
-              <div>
-                <label className="text-[11px] text-slate-300 font-bold block mb-1">Tuition Fee / Month *</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={feeStructure.tuitionFee}
-                  onChange={e => setFeeStructure({ ...feeStructure, tuitionFee: e.target.value })}
-                  placeholder="0"
-                  className="w-full px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-300 font-bold block mb-1">Transport Fee / Month</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={feeStructure.transportFee}
-                  onChange={e => setFeeStructure({ ...feeStructure, transportFee: e.target.value })}
-                  placeholder="0"
-                  className="w-full px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-300 font-bold block mb-1">Game Fee / Month</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={feeStructure.gameFee}
-                  onChange={e => setFeeStructure({ ...feeStructure, gameFee: e.target.value })}
-                  placeholder="0"
-                  className="w-full px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-300 font-bold block mb-1">Late Fine / Day (₹)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={feeStructure.lateFinePerDay}
-                  onChange={e => setFeeStructure({ ...feeStructure, lateFinePerDay: e.target.value })}
-                  placeholder="0"
-                  className="w-full px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] text-slate-300 font-bold block mb-1">Due Day of Month</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={feeStructure.dueDay}
-                  onChange={e => setFeeStructure({ ...feeStructure, dueDay: e.target.value })}
-                  placeholder="10"
-                  className="w-full px-3 py-1.5 rounded-xl bg-[#0f172a] border border-[#334155] text-white font-mono focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-            </div>
-          </div>
-
           {/* ── 2. Monthly Fee Particulars (13 Fee Heads) ── */}
           <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-[#334155] pb-3">
@@ -860,6 +762,19 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
             </div>
 
             <form onSubmit={handleRecordPayment} className="space-y-4 text-xs">
+              {/* Active Fee Month & Payment Date Context Banner */}
+              <div className="flex items-center justify-between p-2.5 bg-[#0f172a] border border-emerald-500/20 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[11px] text-slate-300">
+                    Applying fee to: <strong className="text-emerald-400 font-bold">{monthYearLabel}</strong>
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  Payment Date: <strong className="text-white font-mono">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-slate-300 font-bold mb-1">

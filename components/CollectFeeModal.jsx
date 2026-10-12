@@ -92,9 +92,10 @@ export default function CollectFeeModal({ student, isOpen, onClose }) {
         payDate = new Date(paymentDate);
       }
     }
-    const finalRecNo = receiptNumber || (getNextReceiptNumber ? getNextReceiptNumber(payments, payDate.getFullYear()) : `REC-${payDate.getFullYear()}-001`);
-    const finalFeeMonth = feeMonth || activeMonthName;
-    const finalMonthKey = currentMonth?.monthKey || `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}`;
+    const payDateKey = `${payDate.getFullYear()}-${String(payDate.getMonth() + 1).padStart(2, '0')}`;
+    const mNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const finalFeeMonth = (feeMonth && feeMonth !== 'Monthly Tuition Fee') ? feeMonth : (activeMonthName || `${mNames[payDate.getMonth()]} ${payDate.getFullYear()}`);
+    const finalMonthKey = payDateKey;
 
     const prevDue = currentMonth?.previousDue || 0;
     const resolvedTuition = Number(currentMonth?.tuitionFee) > 0
