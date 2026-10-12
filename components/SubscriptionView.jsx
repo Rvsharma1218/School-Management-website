@@ -158,8 +158,11 @@ export default function SubscriptionView() {
   const upiId = supportConfig?.supportUpi || supportConfig?.upiId || `${cleanPhone || '8568643490'}@upi`;
 
   const handleWhatsAppContact = (planName) => {
+    const promoNote = systemPlansConfig?.isOfferActive
+      ? `\nCoupon Applied: ${systemPlansConfig.promoCode || 'OFFER'} (${systemPlansConfig.offerDiscount || 25}% Discount)`
+      : '';
     const text = encodeURIComponent(
-      `Hello Admin, I want to activate/upgrade the "${planName || 'Standard School'}" plan for ${schoolName}. School ID: ${settings.schoolId || 'N/A'}. Please guide me with payment details.`
+      `Hello Admin, I want to activate/upgrade the "${planName || 'Standard School'}" plan for ${schoolName}.${promoNote}\nSchool ID: ${settings.schoolId || 'N/A'}. Please guide me with payment details.`
     );
     window.open(`https://wa.me/${fullWhatsapp || '918568643490'}?text=${text}`, '_blank');
   };
@@ -243,8 +246,40 @@ export default function SubscriptionView() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-200">
+      {/* ─── Promotional Offer Banner (When Active in Super Admin) ─── */}
+      {systemPlansConfig?.isOfferActive && (
+        <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 border border-amber-400/40 rounded-2xl p-4 sm:p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg animate-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-400 text-purple-950 font-black shadow-md">
+              <Zap className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-400 text-purple-950 uppercase tracking-wider">
+                  Special Offer Active
+                </span>
+                <span className="text-xs text-amber-300 font-bold">
+                  {systemPlansConfig.offerDiscount || 25}% Instant Discount
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-white mt-0.5">
+                {systemPlansConfig.offerBanner || 'Special Festival Offer on All Plans!'}
+              </h4>
+            </div>
+          </div>
+          {systemPlansConfig.promoCode && (
+            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/20">
+              <span className="text-xs text-slate-300">Use Coupon:</span>
+              <code className="text-xs font-mono font-black text-amber-300 bg-black/40 px-2 py-0.5 rounded">
+                {systemPlansConfig.promoCode}
+              </code>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ─── Master Switch Status Notice ─── */}
-      {!isSubscriptionEnabled ? (
+      {!isSubscriptionEnabled && (
         <div className="bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-emerald-500 text-white shadow-md">
@@ -263,36 +298,7 @@ export default function SubscriptionView() {
             100% FREE UNRESTRICTED
           </span>
         </div>
-      ) : systemPlansConfig?.isOfferActive ? (
-        <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 border border-amber-400/30 rounded-2xl p-4 sm:p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-400 text-purple-950 font-black shadow-md">
-              <Zap className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-[10px] font-black bg-amber-400 text-purple-950 uppercase tracking-wider">
-                  Special Offer Active
-                </span>
-                <span className="text-xs text-amber-300 font-bold">
-                  {systemPlansConfig.offerDiscount || 25}% Instant Discount
-                </span>
-              </div>
-              <h4 className="text-sm font-bold text-white mt-0.5">
-                {systemPlansConfig.offerBanner || 'Special Festival Offer on All Annual Plans!'}
-              </h4>
-            </div>
-          </div>
-          {systemPlansConfig.promoCode && (
-            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/20">
-              <span className="text-xs text-slate-300">Use Coupon:</span>
-              <code className="text-xs font-mono font-black text-amber-300 bg-black/40 px-2 py-0.5 rounded">
-                {systemPlansConfig.promoCode}
-              </code>
-            </div>
-          )}
-        </div>
-      ) : null}
+      )}
 
       {/* ─── Top Header Banner ─── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#1f108e] via-[#281ab5] to-[#160b6a] p-6 sm:p-8 text-white shadow-xl">
@@ -472,23 +478,46 @@ export default function SubscriptionView() {
                 </div>
 
                 {/* Price Display */}
-                <div className="pt-1 flex items-baseline gap-1.5">
-                  <span className="text-3xl font-black text-[#0b1c30] tracking-tight">
-                    {displayPrice}
-                  </span>
-                  <span className="text-xs font-bold text-slate-500">
-                    {p.period}
-                  </span>
-                </div>
-
-                {p.savings ? (
-                  <div className="text-[11px] font-bold text-emerald-600">
-                    {p.savings}
+                {systemPlansConfig?.isOfferActive && p.id !== 'free_trial' ? (
+                  <div>
+                    <div className="pt-1 flex items-baseline gap-1.5 flex-wrap">
+                      <span className="text-sm line-through text-slate-400 font-bold">
+                        {displayPrice}
+                      </span>
+                      <span className="text-3xl font-black text-purple-950 tracking-tight">
+                        ₹{Math.max(0, Math.round(Number(displayPrice.replace(/[^0-9]/g, '')) * (1 - (Number(systemPlansConfig.offerDiscount) || 25) / 100)))}
+                      </span>
+                      <span className="text-xs font-bold text-slate-500">
+                        {p.period}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-400 text-purple-950">
+                        {systemPlansConfig.offerDiscount || 25}% OFF
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-bold text-purple-700 mt-0.5">
+                      Coupon {systemPlansConfig.promoCode || 'APPLIED'} applied
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-[11px] font-bold text-slate-400">
-                    100% Unlocked Features
-                  </div>
+                  <>
+                    <div className="pt-1 flex items-baseline gap-1.5">
+                      <span className="text-3xl font-black text-[#0b1c30] tracking-tight">
+                        {displayPrice}
+                      </span>
+                      <span className="text-xs font-bold text-slate-500">
+                        {p.period}
+                      </span>
+                    </div>
+                    {p.savings ? (
+                      <div className="text-[11px] font-bold text-emerald-600">
+                        {p.savings}
+                      </div>
+                    ) : (
+                      <div className="text-[11px] font-bold text-slate-400">
+                        100% Unlocked Features
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Action Button */}
