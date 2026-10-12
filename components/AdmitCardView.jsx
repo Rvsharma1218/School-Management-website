@@ -898,29 +898,27 @@ export default function AdmitCardView() {
                         <span className="text-gray-700">Candidate Signature</span>
                       </div>
                       <div className="text-center flex flex-col items-center relative">
-                        <div className="flex items-center gap-1 mb-1">
-                          {(settings.schoolStamp || settings.stampUrl) && (
-                            <img
-                              src={settings.schoolStamp || settings.stampUrl}
-                              alt="Stamp"
-                              className="h-7 w-7 object-contain opacity-85"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          )}
-                          {sigSrc ? (
-                            <img
-                              src={sigSrc}
-                              alt="Signature"
-                              className="h-7 object-contain"
-                            />
-                          ) : (
-                            <div className="h-7" />
-                          )}
-                        </div>
+                        {sigSrc ? (
+                          <img
+                            src={sigSrc}
+                            alt="Signature"
+                            className="h-8 object-contain mb-1"
+                          />
+                        ) : (
+                          <div className="h-8" />
+                        )}
                         <div className="w-36 border-b-2 border-[#1E3A8A] mb-1" />
                         <span className="text-[#1E3A8A] font-black uppercase tracking-wider text-[8.5px]">
                           Principal / Controller of Exam
                         </span>
+                        {(settings.schoolStamp || settings.stampUrl) && (
+                          <img
+                            src={settings.schoolStamp || settings.stampUrl}
+                            alt="Stamp"
+                            className="h-9 w-9 object-contain mt-1"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>

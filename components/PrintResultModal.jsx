@@ -245,17 +245,11 @@ export default function PrintResultModal({ result: propResult, student: propStud
                 <div className="text-[10px] font-bold uppercase text-slate-700">Class Teacher's Sign</div>
               </div>
 
-              {/* QR Code & Center Stamp */}
-              <div className="flex items-center gap-3">
+              {/* QR Code Center */}
+              <div className="flex items-center">
                 <div className="p-1 border border-slate-300 rounded-md bg-white">
                   <QRCodeSVG value={`RESULT:${result.examName || 'Exam'}|STUDENT:${student?.studentId || result?.studentId}|PCT:${pct}%|GRADE:${grade}|STATUS:${finalStatus}`} size={50} />
                 </div>
-                {stampSrc && (
-                  <div className="text-center flex flex-col items-center">
-                    <img src={stampSrc} alt="School Seal" className="h-12 w-12 object-contain opacity-90" />
-                    <span className="text-[9px] font-bold text-slate-500 uppercase mt-0.5">Official Seal</span>
-                  </div>
-                )}
               </div>
 
               <div className="text-center space-y-1 flex flex-col items-center">
@@ -265,7 +259,13 @@ export default function PrintResultModal({ result: propResult, student: propStud
                   <div className="h-8" />
                 )}
                 <div className="w-36 border-b border-indigo-950" />
-                <div className="text-[10px] font-bold uppercase text-slate-700">Principal's Sign & Seal</div>
+                <div className="text-[10px] font-bold uppercase text-slate-700">Principal's Sign</div>
+                {stampSrc && (
+                  <div className="mt-1 flex flex-col items-center">
+                    <img src={stampSrc} alt="School Seal" className="h-11 w-11 object-contain" />
+                    <span className="text-[8px] font-bold text-slate-500 uppercase">Official Seal</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

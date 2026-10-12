@@ -126,15 +126,24 @@ export default function StudentFeeDetailModal({ student, isOpen, onClose }) {
       const fs = currentStudent.feeStructure || {};
       const mp = currentStudent.monthlyParticulars?.[monthKey] || {};
 
-      const tuitionDefault = (fs.tuitionFee !== undefined && fs.tuitionFee !== '' && fs.tuitionFee !== null && Number(fs.tuitionFee) > 0)
-        ? String(fs.tuitionFee)
-        : (currentStudent.monthlyFee && Number(currentStudent.monthlyFee) > 0 ? String(currentStudent.monthlyFee) : (currentMonthData.tuitionFee ? String(currentMonthData.tuitionFee) : ''));
-      const transportDefault = (fs.transportFee !== undefined && fs.transportFee !== '' && fs.transportFee !== null)
-        ? String(fs.transportFee)
-        : (currentMonthData.transportFee ? String(currentMonthData.transportFee) : '');
-      const gameDefault = (fs.gameFee !== undefined && fs.gameFee !== '' && fs.gameFee !== null)
-        ? String(fs.gameFee)
-        : (currentMonthData.gameFee ? String(currentMonthData.gameFee) : '');
+      const startMonthKey = fs.startMonth || (currentStudent.admissionDate ? String(currentStudent.admissionDate).substring(0, 7) : '');
+      const isPreStart = Boolean(startMonthKey && monthKey < startMonthKey);
+
+      const tuitionDefault = isPreStart
+        ? ''
+        : ((fs.tuitionFee !== undefined && fs.tuitionFee !== '' && fs.tuitionFee !== null && Number(fs.tuitionFee) > 0)
+          ? String(fs.tuitionFee)
+          : (currentStudent.monthlyFee && Number(currentStudent.monthlyFee) > 0 ? String(currentStudent.monthlyFee) : (currentMonthData.tuitionFee ? String(currentMonthData.tuitionFee) : '')));
+      const transportDefault = isPreStart
+        ? ''
+        : ((fs.transportFee !== undefined && fs.transportFee !== '' && fs.transportFee !== null)
+          ? String(fs.transportFee)
+          : (currentMonthData.transportFee ? String(currentMonthData.transportFee) : ''));
+      const gameDefault = isPreStart
+        ? ''
+        : ((fs.gameFee !== undefined && fs.gameFee !== '' && fs.gameFee !== null)
+          ? String(fs.gameFee)
+          : (currentMonthData.gameFee ? String(currentMonthData.gameFee) : ''));
 
       setFeeStructure({
         tuitionFee: tuitionDefault,
