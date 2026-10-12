@@ -28,6 +28,8 @@ export default function SettingsView() {
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [isLogoCropperOpen, setIsLogoCropperOpen] = useState(false);
   const [logoToCrop, setLogoToCrop] = useState(null);
+  const [isStampCropperOpen, setIsStampCropperOpen] = useState(false);
+  const [stampToCrop, setStampToCrop] = useState(null);
   const logoInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -198,34 +200,44 @@ export default function SettingsView() {
     }
 
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = (e) => {
       const dataUrl = e.target.result;
-      try {
-        const transparentStamp = await removeSignatureBackground(dataUrl, 210, 'transparent');
-        setFormData(prev => ({
-          ...prev,
-          schoolStamp: transparentStamp,
-          stampUrl: transparentStamp
-        }));
-        updateSettings({
-          schoolStamp: transparentStamp,
-          stampUrl: transparentStamp
-        });
-        showToast('School seal/stamp processed with background removed!', 'success');
-      } catch (err) {
-        setFormData(prev => ({
-          ...prev,
-          schoolStamp: dataUrl,
-          stampUrl: dataUrl
-        }));
-        updateSettings({
-          schoolStamp: dataUrl,
-          stampUrl: dataUrl
-        });
-        showToast('School seal/stamp uploaded!', 'success');
-      }
+      setStampToCrop(dataUrl);
+      setIsStampCropperOpen(true);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleStampCropComplete = async (croppedDataUrl) => {
+    try {
+      const cleanStamp = await removeSignatureBackground(croppedDataUrl, 210, 'transparent');
+      const stampToSave = cleanStamp || croppedDataUrl;
+      setFormData(prev => ({
+        ...prev,
+        schoolStamp: stampToSave,
+        stampUrl: stampToSave
+      }));
+      updateSettings({
+        schoolStamp: stampToSave,
+        stampUrl: stampToSave,
+        sealUrl: stampToSave
+      });
+      setIsStampCropperOpen(false);
+      showToast('Official School Seal cropped & saved successfully!', 'success');
+    } catch (err) {
+      setFormData(prev => ({
+        ...prev,
+        schoolStamp: croppedDataUrl,
+        stampUrl: croppedDataUrl
+      }));
+      updateSettings({
+        schoolStamp: croppedDataUrl,
+        stampUrl: croppedDataUrl,
+        sealUrl: croppedDataUrl
+      });
+      setIsStampCropperOpen(false);
+      showToast('Official School Seal saved!', 'success');
+    }
   };
 
   const handleSubmit = (e) => {
@@ -793,24 +805,38 @@ export default function SettingsView() {
                     </label>
 
                     {formData.schoolStamp && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            schoolStamp: '',
-                            stampUrl: ''
-                          }));
-                          updateSettings({
-                            schoolStamp: '',
-                            stampUrl: ''
-                          });
-                          showToast('School stamp cleared.', 'info');
-                        }}
-                        className="w-full py-1.5 text-xs text-red-500 hover:text-red-600 font-bold transition-colors cursor-pointer text-center"
-                      >
-                        Remove Stamp
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStampToCrop(formData.schoolStamp);
+                            setIsStampCropperOpen(true);
+                          }}
+                          className="flex-1 py-2 px-3 rounded-xl border border-primary/40 text-primary hover:bg-primary/5 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Crop className="w-3.5 h-3.5" />
+                          <span>Recrop Stamp</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              schoolStamp: '',
+                              stampUrl: ''
+                            }));
+                            updateSettings({
+                              schoolStamp: '',
+                              stampUrl: '',
+                              sealUrl: ''
+                            });
+                            showToast('School stamp cleared.', 'info');
+                          }}
+                          className="py-2 px-3 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 font-bold text-xs transition-all cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1401,8 +1427,22 @@ export default function SettingsView() {
         <ImageCropperModal
           isOpen={isLogoCropperOpen}
           imageSrc={logoToCrop}
+          title="Crop & Align Institute Logo"
+          initialAspect="1:1"
           onClose={() => setIsLogoCropperOpen(false)}
           onCropComplete={handleLogoCropComplete}
+        />
+      )}
+
+      {/* Recrop Stamp Modal */}
+      {isStampCropperOpen && stampToCrop && (
+        <ImageCropperModal
+          isOpen={isStampCropperOpen}
+          imageSrc={stampToCrop}
+          title="Crop School Stamp / Mohar (मोहर)"
+          initialAspect="1:1"
+          onClose={() => setIsStampCropperOpen(false)}
+          onCropComplete={handleStampCropComplete}
         />
       )}
     </div>
