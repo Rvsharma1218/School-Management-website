@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useSchoolStore } from '../lib/store';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const APP_VERSION = 'Version 1.0.0';
 
@@ -153,20 +153,35 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
       return;
     }
     setIsSubmittingFeedback(true);
+    const docId = `fb_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const payload = {
+      id: docId,
+      schoolId: settings?.schoolId || currentUser?.schoolId || 'SCHOOL_001',
+      schoolName: settings?.instituteName || settings?.schoolName || 'School Management',
+      senderEmail: currentUser?.email || 'portal-user@school.com',
+      senderName: currentUser?.name || currentUser?.displayName || 'School Staff',
+      senderRole: currentUser?.role || 'staff',
+      category: feedbackCategory,
+      message: feedbackText.trim(),
+      device: 'web',
+      status: 'new',
+      createdAt: serverTimestamp()
+    };
     try {
       if (db) {
-        await addDoc(collection(db, 'feedbacks'), {
-          schoolId: settings?.schoolId || currentUser?.schoolId || 'SCHOOL_001',
-          schoolName: settings?.instituteName || settings?.schoolName || 'School Management',
-          senderEmail: currentUser?.email || 'portal-user@school.com',
-          senderName: currentUser?.name || currentUser?.displayName || 'School Staff',
-          senderRole: currentUser?.role || 'staff',
-          category: feedbackCategory,
-          message: feedbackText.trim(),
-          device: 'web',
-          status: 'new',
-          createdAt: serverTimestamp()
-        });
+        // 1. Primary write to feedbacks collection
+        try {
+          await addDoc(collection(db, 'feedbacks'), payload);
+        } catch (e1) {
+          console.warn('feedbacks collection write note:', e1);
+        }
+
+        // 2. Guaranteed backup write to schoolDirectory
+        try {
+          await setDoc(doc(db, 'schoolDirectory', 'system_feedbacks', 'items', docId), payload);
+        } catch (e2) {
+          console.warn('schoolDirectory backup note:', e2);
+        }
       }
     } catch (err) {
       console.warn('Feedback save note:', err);
@@ -179,21 +194,33 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
   };
 
   const handleSubmitRating = async () => {
+    const docId = `rate_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const payload = {
+      id: docId,
+      schoolId: settings?.schoolId || currentUser?.schoolId || 'SCHOOL_001',
+      schoolName: settings?.instituteName || settings?.schoolName || 'School Management',
+      senderEmail: currentUser?.email || 'portal-user@school.com',
+      senderName: currentUser?.name || currentUser?.displayName || 'School Staff',
+      senderRole: currentUser?.role || 'staff',
+      category: 'App Rating',
+      rating: rating,
+      message: `${rating} / 5 Stars Rating`,
+      device: 'web',
+      status: 'new',
+      createdAt: serverTimestamp()
+    };
     try {
       if (db) {
-        await addDoc(collection(db, 'feedbacks'), {
-          schoolId: settings?.schoolId || currentUser?.schoolId || 'SCHOOL_001',
-          schoolName: settings?.instituteName || settings?.schoolName || 'School Management',
-          senderEmail: currentUser?.email || 'portal-user@school.com',
-          senderName: currentUser?.name || currentUser?.displayName || 'School Staff',
-          senderRole: currentUser?.role || 'staff',
-          category: 'App Rating',
-          rating: rating,
-          message: `${rating} / 5 Stars Rating`,
-          device: 'web',
-          status: 'new',
-          createdAt: serverTimestamp()
-        });
+        try {
+          await addDoc(collection(db, 'feedbacks'), payload);
+        } catch (e1) {
+          console.warn('feedbacks rating write note:', e1);
+        }
+        try {
+          await setDoc(doc(db, 'schoolDirectory', 'system_feedbacks', 'items', docId), payload);
+        } catch (e2) {
+          console.warn('schoolDirectory rating backup note:', e2);
+        }
       }
     } catch (err) {
       console.warn('Rating save note:', err);
@@ -207,13 +234,15 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
   // Dynamic School Admin Contact Info (Master support info takes priority, fall back to school settings)
   const schoolName = settings?.instituteName || settings?.schoolName || 'School Administration';
   const principalName = settings?.principalName || '';
-  const adminMobile = supportConfig?.supportPhone || settings?.mobile || settings?.phone || '+91 8568643490';
-  const adminEmail = supportConfig?.supportEmail || settings?.email || 'support@schoolcloud.com';
+  const supportPhone = supportConfig?.supportPhone || settings?.mobile || settings?.phone || '+91 8568643490';
+  const supportWhatsapp = supportConfig?.supportWhatsapp || supportPhone;
+  const supportEmail = supportConfig?.supportEmail || settings?.email || 'support@schoolcloud.com';
+  const workingHours = supportConfig?.workingHours || '10:00 AM - 07:00 PM (Mon - Sat)';
 
-  const rawWhatsapp = supportConfig?.supportWhatsapp || adminMobile;
-  const cleanPhone = rawWhatsapp.replace(/[^0-9]/g, '');
-  const whatsappNumber = cleanPhone
-    ? (cleanPhone.startsWith('91') ? cleanPhone : (cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone))
+  const cleanPhone = (supportPhone || '').replace(/[^0-9]/g, '');
+  const cleanWhatsapp = (supportWhatsapp || '').replace(/[^0-9]/g, '');
+  const whatsappNumber = cleanWhatsapp
+    ? (cleanWhatsapp.startsWith('91') ? cleanWhatsapp : (cleanWhatsapp.length === 10 ? `91${cleanWhatsapp}` : cleanWhatsapp))
     : '918568643490';
 
   const filteredFaqs = FAQS.filter(
@@ -462,38 +491,26 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
           {/* ========================================================================= */}
           {activeView === 'contact' && (
             <div className="p-4 space-y-3.5">
-              {/* Institution Identity Card */}
-              <div className={`p-3 rounded-2xl border flex items-center justify-between gap-2 ${
-                isDark ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-slate-50 border-slate-200'
+              {/* Working Hours Support Schedule */}
+              <div className={`p-3.5 rounded-2xl border flex items-center gap-3.5 ${
+                isDark ? 'bg-[#1A1A1A] border-[#2A2A2A]' : 'bg-slate-50 border-slate-200 shadow-2xs'
               }`}>
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase font-bold text-teal-500 tracking-wider">School Administration</p>
-                  <p className={`text-xs font-bold truncate mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>{schoolName}</p>
-                  {principalName && (
-                    <p className={`text-[11px] truncate ${isDark ? 'text-[#8E8E8E]' : 'text-slate-500'}`}>Principal: {principalName}</p>
-                  )}
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-500 flex items-center justify-center font-bold flex-shrink-0">
+                  <Clock className="w-5 h-5" />
                 </div>
-                {currentUser?.role === 'principal' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleClose();
-                      navigate('/settings');
-                    }}
-                    className="px-2.5 py-1 text-[10px] font-bold text-teal-600 dark:text-teal-400 hover:text-teal-700 bg-teal-500/10 hover:bg-teal-500/20 rounded-lg border border-teal-500/30 transition-colors cursor-pointer whitespace-nowrap"
-                  >
-                    Edit in Settings
-                  </button>
-                )}
+                <div className="flex-1 min-w-0">
+                  <div className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    Active Support Schedule
+                  </div>
+                  <div className={`text-[11px] mt-0.5 ${isDark ? 'text-[#8E8E8E]' : 'text-slate-500'}`}>
+                    {workingHours}
+                  </div>
+                </div>
               </div>
-
-              <p className={`text-xs leading-relaxed ${isDark ? 'text-[#8E8E8E]' : 'text-slate-500'}`}>
-                Reach out directly to school administration & helpline support:
-              </p>
 
               {/* WhatsApp Live */}
               <a
-                href={`https://wa.me/${whatsappNumber}?text=Hello%20${encodeURIComponent(schoolName)}%2C%20I%20need%20assistance%20with%20school%20management.`}
+                href={`https://wa.me/${whatsappNumber}?text=Hello%2C%20I%20need%20assistance%20with%20school%20management.`}
                 target="_blank"
                 rel="noreferrer"
                 className={`p-3.5 rounded-2xl border flex items-center gap-3.5 group transition-all cursor-pointer block ${
@@ -508,10 +525,10 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
                     isDark ? 'text-white group-hover:text-emerald-300' : 'text-slate-900 group-hover:text-emerald-600'
                   }`}>
                     <span>WhatsApp Support</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-normal">Instant</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-normal">Instant Chat</span>
                   </div>
                   <div className={`text-[11px] mt-0.5 ${isDark ? 'text-[#8E8E8E]' : 'text-slate-500'}`}>
-                    {adminMobile}
+                    {supportWhatsapp}
                   </div>
                 </div>
                 <ExternalLink className={`w-4 h-4 ${isDark ? 'text-[#8E8E8E] group-hover:text-white' : 'text-slate-400 group-hover:text-slate-700'}`} />
@@ -528,13 +545,14 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
                   <Phone className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className={`text-xs font-bold transition-colors ${
+                  <div className={`text-xs font-bold transition-colors flex items-center justify-between ${
                     isDark ? 'text-white group-hover:text-blue-300' : 'text-slate-900 group-hover:text-blue-600'
                   }`}>
-                    Helpline Voice Call
+                    <span>Helpline Voice Call</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-600 dark:text-blue-400 font-normal">Direct</span>
                   </div>
                   <div className={`text-[11px] mt-0.5 ${isDark ? 'text-[#8E8E8E]' : 'text-slate-500'}`}>
-                    {adminMobile} (Office Hours)
+                    {supportPhone}
                   </div>
                 </div>
                 <ExternalLink className={`w-4 h-4 ${isDark ? 'text-[#8E8E8E] group-hover:text-white' : 'text-slate-400 group-hover:text-slate-700'}`} />
@@ -542,7 +560,7 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
 
               {/* Email Support */}
               <a
-                href={`mailto:${adminEmail}?subject=${encodeURIComponent(schoolName)}%20Support%20Inquiry`}
+                href={`mailto:${supportEmail}?subject=Support%20Inquiry%20-%20${encodeURIComponent(schoolName)}`}
                 className={`p-3.5 rounded-2xl border flex items-center gap-3.5 group transition-all cursor-pointer block ${
                   isDark ? 'bg-[#1E1E1E] border-[#2A2A2A] hover:border-amber-500/50' : 'bg-slate-50 border-slate-200 hover:border-amber-500/50 shadow-2xs'
                 }`}
@@ -557,7 +575,7 @@ export default function HelpAndFeedbackModal({ isOpen, onClose }) {
                     Official Email Desk
                   </div>
                   <div className={`text-[11px] mt-0.5 truncate ${isDark ? 'text-[#8E8E8E]' : 'text-slate-500'}`}>
-                    {adminEmail}
+                    {supportEmail}
                   </div>
                 </div>
                 <ExternalLink className={`w-4 h-4 ${isDark ? 'text-[#8E8E8E] group-hover:text-white' : 'text-slate-400 group-hover:text-slate-700'}`} />

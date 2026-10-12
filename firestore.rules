@@ -34,5 +34,10 @@ service cloud.firestore {
     match /licenseKeys/{document=**} {
       allow read, write: if true;
     }
+
+    // ── User Feedbacks & Star Ratings ─────────────────────────────────────────
+    match /feedbacks/{document=**} {
+      allow read, write: if true;
+    }
   }
 }
