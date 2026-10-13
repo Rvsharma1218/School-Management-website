@@ -45,7 +45,8 @@ export default function DashboardView() {
     students, payments, attendance, results, settings, stats,
     setSelectedStudentId, setIsAddStudentOpen, currentUser, navigate,
     setFeeDetailStudent, setIsFeeDetailSelectorOpen, setWhatsAppReminderData,
-    notices, setIsAddNoticeOpen, setViewingNotice, unreadNoticeCount
+    notices, setIsAddNoticeOpen, setViewingNotice, unreadNoticeCount,
+    teacherPermissions
   } = useSchoolStore();
 
   const isPrincipal = currentUser?.role === 'principal';
@@ -269,7 +270,7 @@ export default function DashboardView() {
           </div>
 
           <div className="flex items-center gap-2">
-            {isPrincipal && (
+            {(isPrincipal || teacherPermissions?.canPostNotices !== false) && (
               <button
                 onClick={() => setIsAddNoticeOpen(true)}
                 className="px-3.5 py-2 rounded-xl bg-[#1f108e] hover:bg-[#0f0069] text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"

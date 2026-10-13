@@ -492,6 +492,13 @@ export default function TeachersView() {
         </div>
       )}
 
+      {isPermsModalOpen && (
+        <TeacherPermissionsModal
+          isOpen={isPermsModalOpen}
+          onClose={() => setIsPermsModalOpen(false)}
+        />
+      )}
+
     </div>
   );
 }
