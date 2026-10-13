@@ -211,7 +211,7 @@ export default function AttendanceView() {
             <span>Mark Daily Attendance</span>
           </button>
 
-          {(isPrincipal || teacherPermissions?.canMarkTeacherAtt) && (
+          {(isPrincipal || currentUser?.role !== 'teacher' || teacherPermissions?.canMarkTeacherAtt) && (
             <button
               onClick={() => setActiveTab('teachers')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${

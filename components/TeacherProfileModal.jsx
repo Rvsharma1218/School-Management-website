@@ -35,10 +35,11 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
     settings,
     updateTeacher,
     deleteTeacher,
-    showToast
+    showToast,
+    teacherAttendance
   } = useSchoolStore();
 
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'professional' | 'credentials'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'professional' | 'credentials' | 'attendance'
   const [showPassword, setShowPassword] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
@@ -221,7 +222,8 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
           {[
             { id: 'overview', label: 'Personal Info', icon: User },
             { id: 'professional', label: 'Academic & Salary', icon: Briefcase },
-            { id: 'credentials', label: 'Portal Login', icon: Mail }
+            { id: 'credentials', label: 'Portal Login', icon: Mail },
+            { id: 'attendance', label: 'Attendance', icon: Calendar }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -428,6 +430,104 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
               </div>
             </div>
           )}
+
+          {activeTab === 'attendance' && (() => {
+            const teacherKey = teacher.id || teacher.teacherId || teacher.authUid;
+            const historyLogs = [];
+            let totalDays = 0;
+            let presentDays = 0;
+            let absentDays = 0;
+            let leaveDays = 0;
+
+            if (teacherAttendance && typeof teacherAttendance === 'object') {
+              Object.entries(teacherAttendance).forEach(([date, recMap]) => {
+                if (recMap && typeof recMap === 'object') {
+                  const status = recMap[teacherKey] || recMap[teacher.teacherId] || recMap[teacher.authUid];
+                  if (status) {
+                    totalDays++;
+                    if (status === 'present') presentDays++;
+                    else if (status === 'absent') absentDays++;
+                    else leaveDays++;
+                    historyLogs.push({ date, status });
+                  }
+                }
+              });
+            }
+            historyLogs.sort((a, b) => b.date.localeCompare(a.date));
+            const attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 100;
+
+            return (
+              <div className="space-y-4">
+                {/* Metrics row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                    <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300 block">Attendance Rate</span>
+                    <span className="text-xl font-extrabold text-emerald-800 dark:text-emerald-200 block mt-0.5">{attendanceRate}%</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block">{presentDays} / {totalDays} logged days</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-surface2 border border-border/70">
+                    <span className="text-[10px] uppercase font-bold text-text-secondary block">Present</span>
+                    <span className="text-xl font-extrabold text-text block mt-0.5">{presentDays}</span>
+                    <span className="text-[10px] text-text-muted block">Days present</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900">
+                    <span className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-300 block">Absent</span>
+                    <span className="text-xl font-extrabold text-rose-800 dark:text-rose-200 block mt-0.5">{absentDays}</span>
+                    <span className="text-[10px] text-rose-600 dark:text-rose-400 block">Days recorded absent</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900">
+                    <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-300 block">Leave / Half Day</span>
+                    <span className="text-xl font-extrabold text-amber-800 dark:text-amber-200 block mt-0.5">{leaveDays}</span>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 block">Official leave logged</span>
+                  </div>
+                </div>
+
+                {/* History table */}
+                <div className="rounded-xl border border-border overflow-hidden bg-card">
+                  <div className="px-4 py-2.5 bg-surface2 border-b border-border flex items-center justify-between">
+                    <span className="text-xs font-bold text-text">Recent Attendance Records</span>
+                    <span className="text-[10.5px] text-text-muted">{historyLogs.length} entries</span>
+                  </div>
+
+                  {historyLogs.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-text-muted">
+                      No attendance logged for this faculty member yet.
+                      <p className="text-[11px] mt-1 text-text-secondary">Mark daily teacher attendance in the Attendance module.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-border max-h-56 overflow-y-auto">
+                      {historyLogs.slice(0, 20).map(log => {
+                        let badgeStyle = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                        let label = 'PRESENT';
+                        if (log.status === 'absent') {
+                          badgeStyle = 'bg-rose-50 text-rose-700 border-rose-200';
+                          label = 'ABSENT';
+                        } else if (log.status === 'half_day') {
+                          badgeStyle = 'bg-amber-50 text-amber-700 border-amber-200';
+                          label = 'HALF DAY';
+                        } else if (log.status === 'leave') {
+                          badgeStyle = 'bg-purple-50 text-purple-700 border-purple-200';
+                          label = 'LEAVE';
+                        }
+
+                        return (
+                          <div key={log.date} className="px-4 py-2.5 flex items-center justify-between text-xs hover:bg-surface2/50 transition-colors">
+                            <span className="font-semibold text-text">{log.date}</span>
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeStyle}`}>
+                              {label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Modal Footer */}
