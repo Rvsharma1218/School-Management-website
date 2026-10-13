@@ -1,6 +1,7 @@
 'use client';
 
 import TeacherPermissionsModal from './TeacherPermissionsModal';
+import TeacherProfileModal from './TeacherProfileModal';
 
 import React, { useState, useRef } from 'react';
 import { useSchoolStore, getNextTeacherId, getActiveSchoolId } from '../lib/store';
@@ -33,7 +34,13 @@ import {
   CreditCard,
   Camera,
   Upload,
-  Crop
+  Crop,
+  LayoutGrid,
+  List,
+  Eye,
+  Users,
+  CheckCircle2,
+  Filter
 } from 'lucide-react';
 
 export default function TeachersView() {
@@ -54,8 +61,13 @@ export default function TeachersView() {
   const [isPermsModalOpen, setIsPermsModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [selectedTeacherForHistory, setSelectedTeacherForHistory] = useState(null);
+  const [selectedTeacherForProfile, setSelectedTeacherForProfile] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClassFilter, setSelectedClassFilter] = useState('all');
+  const [selectedDesignationFilter, setSelectedDesignationFilter] = useState('all');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
   const photoInputRef = useRef(null);
@@ -185,17 +197,53 @@ export default function TeachersView() {
   const schoolPart = (activeSchoolId || 'school001').toLowerCase().replace(/[^a-z0-9]/g, '');
   const previewEmail = `${namePart || 'name'}.${(editingTeacher?.teacherId || nextTeacherId).toLowerCase()}@${schoolPart}.teachers`;
 
+  const totalFaculty = teachers.length;
+  const classTeachersCount = teachers.filter(t => t.assignedClass && t.assignedClass !== 'none' && t.assignedClass !== 'None').length;
+  const subjectTeachersCount = totalFaculty - classTeachersCount;
+  const activeStaffCount = teachers.filter(t => t.active !== false && t.status !== 'inactive').length;
+
+  const availableClasses = settings.classes || settings.schoolClasses || [
+    'Nursery', 'LKG', 'UKG', '1st', '2nd', '3rd', '4th', '5th',
+    '6th', '7th', '8th', '9th', '10th', '11th-Sci', '12th-Sci'
+  ];
+
   const filteredTeachers = teachers.filter(t => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      (t.name && t.name.toLowerCase().includes(q)) ||
-      (t.teacherId && t.teacherId.toLowerCase().includes(q)) ||
-      (t.mobile && t.mobile.includes(q)) ||
-      (t.subject && t.subject.toLowerCase().includes(q)) ||
-      (t.qualification && t.qualification.toLowerCase().includes(q)) ||
-      (t.assignedClass && String(t.assignedClass).toLowerCase().includes(q))
-    );
+    // 1. Search Query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match = (
+        (t.name && t.name.toLowerCase().includes(q)) ||
+        (t.teacherId && t.teacherId.toLowerCase().includes(q)) ||
+        (t.mobile && t.mobile.includes(q)) ||
+        (t.subject && t.subject.toLowerCase().includes(q)) ||
+        (t.qualification && t.qualification.toLowerCase().includes(q)) ||
+        (t.assignedClass && String(t.assignedClass).toLowerCase().includes(q))
+      );
+      if (!match) return false;
+    }
+
+    // 2. Class Filter
+    if (selectedClassFilter !== 'all') {
+      if (selectedClassFilter === 'subject_only') {
+        if (t.assignedClass && t.assignedClass !== 'none' && t.assignedClass !== 'None') return false;
+      } else {
+        if (String(t.assignedClass) !== String(selectedClassFilter)) return false;
+      }
+    }
+
+    // 3. Designation Filter
+    if (selectedDesignationFilter !== 'all') {
+      if ((t.designation || 'Teacher').toLowerCase() !== selectedDesignationFilter.toLowerCase()) return false;
+    }
+
+    // 4. Status Filter
+    if (selectedStatusFilter !== 'all') {
+      const isActive = t.active !== false && t.status !== 'inactive';
+      if (selectedStatusFilter === 'active' && !isActive) return false;
+      if (selectedStatusFilter === 'inactive' && isActive) return false;
+    }
+
+    return true;
   });
 
   return (
@@ -207,7 +255,7 @@ export default function TeachersView() {
             Faculty & Teacher Management
           </h2>
           <p className="text-xs lg:text-sm text-text-secondary">
-            Complete teacher profiles, personal & academic details, and portal credentials
+            Manage teacher profiles, photo DPs, assigned classes, and portal credentials
           </p>
         </div>
 
@@ -244,7 +292,7 @@ export default function TeachersView() {
 
           <button
             onClick={handleOpenAdd}
-            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer active:scale-95"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Add New Teacher</span>
@@ -252,54 +300,173 @@ export default function TeachersView() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative max-w-md">
-        <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input
-          type="text"
-          placeholder="Search teacher by name, ID, subject, mobile..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-card border border-border text-xs text-text font-medium focus:outline-none focus:border-primary shadow-xs"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        )}
+      {/* Metric Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-card border border-border shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10.5px] font-bold text-text-muted uppercase tracking-wider block">Total Faculty</span>
+            <span className="text-lg sm:text-xl font-black text-text">{totalFaculty}</span>
+          </div>
+        </div>
+
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-card border border-border shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <GraduationCap className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10.5px] font-bold text-text-muted uppercase tracking-wider block">Class Incharges</span>
+            <span className="text-lg sm:text-xl font-black text-primary">{classTeachersCount}</span>
+          </div>
+        </div>
+
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-card border border-border shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10.5px] font-bold text-text-muted uppercase tracking-wider block">Subject Teachers</span>
+            <span className="text-lg sm:text-xl font-black text-emerald-600">{subjectTeachersCount}</span>
+          </div>
+        </div>
+
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-card border border-border shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center shrink-0">
+            <CheckCircle className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10.5px] font-bold text-text-muted uppercase tracking-wider block">Active Staff</span>
+            <span className="text-lg sm:text-xl font-black text-teal-600">{activeStaffCount}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Teachers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredTeachers.length === 0 ? (
-          <div className="col-span-full py-16 text-center text-text-muted text-xs bg-card border border-border rounded-2xl">
-            {searchQuery ? 'No teachers found matching your search.' : "No teachers added yet. Click 'Add New Teacher' to allocate faculty responsibilities."}
+      {/* Filter and View Controls Bar */}
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-card border border-border shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search by name, ID, subject, phone, qualification..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-medium focus:outline-none focus:border-primary shadow-xs"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Dropdowns & View Toggles */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Class Filter */}
+          <select
+            value={selectedClassFilter}
+            onChange={(e) => setSelectedClassFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-bold focus:outline-none focus:border-primary shadow-xs cursor-pointer"
+          >
+            <option value="all">All Classes</option>
+            <option value="subject_only">Subject Teachers (No Class)</option>
+            {availableClasses.map(c => (
+              <option key={c} value={c}>Class {c}</option>
+            ))}
+          </select>
+
+          {/* Designation Filter */}
+          <select
+            value={selectedDesignationFilter}
+            onChange={(e) => setSelectedDesignationFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-bold focus:outline-none focus:border-primary shadow-xs cursor-pointer"
+          >
+            <option value="all">All Roles</option>
+            <option value="Subject Teacher">Subject Teacher</option>
+            <option value="Class Teacher">Class Teacher</option>
+            <option value="PGT">PGT</option>
+            <option value="TGT">TGT</option>
+            <option value="PRT">PRT</option>
+            <option value="Principal">Principal</option>
+            <option value="Vice Principal">Vice Principal</option>
+            <option value="Lab Assistant">Lab Assistant</option>
+          </select>
+
+          {/* Status Filter */}
+          <select
+            value={selectedStatusFilter}
+            onChange={(e) => setSelectedStatusFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text font-bold focus:outline-none focus:border-primary shadow-xs cursor-pointer"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active Only</option>
+            <option value="inactive">Inactive</option>
+          </select>
+
+          {/* Grid / Table Toggle */}
+          <div className="flex items-center p-0.5 rounded-xl bg-surface2 border border-border shadow-xs">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                viewMode === 'grid' ? 'bg-card text-primary shadow-xs' : 'text-text-muted hover:text-text'
+              }`}
+              title="Grid Card View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                viewMode === 'table' ? 'bg-card text-primary shadow-xs' : 'text-text-muted hover:text-text'
+              }`}
+              title="Table List View"
+            >
+              <List className="w-4 h-4" />
+            </button>
           </div>
-        ) : (
-          filteredTeachers.map((teacher, idx) => {
+        </div>
+      </div>
+
+      {/* Teachers Display: GRID OR TABLE */}
+      {filteredTeachers.length === 0 ? (
+        <div className="py-16 text-center text-text-muted text-xs bg-card border border-border rounded-2xl">
+          {searchQuery || selectedClassFilter !== 'all' || selectedDesignationFilter !== 'all'
+            ? 'No faculty members matching the selected filters.'
+            : "No teachers added yet. Click 'Add New Teacher' to add your staff."}
+        </div>
+      ) : viewMode === 'grid' ? (
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredTeachers.map((teacher, idx) => {
             const teacherKey = teacher.authUid || teacher.id || `tch_${idx}`;
             const displayEmail = teacher.authEmail || teacher.email || `${(teacher.name || 'teacher').toLowerCase().replace(/[^a-z0-9]/g, '')}.${(teacher.teacherId || `T${idx+1}`).toLowerCase()}@${schoolPart}.teachers`;
 
             return (
               <div
                 key={teacherKey}
-                className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all hover:shadow-md"
+                onClick={() => setSelectedTeacherForProfile(teacher)}
+                className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
               >
                 <div>
                   <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-primary text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0 overflow-hidden">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* DP Avatar */}
+                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-indigo-600 to-primary text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0 overflow-hidden border-2 border-border/80 group-hover:scale-105 transition-transform">
                         {teacher.photoUrl ? (
                           <img src={teacher.photoUrl} alt={teacher.name} className="w-full h-full object-cover" />
                         ) : (
-                          teacher.name?.charAt(0) || 'T'
+                          <span>{teacher.name?.charAt(0) || 'T'}</span>
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-bold text-sm text-text truncate">{teacher.name}</h4>
+                        <h4 className="font-extrabold text-sm text-text truncate group-hover:text-primary transition-colors">
+                          {teacher.name}
+                        </h4>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-[10px] text-primary font-mono font-bold">
                             {teacher.teacherId || `T${String(idx + 1).padStart(3, '0')}`}
@@ -313,7 +480,15 @@ export default function TeachersView() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 shrink-0">
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => setSelectedTeacherForProfile(teacher)}
+                        className="p-1.5 rounded-lg bg-surface2 hover:bg-primary/10 text-text-muted hover:text-primary cursor-pointer transition-colors"
+                        title="View Full Profile"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         onClick={() => handleOpenEdit(teacher)}
                         className="p-1.5 rounded-lg bg-surface2 hover:bg-border text-text-muted hover:text-text cursor-pointer transition-colors"
@@ -361,15 +536,8 @@ export default function TeachersView() {
                       </div>
                     )}
 
-                    {teacher.fatherName && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-text-secondary font-medium">Father's Name:</span>
-                        <span className="font-semibold text-text text-[11px]">{teacher.fatherName}</span>
-                      </div>
-                    )}
-
                     {/* Auth Login Email */}
-                    <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center justify-between gap-1" onClick={(e) => e.stopPropagation()}>
                       <span className="text-text-secondary font-medium shrink-0">Auth Email:</span>
                       <div className="flex items-center gap-1 min-w-0">
                         <span className="font-mono text-[11px] text-indigo-950 dark:text-indigo-200 font-bold truncate max-w-[170px]" title={displayEmail}>
@@ -392,43 +560,22 @@ export default function TeachersView() {
                       </div>
                     )}
 
-                    {teacher.alternateMobile && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-text-secondary font-medium">Alt Phone:</span>
-                        <span className="font-mono text-text font-semibold">{teacher.alternateMobile}</span>
-                      </div>
-                    )}
-
-                    {teacher.address && (
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-text-secondary font-medium shrink-0">Address:</span>
-                        <span className="text-text font-normal truncate text-[11px]" title={teacher.address}>{teacher.address}</span>
-                      </div>
-                    )}
-
                     {/* Salary & History */}
-                    <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center justify-between pt-1" onClick={(e) => e.stopPropagation()}>
                       <span className="text-text-secondary font-medium">Base Salary:</span>
                       <div className="flex items-center gap-2">
                         <span className="font-extrabold text-emerald-600 font-mono text-[11px] bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
-                          ₹{Number(teacher.salary || 25000).toLocaleString()} / mo
+                          ₹{Number(teacher.salary || 25000).toLocaleString('en-IN')} / mo
                         </span>
                         <button
                           type="button"
                           onClick={() => setSelectedTeacherForHistory(teacher)}
                           className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold border border-indigo-200 dark:border-indigo-800 cursor-pointer transition-colors"
                         >
-                          Salary History
+                          History
                         </button>
                       </div>
                     </div>
-
-                    {teacher.password && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-text-secondary font-medium">Login Password:</span>
-                        <span className="font-mono text-text font-semibold">{teacher.password}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -437,15 +584,137 @@ export default function TeachersView() {
                     <CheckCircle className="w-3 h-3" />
                     <span>Active Faculty</span>
                   </span>
-                  <span className="text-[10px] text-text-muted font-medium">
-                    {teacher.designation || 'Class Teacher'}
+                  <span className="text-[10px] text-primary font-bold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    <span>View Profile</span>
+                    <span>→</span>
                   </span>
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      ) : (
+        /* TABLE LIST VIEW */
+        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+              <thead className="bg-surface2 text-text font-bold border-b border-border text-[11px]">
+                <tr>
+                  <th className="py-3 px-4">Faculty Member</th>
+                  <th className="py-3 px-4">Role / Class</th>
+                  <th className="py-3 px-4">Subject & Qualification</th>
+                  <th className="py-3 px-4">Contact Phone</th>
+                  <th className="py-3 px-4">Monthly Salary</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {filteredTeachers.map((teacher, idx) => {
+                  const teacherKey = teacher.authUid || teacher.id || `tch_${idx}`;
+                  const isClassTch = teacher.assignedClass && teacher.assignedClass !== 'none' && teacher.assignedClass !== 'None';
+
+                  return (
+                    <tr
+                      key={teacherKey}
+                      onClick={() => setSelectedTeacherForProfile(teacher)}
+                      className="hover:bg-surface2/60 transition-colors cursor-pointer group"
+                    >
+                      {/* Name & DP */}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-primary text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0 overflow-hidden border border-border">
+                            {teacher.photoUrl ? (
+                              <img src={teacher.photoUrl} alt={teacher.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span>{teacher.name?.charAt(0) || 'T'}</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="font-extrabold text-text block group-hover:text-primary transition-colors">
+                              {teacher.name}
+                            </span>
+                            <span className="text-[10px] font-mono text-primary font-bold">
+                              {teacher.teacherId || `T${String(idx + 1).padStart(3, '0')}`}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Role / Class */}
+                      <td className="py-3 px-4">
+                        {isClassTch ? (
+                          <span className="font-bold text-primary px-2 py-0.5 rounded-md bg-primary/10 text-[11px]">
+                            Class {teacher.assignedClass}{teacher.assignedSection ? ` - ${teacher.assignedSection}` : ''}
+                          </span>
+                        ) : (
+                          <span className="font-bold text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 text-[10.5px]">
+                            Subject Teacher
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Subject & Qual */}
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-text block">{teacher.subject || 'All Subjects'}</span>
+                        <span className="text-[10.5px] text-text-muted">{teacher.qualification || '—'}</span>
+                      </td>
+
+                      {/* Contact */}
+                      <td className="py-3 px-4 font-mono">
+                        <span className="font-bold text-text block">{teacher.mobile || '—'}</span>
+                        <span className="text-[10px] text-text-muted truncate max-w-[140px] block" title={teacher.authEmail}>
+                          {teacher.authEmail || teacher.email || '—'}
+                        </span>
+                      </td>
+
+                      {/* Salary */}
+                      <td className="py-3 px-4 font-mono font-bold text-emerald-600">
+                        ₹{Number(teacher.salary || 25000).toLocaleString('en-IN')}
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                          <CheckCircle className="w-2.5 h-2.5" />
+                          <span>Active</span>
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setSelectedTeacherForProfile(teacher)}
+                            className="p-1.5 rounded-lg bg-surface2 hover:bg-primary/10 text-text-muted hover:text-primary cursor-pointer transition-colors"
+                            title="View Full Profile"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenEdit(teacher)}
+                            className="p-1.5 rounded-lg bg-surface2 hover:bg-border text-text-muted hover:text-text cursor-pointer transition-colors"
+                            title="Edit Teacher"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteTeacher(teacher)}
+                            className="p-1.5 rounded-lg bg-surface2 hover:bg-rose-100 text-text-muted hover:text-rose-600 cursor-pointer transition-colors"
+                            title="Delete Teacher"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Add / Edit Teacher Modal (Complete Student-Like Details) */}
       {isAddOpen && (
@@ -905,6 +1174,15 @@ export default function TeachersView() {
         onCropComplete={handleCropComplete}
         onClose={() => setIsCropperOpen(false)}
       />
+      {/* Teacher Profile Modal */}
+      {selectedTeacherForProfile && (
+        <TeacherProfileModal
+          teacher={selectedTeacherForProfile}
+          onClose={() => setSelectedTeacherForProfile(null)}
+          onEdit={(t) => handleOpenEdit(t)}
+          onOpenPermissions={() => setIsPermsModalOpen(true)}
+        />
+      )}
     </div>
   );
 }

@@ -902,8 +902,12 @@ export default function AdmitCardView() {
                           <img
                             src={settings.schoolStamp || settings.stampUrl || settings.sealUrl}
                             alt="Stamp"
-                            className="h-10 w-10 object-contain mb-1"
-                            style={{ mixBlendMode: 'multiply' }}
+                            className="object-contain mb-1"
+                            style={{
+                              width: `${Math.round(40 * (Number(settings.stampScale) || 1.0))}px`,
+                              height: `${Math.round(40 * (Number(settings.stampScale) || 1.0))}px`,
+                              mixBlendMode: 'multiply'
+                            }}
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         )}
@@ -912,7 +916,11 @@ export default function AdmitCardView() {
                             <img
                               src={sigSrc}
                               alt="Signature"
-                              className="h-8 object-contain mb-1"
+                              className="object-contain mb-1"
+                              style={{
+                                height: `${Math.round(32 * (Number(settings.signatureScale) || 1.0))}px`,
+                                maxWidth: `${Math.round(130 * (Number(settings.signatureScale) || 1.0))}px`
+                              }}
                             />
                           ) : (
                             <div className="h-8" />

@@ -422,13 +422,17 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
                 Class Teacher Sign.
               </div>
               <div className="text-right flex flex-col items-center">
-                <div className="relative flex items-center justify-center min-w-[110px] h-12 mb-1">
+                <div className="relative flex items-center justify-center min-w-[110px] min-h-[48px] mb-1">
                   {(settings.schoolStamp || settings.stampUrl || settings.sealUrl) && (
                     <img
                       src={settings.schoolStamp || settings.stampUrl || settings.sealUrl}
                       alt="Official Stamp"
-                      className="absolute inset-0 m-auto h-12 w-12 object-contain opacity-90"
-                      style={{ mixBlendMode: 'multiply' }}
+                      className="absolute inset-0 m-auto object-contain opacity-90"
+                      style={{
+                        width: `${Math.round(48 * (Number(settings.stampScale) || 1.0))}px`,
+                        height: `${Math.round(48 * (Number(settings.stampScale) || 1.0))}px`,
+                        mixBlendMode: 'multiply'
+                      }}
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                   )}
@@ -436,7 +440,11 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
                     <img
                       src={settings.principalSignature || settings.signatureUrl || settings.signaturePath || settings.signature}
                       alt="Director Signature"
-                      className="relative z-10 h-8 max-h-8 w-auto object-contain"
+                      className="relative z-10 w-auto object-contain"
+                      style={{
+                        height: `${Math.round(32 * (Number(settings.signatureScale) || 1.0))}px`,
+                        maxWidth: `${Math.round(110 * (Number(settings.signatureScale) || 1.0))}px`
+                      }}
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                   )}

@@ -399,8 +399,12 @@ export default function IdCardView() {
                           <img
                             src={settings.schoolStamp || settings.stampUrl || settings.sealUrl}
                             alt="Stamp"
-                            className="absolute -top-7 right-16 h-9 w-9 object-contain pointer-events-none opacity-85"
-                            style={{ mixBlendMode: 'multiply' }}
+                            className="absolute -top-7 right-16 object-contain pointer-events-none opacity-85"
+                            style={{
+                              width: `${Math.round(36 * (Number(settings.stampScale) || 1.0))}px`,
+                              height: `${Math.round(36 * (Number(settings.stampScale) || 1.0))}px`,
+                              mixBlendMode: 'multiply'
+                            }}
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         ) : null}
@@ -408,7 +412,11 @@ export default function IdCardView() {
                           <img
                             src={settings.principalSignature || settings.signatureUrl}
                             alt="Sign"
-                            className="absolute -top-7 right-0 h-9 max-w-[100px] object-contain pointer-events-none"
+                            className="absolute -top-7 right-0 object-contain pointer-events-none"
+                            style={{
+                              height: `${Math.round(36 * (Number(settings.signatureScale) || 1.0))}px`,
+                              maxWidth: `${Math.round(100 * (Number(settings.signatureScale) || 1.0))}px`
+                            }}
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         ) : null}
