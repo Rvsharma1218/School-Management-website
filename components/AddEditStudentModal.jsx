@@ -16,7 +16,10 @@ import {
   Upload,
   Crop,
   Trash2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  FileText,
+  Eye,
+  FileCheck
 } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
 
@@ -29,7 +32,9 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
   const [studentType, setStudentType] = useState('school');
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
+  const [previewDocModal, setPreviewDocModal] = useState(false);
   const photoInputRef = useRef(null);
+  const aadhaarInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -43,6 +48,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
     address: '',
     photoPath: '',
     aadhaarNumber: '',
+    aadhaarDocUrl: '',
     admissionNumber: '',
     studentId: '',
     rollNumber: '',
@@ -77,6 +83,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
         photoPath: student.photoPath || student.photoUrl || '',
         photoUrl: student.photoPath || student.photoUrl || '',
         aadhaarNumber: student.aadhaarNumber || student.aadharNumber || '',
+        aadhaarDocUrl: student.aadhaarDocUrl || student.aadhaarDocPath || student.aadhaarCardUrl || '',
         admissionNumber: student.admissionNumber || student.admissionNo || '',
         studentId: student.studentId || student.id || '',
         rollNumber: student.rollNumber || '',
@@ -108,6 +115,7 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
         address: '',
         photoPath: '',
         aadhaarNumber: '',
+        aadhaarDocUrl: '',
         admissionNumber: nextAdm,
         studentId: nextId,
         rollNumber: '',
@@ -142,6 +150,9 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
       photoUrl: formData.photoPath || '',
       aadhaarNumber: formData.aadhaarNumber || '',
       aadharNumber: formData.aadhaarNumber || '',
+      aadhaarDocUrl: formData.aadhaarDocUrl || '',
+      aadhaarDocPath: formData.aadhaarDocUrl || '',
+      aadhaarCardUrl: formData.aadhaarDocUrl || '',
       studentType,
       totalFees: Number(formData.totalFees) || 0,
       paidFees: Number(formData.paidFees) || 0,
@@ -158,6 +169,49 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
         onClose();
       }
     }
+  };
+
+  const handleAadhaarFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('Please select a valid image file (JPG/PNG/WebP).', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxWidth = 1000;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          setFormData(prev => ({
+            ...prev,
+            aadhaarDocUrl: compressedDataUrl
+          }));
+          showToast('Aadhaar / ID document photo attached!', 'success');
+        };
+        img.onerror = () => {
+          setFormData(prev => ({
+            ...prev,
+            aadhaarDocUrl: event.target.result
+          }));
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = '';
   };
 
   const handlePhotoFileSelect = (e) => {
@@ -567,17 +621,105 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
               />
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-text mb-1">Aadhaar / Document ID</label>
-              <input
-                type="text"
-                maxLength={14}
-                placeholder="12-digit Aadhaar No."
-                value={formData.aadhaarNumber || ''}
-                onChange={(e) => setFormData({ ...formData, aadhaarNumber: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-surface2 border border-border text-xs text-text focus:outline-none focus:border-primary font-mono"
-              />
+          {/* Identity & Aadhaar Card Documents */}
+          <div className="p-4 rounded-xl bg-surface2/60 border border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-2">
+                <FileCheck className="w-4 h-4 text-emerald-600" />
+                <span>Identity & Aadhaar Card Document</span>
+              </h4>
+              <span className="text-[10px] text-text-muted">Student Official Verification Document</span>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div>
+                <label className="block text-[11px] font-bold text-text mb-1">
+                  12-Digit Aadhaar Card Number
+                </label>
+                <input
+                  type="text"
+                  maxLength={14}
+                  placeholder="e.g. 1234 5678 9012"
+                  value={formData.aadhaarNumber || ''}
+                  onChange={(e) => setFormData({ ...formData, aadhaarNumber: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-card border border-border text-xs text-text focus:outline-none focus:border-primary font-mono font-bold"
+                />
+                <span className="text-[10px] text-text-muted mt-1 block">Government UIDAI Number for student record</span>
+              </div>
+
+              {/* Aadhaar Card Document Upload Card */}
+              <div className="flex items-center gap-3 bg-card p-2.5 rounded-xl border border-dashed border-border">
+                {formData.aadhaarDocUrl ? (
+                  <div className="relative w-20 h-14 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-slate-900 group">
+                    <img
+                      src={formData.aadhaarDocUrl}
+                      alt="Aadhaar Card"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPreviewDocModal(true)}
+                      className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px]"
+                      title="View Document"
+                    >
+                      <Eye className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-20 h-14 rounded-lg bg-surface2 border border-border flex flex-col items-center justify-center text-text-muted flex-shrink-0">
+                    <FileText className="w-5 h-5 text-text-muted/60" />
+                    <span className="text-[8px] font-bold mt-0.5">No Doc</span>
+                  </div>
+                )}
+
+                <div className="flex-1 min-w-0">
+                  <span className="text-[11px] font-bold text-text block truncate">
+                    {formData.aadhaarDocUrl ? 'Aadhaar Card Photo Attached' : 'Attach Aadhaar Card Photo'}
+                  </span>
+                  <span className="text-[9.5px] text-text-muted block">
+                    {formData.aadhaarDocUrl ? 'Click view or change photo' : 'Front/Both sides photo (Auto-compressed)'}
+                  </span>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <input
+                      ref={aadhaarInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAadhaarFileSelect}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => aadhaarInputRef.current?.click()}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>{formData.aadhaarDocUrl ? 'Change' : 'Upload Card'}</span>
+                    </button>
+                    {formData.aadhaarDocUrl && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewDocModal(true)}
+                          className="px-2 py-1 rounded-lg bg-surface2 hover:bg-surface2/80 text-text text-[10px] font-bold flex items-center gap-1 cursor-pointer border border-border"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>View</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, aadhaarDocUrl: '' }))}
+                          className="p-1 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 text-[10px] cursor-pointer hover:bg-rose-100"
+                          title="Remove attached Aadhaar document"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
             <div className="sm:col-span-2 lg:col-span-4">
               <label className="block text-[11px] font-bold text-text mb-1">Residential Address</label>
@@ -624,6 +766,46 @@ export default function AddEditStudentModal({ student, isOpen, onClose }) {
           setImageToCrop(null);
         }}
       />
+
+      {/* Full Document Preview Modal */}
+      {previewDocModal && formData.aadhaarDocUrl && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl max-w-2xl w-full p-4 overflow-hidden shadow-2xl space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-emerald-600" />
+                <span className="font-bold text-sm text-text">Aadhaar Card / Document Preview</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewDocModal(false)}
+                className="p-1 rounded-lg bg-surface2 text-text-muted hover:text-text cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-auto rounded-xl border border-border bg-slate-950 flex items-center justify-center p-2">
+              <img
+                src={formData.aadhaarDocUrl}
+                alt="Aadhaar Document Full"
+                className="max-h-[65vh] w-auto object-contain rounded-lg shadow-md"
+              />
+            </div>
+            <div className="flex justify-between items-center pt-2">
+              <span className="text-xs text-text-muted font-mono">
+                {formData.aadhaarNumber ? `UIDAI No: ${formData.aadhaarNumber}` : 'Document Attached'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewDocModal(false)}
+                className="px-4 py-1.5 rounded-xl bg-primary text-white font-bold text-xs cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

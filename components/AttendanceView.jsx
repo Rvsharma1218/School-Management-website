@@ -40,7 +40,7 @@ export default function AttendanceView() {
     const saved = (teacherAttendance && teacherAttendance[selectedTeacherDate]) || {};
     const initialMap = {};
     (teachers || []).forEach(t => {
-      initialMap[t.id || t.teacherId] = saved[t.id || t.teacherId] || 'present';
+      initialMap[t.id || t.teacherId] = saved[t.id] || saved[t.teacherId] || saved[t.authUid] || 'present';
     });
     setLocalTeacherStatus(initialMap);
   }, [selectedTeacherDate, teacherAttendance, teachers]);
@@ -53,6 +53,19 @@ export default function AttendanceView() {
   const [selectedType, setSelectedType] = useState('all'); // 'all' | 'school' | 'computer'
   const [selectedClass, setSelectedClass] = useState(isPrincipal ? 'all' : assignedClass);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Auto-switch to teachers tab if navigated from Teacher Profile or query param
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      const savedTab = localStorage.getItem('attendance_active_tab');
+      if (tabParam === 'teachers' || savedTab === 'teachers') {
+        setActiveTab('teachers');
+        localStorage.removeItem('attendance_active_tab');
+      }
+    }
+  }, []);
 
   // Auto-filter to specific class if navigated from Classes card
   useEffect(() => {

@@ -32,7 +32,8 @@ import {
   FileText,
   Printer,
   ChevronRight,
-  Clock
+  Clock,
+  FileCheck
 } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
 
@@ -48,6 +49,7 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'professional' | 'salary' | 'credentials' | 'attendance'
   const [showPassword, setShowPassword] = useState(false);
+  const [previewAadhaarModal, setPreviewAadhaarModal] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
@@ -215,15 +217,45 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
     printSalarySlip(record);
   };
 
-  // ─── OFFICIAL PRINTABLE SALARY SLIP (STAMP + SIGN + DATE/TIME) ─────────────
+  // Helper to format raw ISO dates into clean human format (e.g. 15 Jan 1995)
+  const formatDob = (val) => {
+    if (!val) return '—';
+    try {
+      const clean = String(val).split('T')[0];
+      const parts = clean.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+      }
+      return clean;
+    } catch {
+      return String(val).split('T')[0];
+    }
+  };
+
+  // ─── OFFICIAL PRINTABLE SALARY SLIP (STAMP + SIGN + LOGO + DATE/TIME) ─────────────
   const printSalarySlip = (record) => {
     const schoolName = settings.instituteName || settings.schoolName || 'SMART HIGH SCHOOL';
     const schoolAddress = settings.address || 'Main Campus';
     const schoolPhone = settings.phone || settings.mobile || 'Support Line';
     const schoolEmail = settings.email || 'info@school.com';
-    const stampImg = settings.schoolStamp || settings.stamp || '';
-    const sigImg = settings.principalSignature || settings.rawSignature || settings.signature || '';
+    const rawLogo = settings.logoUrl || settings.logoPath || settings.logo || '';
+    const rawStamp = settings.schoolStamp || settings.stamp || '';
+    const rawSig = settings.principalSignature || settings.rawSignature || settings.signature || '';
     const printDate = record.timestampFormatted || new Date().toLocaleString();
+
+    const formatImgSrc = (val) => {
+      if (!val || typeof val !== 'string') return '';
+      val = val.trim();
+      if (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:')) return val;
+      return `data:image/png;base64,${val}`;
+    };
+
+    const logoSrc = formatImgSrc(rawLogo);
+    const stampSrc = formatImgSrc(rawStamp);
+    const sigSrc = formatImgSrc(rawSig);
 
     const slipWindow = window.open('', '_blank', 'width=800,height=900');
     if (!slipWindow) {
@@ -240,7 +272,8 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; color: #1e293b; padding: 30px; }
             .voucher-card { border: 2px solid #334155; border-radius: 12px; padding: 25px; max-width: 720px; margin: 0 auto; position: relative; }
-            .header-row { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 14px; }
+            .header-row { display: flex; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 14px; gap: 16px; }
+            .school-logo { height: 60px; max-width: 90px; object-fit: contain; }
             .school-title { font-size: 20px; font-weight: 900; color: #1e3a8a; text-transform: uppercase; letter-spacing: -0.5px; }
             .school-sub { font-size: 11px; color: #64748b; margin-top: 3px; }
             .badge-title { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; text-align: center; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -268,7 +301,8 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
         <body>
           <div class="voucher-card">
             <div class="header-row">
-              <div>
+              ${logoSrc ? `<img src="${logoSrc}" class="school-logo" alt="School Logo" />` : ''}
+              <div style="flex: 1;">
                 <div class="school-title">${schoolName}</div>
                 <div class="school-sub">${schoolAddress} | Phone: ${schoolPhone} | Email: ${schoolEmail}</div>
               </div>
@@ -304,8 +338,8 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
 
               <div class="sig-col">
                 <div class="stamp-sig-box">
-                  ${stampImg ? `<img src="${stampImg}" class="stamp-img" alt="Stamp" />` : ''}
-                  ${sigImg ? `<img src="${sigImg}" class="sig-img" alt="Principal Sign" />` : ''}
+                  ${stampSrc ? `<img src="${stampSrc}" class="stamp-img" alt="Stamp" />` : ''}
+                  ${sigSrc ? `<img src="${sigSrc}" class="sig-img" alt="Principal Sign" />` : ''}
                 </div>
                 <div class="sig-line">Director / Principal Sign & Stamp</div>
               </div>
@@ -331,7 +365,11 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
 
   // ─── 1-CLICK ATTENDANCE (PRESENT, ABSENT, HALF DAY, LEAVE) ──────────────────
   const todayStr = new Date().toISOString().split('T')[0];
-  const todayStatus = teacherAttendance?.[todayStr]?.[teacherKey] || null;
+  const todayRecords = teacherAttendance?.[todayStr] || {};
+  const todayStatus = todayRecords[teacherKey] || 
+                      todayRecords[teacher.teacherId] || 
+                      todayRecords[teacher.authUid] || 
+                      todayRecords[teacher.id] || null;
 
   const handle1ClickAttendance = async (status) => {
     try {
@@ -521,7 +559,7 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
                 <div className="p-3 rounded-xl bg-surface2 border border-border/70 space-y-1">
                   <span className="text-[10.5px] text-text-muted font-medium block">Date of Birth & Gender</span>
                   <span className="font-bold text-text text-sm block">
-                    {teacher.dob || '—'} ({teacher.gender || 'Male'})
+                    {formatDob(teacher.dob)} ({teacher.gender || 'Male'})
                   </span>
                 </div>
 
@@ -546,12 +584,87 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
                   <span className="font-mono font-bold text-text text-sm block">{teacher.alternateMobile || '—'}</span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-surface2 border border-border/70 space-y-1 sm:col-span-2">
-                  <span className="text-[10.5px] text-text-muted font-medium block">Aadhaar Card Number</span>
-                  <span className="font-mono font-bold text-text text-sm block">
-                    {teacher.aadhaarNumber || teacher.aadharNumber || 'Not Linked / Verified'}
-                  </span>
-                </div>
+                {/* Aadhaar Card & Identity Document Card */}
+                {(() => {
+                  const teacherAadhaarDoc = teacher.aadhaarDocUrl || teacher.aadhaarDocPath || teacher.aadhaarCardUrl;
+                  return (
+                    <div className="p-3.5 rounded-xl bg-surface2 border border-border/80 space-y-2.5 sm:col-span-2">
+                      <div className="flex items-center justify-between pb-1 border-b border-border/50">
+                        <div className="flex items-center gap-1.5">
+                          <FileCheck className="w-4 h-4 text-emerald-600" />
+                          <span className="text-[11px] font-bold text-text uppercase tracking-wider">Aadhaar Card & Identity Document</span>
+                        </div>
+                        <span className="font-mono text-xs font-bold text-text">
+                          {teacher.aadhaarNumber || teacher.aadharNumber ? `UIDAI: ${teacher.aadhaarNumber || teacher.aadharNumber}` : 'Not Linked'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 bg-card p-2.5 rounded-xl border border-border">
+                        <div className="flex items-center gap-3">
+                          {teacherAadhaarDoc ? (
+                            <div
+                              onClick={() => setPreviewAadhaarModal(true)}
+                              className="relative w-20 h-14 rounded-lg overflow-hidden border border-border bg-slate-900 cursor-pointer group flex-shrink-0 shadow-xs"
+                              title="Click to view full Aadhaar document"
+                            >
+                              <img
+                                src={teacherAadhaarDoc}
+                                alt="Aadhaar Card"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-bold transition-opacity">
+                                <Eye className="w-4 h-4" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-20 h-14 rounded-lg bg-surface2 border border-dashed border-border flex flex-col items-center justify-center text-text-muted flex-shrink-0">
+                              <FileText className="w-4 h-4 text-text-muted/60" />
+                              <span className="text-[8px] font-bold mt-0.5">No Doc</span>
+                            </div>
+                          )}
+
+                          <div>
+                            <div className="font-bold text-xs text-text flex items-center gap-1.5">
+                              <span>Official Document Photo</span>
+                              {teacherAadhaarDoc ? (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-600">Attached</span>
+                              ) : (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/10 text-amber-600">Missing</span>
+                              )}
+                            </div>
+                            <span className="text-[10.5px] text-text-muted block mt-0.5">
+                              {teacherAadhaarDoc ? 'Aadhaar ID photo attached to faculty profile.' : 'Upload Aadhaar copy from Edit Faculty.'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          {teacherAadhaarDoc && (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewAadhaarModal(true)}
+                              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>View</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onEdit(teacher);
+                              onClose();
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-surface2 hover:bg-border text-text text-xs font-bold flex items-center gap-1 cursor-pointer border border-border transition-colors"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>{teacherAadhaarDoc ? 'Update' : 'Upload'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="p-3 rounded-xl bg-surface2 border border-border/70 space-y-1 sm:col-span-2">
                   <span className="text-[10.5px] text-text-muted font-medium block">Residential Address</span>
@@ -814,6 +927,22 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
                     ))}
                   </div>
                 </div>
+
+                {/* 1-Click Navigate to Full Teacher Attendance Register */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('attendance_active_tab', 'teachers');
+                      window.location.href = '/attendance?tab=teachers';
+                    }
+                  }}
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 text-white text-xs font-bold shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.99]"
+                >
+                  <CalendarCheck className="w-4 h-4 text-emerald-300" />
+                  <span>Open Full Teacher Attendance Register (1-Click) ➔</span>
+                </button>
 
                 {/* Metrics row */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
@@ -1111,6 +1240,65 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
           onClose={() => setIsCropperOpen(false)}
           aspectRatio={3 / 4}
         />
+      )}
+
+      {/* Full Size Teacher Aadhaar Document Preview Modal */}
+      {previewAadhaarModal && (teacher.aadhaarDocUrl || teacher.aadhaarDocPath || teacher.aadhaarCardUrl) && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl max-w-3xl w-full p-4 overflow-hidden shadow-2xl space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <h4 className="font-bold text-sm text-text">
+                    Aadhaar Card: {teacher.name}
+                  </h4>
+                  <span className="text-[10px] text-text-muted font-mono">
+                    UIDAI: {teacher.aadhaarNumber || teacher.aadharNumber || 'Not Linked'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewAadhaarModal(false)}
+                className="p-1.5 rounded-lg bg-surface2 text-text-muted hover:text-text cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[72vh] overflow-auto rounded-xl border border-border bg-slate-950 flex items-center justify-center p-3">
+              <img
+                src={teacher.aadhaarDocUrl || teacher.aadhaarDocPath || teacher.aadhaarCardUrl}
+                alt="Teacher Aadhaar Document Full"
+                className="max-h-[68vh] w-auto object-contain rounded-lg shadow-lg"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] text-text-muted">
+                Teacher ID: <strong className="text-text font-mono">{teacher.teacherId || 'T001'}</strong>
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={teacher.aadhaarDocUrl || teacher.aadhaarDocPath || teacher.aadhaarCardUrl}
+                  download={`Aadhaar_Teacher_${(teacher.name || 'faculty').replace(/\s+/g, '_')}.jpg`}
+                  className="px-3.5 py-1.5 rounded-xl bg-surface2 hover:bg-surface2/80 text-text text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-border transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewAadhaarModal(false)}
+                  className="px-4 py-1.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs cursor-pointer transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

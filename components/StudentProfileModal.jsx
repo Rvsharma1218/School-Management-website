@@ -28,7 +28,8 @@ import {
   FileCheck,
   FileSpreadsheet,
   Share2,
-  Filter
+  Filter,
+  Eye
 } from 'lucide-react';
 import { 
   openWhatsAppFeeReminder, 
@@ -83,6 +84,7 @@ export default function StudentProfileModal({ student, onClose }) {
   } = useSchoolStore();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'fees' | 'attendance' | 'results' | 'reports' | 'idcard'
+  const [previewAadhaarModal, setPreviewAadhaarModal] = useState(false);
   const [reportMonthFilter, setReportMonthFilter] = useState('all'); // 'all' or 'YYYY-MM'
   const [isAddResultOpen, setIsAddResultOpen] = useState(false);
   const [editingResultItem, setEditingResultItem] = useState(null);
@@ -435,6 +437,97 @@ export default function StudentProfileModal({ student, onClose }) {
                   </div>
                 </div>
               </div>
+
+              {/* Identity & Aadhaar Card Official Document Card */}
+              {(() => {
+                const aadhaarDoc = student.aadhaarDocUrl || student.aadhaarDocPath || student.aadhaarCardUrl;
+                return (
+                  <div className="p-4 rounded-xl bg-surface2/50 border border-border space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border/50">
+                      <div className="flex items-center gap-2">
+                        <FileCheck className="w-4 h-4 text-emerald-600" />
+                        <h4 className="text-xs font-bold text-text uppercase tracking-wider">
+                          Official Aadhaar & Verification Document
+                        </h4>
+                      </div>
+                      <span className="text-[10px] text-text-muted">
+                        UIDAI Identification: <strong className="text-text font-mono">{student.aadhaarNumber || student.aadharNumber || 'Not Linked'}</strong>
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-card p-3 rounded-xl border border-border">
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
+                        {aadhaarDoc ? (
+                          <div 
+                            onClick={() => setPreviewAadhaarModal(true)}
+                            className="relative w-24 h-16 rounded-lg overflow-hidden border border-border bg-slate-900 cursor-pointer group flex-shrink-0 shadow-sm"
+                            title="Click to view full Aadhaar document"
+                          >
+                            <img
+                              src={aadhaarDoc}
+                              alt="Aadhaar Card"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-bold transition-opacity">
+                              <Eye className="w-4 h-4" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-24 h-16 rounded-lg bg-surface2 border border-dashed border-border flex flex-col items-center justify-center text-text-muted flex-shrink-0">
+                            <FileText className="w-5 h-5 text-text-muted/60" />
+                            <span className="text-[9px] font-bold mt-1">No Photo</span>
+                          </div>
+                        )}
+
+                        <div>
+                          <div className="font-bold text-xs text-text flex items-center gap-1.5">
+                            <span>Aadhaar Card Photo</span>
+                            {aadhaarDoc ? (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-600 uppercase">
+                                Verified Attachment
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-600 uppercase">
+                                Not Uploaded
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-text-muted block mt-0.5">
+                            {aadhaarDoc 
+                              ? 'Original copy stored securely for official student records.'
+                              : 'Upload student Aadhaar card photo from Edit Student.'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        {aadhaarDoc && (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewAadhaarModal(true)}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>View Full Card</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingStudent(student);
+                            setIsAddStudentOpen(true);
+                            onClose();
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-surface2 hover:bg-surface2/80 text-text text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-border transition-colors"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          <span>{aadhaarDoc ? 'Update Card' : 'Upload Card'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -1282,6 +1375,65 @@ export default function StudentProfileModal({ student, onClose }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Full Size Student Aadhaar Document Preview Modal */}
+      {previewAadhaarModal && (student.aadhaarDocUrl || student.aadhaarDocPath || student.aadhaarCardUrl) && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl max-w-3xl w-full p-4 overflow-hidden shadow-2xl space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <h4 className="font-bold text-sm text-text">
+                    Aadhaar Card: {student.name}
+                  </h4>
+                  <span className="text-[10px] text-text-muted font-mono">
+                    UIDAI No: {student.aadhaarNumber || student.aadharNumber || 'Not Linked'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewAadhaarModal(false)}
+                className="p-1.5 rounded-lg bg-surface2 text-text-muted hover:text-text cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[72vh] overflow-auto rounded-xl border border-border bg-slate-950 flex items-center justify-center p-3">
+              <img
+                src={student.aadhaarDocUrl || student.aadhaarDocPath || student.aadhaarCardUrl}
+                alt="Aadhaar Card Full"
+                className="max-h-[68vh] w-auto object-contain rounded-lg shadow-lg"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] text-text-muted">
+                Student ID: <strong className="text-text font-mono">{student.studentId}</strong>
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={student.aadhaarDocUrl || student.aadhaarDocPath || student.aadhaarCardUrl}
+                  download={`Aadhaar_${(student.name || 'student').replace(/\s+/g, '_')}.jpg`}
+                  className="px-3.5 py-1.5 rounded-xl bg-surface2 hover:bg-surface2/80 text-text text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-border transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewAadhaarModal(false)}
+                  className="px-4 py-1.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs cursor-pointer transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

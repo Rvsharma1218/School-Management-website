@@ -40,8 +40,10 @@ import {
   Eye,
   Users,
   CheckCircle2,
-  Filter
+  Filter,
+  FileCheck
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export default function TeachersView() {
   const {
@@ -70,7 +72,13 @@ export default function TeachersView() {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
+  const [previewAadhaarDocModal, setPreviewAadhaarDocModal] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importingFaculty, setImportingFaculty] = useState(false);
+  const [facultyImportPreview, setFacultyImportPreview] = useState(null);
   const photoInputRef = useRef(null);
+  const aadhaarDocInputRef = useRef(null);
+  const facultyImportInputRef = useRef(null);
 
   const handlePhotoFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -116,7 +124,9 @@ export default function TeachersView() {
     subject: 'All Subjects',
     joiningDate: new Date().toISOString().split('T')[0],
     salary: 25000,
-    photoUrl: ''
+    photoUrl: '',
+    aadhaarDocUrl: '',
+    aadhaarDocPath: ''
   };
 
   const [formData, setFormData] = useState(defaultFormData);
@@ -152,9 +162,167 @@ export default function TeachersView() {
       subject: t.subject || t.subjects || 'All Subjects',
       joiningDate: t.joiningDate ? (typeof t.joiningDate === 'string' ? t.joiningDate.split('T')[0] : t.joiningDate) : new Date().toISOString().split('T')[0],
       salary: t.salary || 25000,
-      photoUrl: t.photoUrl || ''
+      photoUrl: t.photoUrl || '',
+      aadhaarDocUrl: t.aadhaarDocUrl || t.aadhaarDocPath || t.aadhaarCardUrl || '',
+      aadhaarDocPath: t.aadhaarDocUrl || t.aadhaarDocPath || t.aadhaarCardUrl || ''
     });
     setIsAddOpen(true);
+  };
+
+  const handleAadhaarDocFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('Please select a valid image file (JPG/PNG/WebP).', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxWidth = 1000;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          setFormData(prev => ({
+            ...prev,
+            aadhaarDocUrl: compressedDataUrl,
+            aadhaarDocPath: compressedDataUrl
+          }));
+          showToast('Teacher Aadhaar / ID document photo attached!', 'success');
+        };
+        img.onerror = () => {
+          setFormData(prev => ({
+            ...prev,
+            aadhaarDocUrl: event.target.result,
+            aadhaarDocPath: event.target.result
+          }));
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+  };
+
+  const downloadFacultyImportTemplate = () => {
+    const sampleRows = [
+      {
+        'Teacher Name *': 'Ramesh Kumar',
+        'Mobile Number *': '9876543210',
+        'Gender': 'Male',
+        'Date of Birth (YYYY-MM-DD)': '1990-05-15',
+        'Designation': 'Subject Teacher',
+        'Subject': 'Mathematics',
+        'Qualification': 'B.Ed, M.Sc',
+        'Assigned Class': '10th',
+        'Assigned Section': 'A',
+        'Salary': 25000,
+        'Aadhaar Number': '123456789012',
+        'Residential Address': 'Siwan, Bihar'
+      },
+      {
+        'Teacher Name *': 'Pooja Sharma',
+        'Mobile Number *': '9876543211',
+        'Gender': 'Female',
+        'Date of Birth (YYYY-MM-DD)': '1994-08-20',
+        'Designation': 'Senior Teacher',
+        'Subject': 'Science',
+        'Qualification': 'B.Ed, B.Sc',
+        'Assigned Class': '8th',
+        'Assigned Section': 'A',
+        'Salary': 22000,
+        'Aadhaar Number': '987654321098',
+        'Residential Address': 'Patna, Bihar'
+      }
+    ];
+    const ws = XLSX.utils.json_to_sheet(sampleRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Faculty_Import_Template');
+    XLSX.writeFile(wb, 'Faculty_Import_Template.xlsx');
+    showToast('Downloaded Faculty Import Template!', 'success');
+  };
+
+  const handleFacultyFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName]);
+        if (!rows || rows.length === 0) {
+          showToast('The selected file has no data rows.', 'error');
+          return;
+        }
+        const parsed = rows.map((r) => ({
+          name: r['Teacher Name *'] || r['Teacher Name'] || r['Name'] || '',
+          mobile: String(r['Mobile Number *'] || r['Mobile Number'] || r['Mobile'] || '').replace(/[^0-9]/g, ''),
+          gender: r['Gender'] || 'Male',
+          dob: r['Date of Birth (YYYY-MM-DD)'] || r['DOB'] || '1992-05-15',
+          designation: r['Designation'] || 'Subject Teacher',
+          subject: r['Subject'] || 'All Subjects',
+          qualification: r['Qualification'] || 'B.Ed',
+          assignedClass: r['Assigned Class'] ? String(r['Assigned Class']).replace(/^Class\s*/i, '') : '',
+          assignedSection: r['Assigned Section'] || '',
+          salary: Number(r['Salary']) || 20000,
+          aadhaarNumber: String(r['Aadhaar Number'] || r['Aadhaar'] || '').replace(/[^0-9]/g, ''),
+          address: r['Residential Address'] || r['Address'] || '',
+          isValid: !!(r['Teacher Name *'] || r['Teacher Name'] || r['Name']) && !!(r['Mobile Number *'] || r['Mobile Number'] || r['Mobile'])
+        }));
+        setFacultyImportPreview(parsed);
+        setIsImportModalOpen(true);
+      } catch (err) {
+        showToast('Error reading Excel file: ' + err.message, 'error');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  };
+
+  const handleConfirmImportFaculty = async () => {
+    if (!facultyImportPreview || facultyImportPreview.length === 0) return;
+    setImportingFaculty(true);
+    let addedCount = 0;
+    try {
+      for (const row of facultyImportPreview) {
+        if (!row.isValid) continue;
+        await addTeacher({
+          name: row.name,
+          mobile: row.mobile,
+          gender: row.gender,
+          dob: row.dob,
+          designation: row.designation,
+          subject: row.subject,
+          qualification: row.qualification,
+          assignedClass: row.assignedClass,
+          assignedSection: row.assignedSection,
+          salary: row.salary,
+          aadhaarNumber: row.aadhaarNumber,
+          address: row.address,
+          password: '123456'
+        });
+        addedCount++;
+      }
+      showToast(`Successfully imported ${addedCount} teachers into system!`, 'success');
+      setIsImportModalOpen(false);
+      setFacultyImportPreview(null);
+    } catch (err) {
+      showToast('Error importing teachers: ' + err.message, 'error');
+    } finally {
+      setImportingFaculty(false);
+    }
   };
 
   const handleCopyEmail = (email, id) => {
@@ -173,12 +341,18 @@ export default function TeachersView() {
     }
 
     try {
+      const payload = {
+        ...formData,
+        aadhaarDocUrl: formData.aadhaarDocUrl || '',
+        aadhaarDocPath: formData.aadhaarDocUrl || '',
+        aadhaarCardUrl: formData.aadhaarDocUrl || ''
+      };
       if (editingTeacher) {
         const uid = editingTeacher.authUid || editingTeacher.id || editingTeacher.teacherId;
-        await updateTeacher(uid, formData);
+        await updateTeacher(uid, payload);
         showToast(`Teacher "${formData.name}" updated successfully!`, "success");
       } else {
-        await addTeacher(formData);
+        await addTeacher(payload);
         showToast(`Teacher "${formData.name}" added successfully with name-based Auth email!`, "success");
       }
       setIsAddOpen(false);
@@ -260,6 +434,23 @@ export default function TeachersView() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Faculty Excel Bulk Import */}
+          <input
+            ref={facultyImportInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFacultyFileSelect}
+            className="hidden"
+          />
+          <button
+            onClick={() => facultyImportInputRef.current?.click()}
+            className="px-3 py-2 rounded-xl bg-surface2 hover:bg-border text-text font-bold text-xs shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Import Faculty List from Excel or CSV"
+          >
+            <Upload className="w-4 h-4 text-emerald-600" />
+            <span className="hidden sm:inline">Import Excel</span>
+          </button>
+
           {teachers.length > 0 && (
             <>
               <button
@@ -821,18 +1012,96 @@ export default function TeachersView() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block font-bold text-text mb-1">
-                      Aadhaar Number
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={12}
-                      placeholder="e.g. 1234 5678 9012"
-                      value={formData.aadhaarNumber}
-                      onChange={(e) => setFormData({ ...formData, aadhaarNumber: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-surface2 border border-border text-xs text-text font-mono focus:outline-none focus:border-primary"
-                    />
+                  <div className="sm:col-span-2 p-3.5 rounded-xl bg-surface2/60 border border-border space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-text text-xs flex items-center gap-1.5">
+                        <FileCheck className="w-4 h-4 text-emerald-600" />
+                        <span>Aadhaar Card & Identity Document</span>
+                      </label>
+                      <span className="text-[10px] text-text-muted">Government ID for staff records</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                      <div>
+                        <span className="block text-[11px] font-bold text-text-secondary mb-1">12-Digit Aadhaar Number</span>
+                        <input
+                          type="text"
+                          maxLength={14}
+                          placeholder="e.g. 1234 5678 9012"
+                          value={formData.aadhaarNumber || ''}
+                          onChange={(e) => setFormData({ ...formData, aadhaarNumber: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-card border border-border text-xs text-text font-mono font-bold focus:outline-none focus:border-primary"
+                        />
+                      </div>
+
+                      {/* Aadhaar Photo Upload */}
+                      <div className="flex items-center gap-2.5 bg-card p-2 rounded-xl border border-dashed border-border">
+                        {formData.aadhaarDocUrl ? (
+                          <div className="relative w-16 h-12 rounded-lg overflow-hidden border border-border bg-slate-900 group flex-shrink-0">
+                            <img
+                              src={formData.aadhaarDocUrl}
+                              alt="Teacher Aadhaar"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setPreviewAadhaarDocModal(true)}
+                              className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px]"
+                              title="View Document"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-16 h-12 rounded-lg bg-surface2 border border-border flex flex-col items-center justify-center text-text-muted flex-shrink-0">
+                            <FileText className="w-4 h-4 text-text-muted/60" />
+                            <span className="text-[7.5px] font-bold">No Doc</span>
+                          </div>
+                        )}
+
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[10.5px] font-bold text-text block truncate">
+                            {formData.aadhaarDocUrl ? 'Aadhaar Attached' : 'Attach Aadhaar Card'}
+                          </span>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <input
+                              ref={aadhaarDocInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={handleAadhaarDocFileSelect}
+                              className="hidden"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => aadhaarDocInputRef.current?.click()}
+                              className="px-2 py-0.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <Upload className="w-2.5 h-2.5" />
+                              <span>{formData.aadhaarDocUrl ? 'Change' : 'Upload'}</span>
+                            </button>
+                            {formData.aadhaarDocUrl && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewAadhaarDocModal(true)}
+                                  className="px-1.5 py-0.5 rounded-lg bg-surface2 text-text text-[9.5px] font-bold cursor-pointer border border-border"
+                                >
+                                  <Eye className="w-2.5 h-2.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, aadhaarDocUrl: '', aadhaarDocPath: '' }))}
+                                  className="p-1 rounded-lg bg-rose-50 text-rose-600 text-[9.5px] cursor-pointer hover:bg-rose-100"
+                                  title="Remove Document"
+                                >
+                                  <Trash2 className="w-2.5 h-2.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1122,6 +1391,144 @@ export default function TeachersView() {
           onEdit={(t) => handleOpenEdit(t)}
           onOpenPermissions={() => setIsPermsModalOpen(true)}
         />
+      )}
+
+      {/* Full Size Aadhaar Document Preview Modal */}
+      {previewAadhaarDocModal && formData.aadhaarDocUrl && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl max-w-2xl w-full p-4 overflow-hidden shadow-2xl space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-border">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-emerald-600" />
+                <span className="font-bold text-sm text-text">Teacher Aadhaar Card / ID Document Preview</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewAadhaarDocModal(false)}
+                className="p-1 rounded-lg bg-surface2 text-text-muted hover:text-text cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-auto rounded-xl border border-border bg-slate-950 flex items-center justify-center p-2">
+              <img
+                src={formData.aadhaarDocUrl}
+                alt="Teacher Aadhaar Document Full"
+                className="max-h-[65vh] w-auto object-contain rounded-lg shadow-md"
+              />
+            </div>
+            <div className="flex justify-between items-center pt-2">
+              <span className="text-xs text-text-muted font-mono">
+                {formData.aadhaarNumber ? `UIDAI No: ${formData.aadhaarNumber}` : 'Document Attached'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewAadhaarDocModal(false)}
+                className="px-4 py-1.5 rounded-xl bg-primary text-white font-bold text-xs cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Faculty Bulk Import Modal */}
+      {isImportModalOpen && facultyImportPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl max-w-3xl w-full p-5 overflow-hidden shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-text">Bulk Import Teachers / Faculty</h3>
+                  <p className="text-xs text-text-muted">Review Excel/CSV rows before adding to system</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setIsImportModalOpen(false); setFacultyImportPreview(null); }}
+                className="p-1.5 rounded-lg bg-surface2 text-text-muted hover:text-text cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between bg-surface2 p-3 rounded-xl border border-border">
+              <div>
+                <span className="text-xs font-bold text-text">Need Excel Format?</span>
+                <span className="text-[11px] text-text-muted block">Download our template with pre-configured headers</span>
+              </div>
+              <button
+                type="button"
+                onClick={downloadFacultyImportTemplate}
+                className="px-3 py-1.5 rounded-lg bg-card hover:bg-border text-text font-bold text-xs flex items-center gap-1.5 border border-border shadow-2xs cursor-pointer transition-colors"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Download Template</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto border border-border rounded-xl">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-surface2 text-text font-bold border-b border-border">
+                    <th className="p-2.5">#</th>
+                    <th className="p-2.5">Teacher Name</th>
+                    <th className="p-2.5">Mobile</th>
+                    <th className="p-2.5">Subject</th>
+                    <th className="p-2.5">Assigned Class</th>
+                    <th className="p-2.5">Salary</th>
+                    <th className="p-2.5 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {facultyImportPreview.map((row, idx) => (
+                    <tr key={idx} className={row.isValid ? 'hover:bg-surface2/50' : 'bg-rose-500/10'}>
+                      <td className="p-2.5 text-text-muted font-mono">{idx + 1}</td>
+                      <td className="p-2.5 font-bold text-text">{row.name || <span className="text-rose-500 font-bold">Missing Name</span>}</td>
+                      <td className="p-2.5 font-mono">{row.mobile || <span className="text-rose-500 font-bold">Missing Mobile</span>}</td>
+                      <td className="p-2.5">{row.subject || '—'}</td>
+                      <td className="p-2.5">{row.assignedClass ? `Class ${row.assignedClass}` : '—'}</td>
+                      <td className="p-2.5 font-mono">₹{Number(row.salary || 0).toLocaleString()}</td>
+                      <td className="p-2.5 text-center">
+                        {row.isValid ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600">Valid</span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600">Error</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between border-t border-border">
+              <span className="text-xs text-text-muted">
+                Total Rows: <strong>{facultyImportPreview.length}</strong> (Valid: <strong className="text-emerald-600">{facultyImportPreview.filter(r => r.isValid).length}</strong>)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setIsImportModalOpen(false); setFacultyImportPreview(null); }}
+                  className="px-4 py-2 rounded-xl bg-surface2 text-text text-xs font-semibold hover:bg-border cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={importingFaculty || facultyImportPreview.filter(r => r.isValid).length === 0}
+                  onClick={handleConfirmImportFaculty}
+                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-dark text-white text-xs font-bold shadow-md cursor-pointer transition-all disabled:opacity-50"
+                >
+                  {importingFaculty ? 'Importing Teachers...' : `Confirm Import (${facultyImportPreview.filter(r => r.isValid).length} Teachers)`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

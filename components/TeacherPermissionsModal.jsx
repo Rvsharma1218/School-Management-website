@@ -6,7 +6,8 @@ import { t } from '../lib/translations';
 import {
   Shield, X, Check, Users, UserPlus, Building2,
   CalendarCheck, Award, FileText, Contact, Calendar,
-  Megaphone, CreditCard, FileSpreadsheet, Bus, Sparkles
+  Megaphone, CreditCard, FileSpreadsheet, Bus, Sparkles,
+  Edit3, Trash2, Activity, MessageSquare, Printer, Coins, UserCheck
 } from 'lucide-react';
 
 export default function TeacherPermissionsModal({ isOpen, onClose }) {
@@ -34,49 +35,70 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
       updated = {
         canViewStudents: true,
         canAddStudents: true,
+        canEditStudents: true,
+        canDeleteStudents: true,
         canMarkAttendance: true,
         canCollectFees: true,
+        canViewFeeStatus: true,
         canEnterResults: true,
         canViewAdmitCards: true,
         canViewIdCards: true,
+        canPrintCards: true,
         canManageTimetable: true,
         canPostNotices: true,
+        canSendWhatsApp: true,
         canViewTransport: true,
         canExportReports: true,
         canManageClasses: true,
         canMarkTeacherAtt: true,
+        canViewSchoolStatus: true,
+        canViewFacultyList: true,
       };
     } else if (type === 'standard') {
       updated = {
         canViewStudents: true,
-        canAddStudents: false,
+        canAddStudents: true,
+        canEditStudents: true,
+        canDeleteStudents: true,
         canMarkAttendance: true,
         canCollectFees: false,
+        canViewFeeStatus: false,
         canEnterResults: true,
         canViewAdmitCards: true,
-        canViewIdCards: false,
+        canViewIdCards: true,
+        canPrintCards: true,
         canManageTimetable: true,
         canPostNotices: true,
+        canSendWhatsApp: true,
         canViewTransport: false,
         canExportReports: false,
         canManageClasses: false,
         canMarkTeacherAtt: false,
+        canViewSchoolStatus: false,
+        canViewFacultyList: false,
       };
     } else if (type === 'minimal') {
       updated = {
         canViewStudents: true,
         canAddStudents: false,
+        canEditStudents: false,
+        canDeleteStudents: false,
         canMarkAttendance: true,
         canCollectFees: false,
+        canViewFeeStatus: false,
         canEnterResults: false,
         canViewAdmitCards: false,
         canViewIdCards: false,
+        canPrintCards: false,
         canManageTimetable: false,
         canPostNotices: false,
+        canSendWhatsApp: false,
         canViewTransport: false,
         canExportReports: false,
         canManageClasses: false,
         canMarkTeacherAtt: false,
+        canViewSchoolStatus: false,
+        canViewFacultyList: false,
       };
     }
     setPerms(updated);
@@ -199,6 +221,8 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {renderToggleRow('canViewStudents', t('permViewStudents', lang), t('permViewStudentsDesc', lang), Users, 'bg-blue-50', 'text-blue-600')}
               {renderToggleRow('canAddStudents', t('permAddStudents', lang), t('permAddStudentsDesc', lang), UserPlus, 'bg-sky-50', 'text-sky-600')}
+              {renderToggleRow('canEditStudents', t('permEditStudents', lang), t('permEditStudentsDesc', lang), Edit3, 'bg-indigo-50', 'text-indigo-600')}
+              {renderToggleRow('canDeleteStudents', t('permDeleteStudents', lang), t('permDeleteStudentsDesc', lang), Trash2, 'bg-rose-50', 'text-rose-600')}
               {renderToggleRow('canManageClasses', t('permManageClasses', lang), t('permManageClassesDesc', lang), Building2, 'bg-teal-50', 'text-teal-600')}
             </div>
           </div>
@@ -223,10 +247,11 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
               {renderToggleRow('canEnterResults', t('permEnterResults', lang), t('permEnterResultsDesc', lang), Award, 'bg-orange-50', 'text-orange-600')}
               {renderToggleRow('canViewAdmitCards', t('permViewAdmitCards', lang), t('permViewAdmitCardsDesc', lang), FileText, 'bg-indigo-50', 'text-indigo-600')}
               {renderToggleRow('canViewIdCards', t('permViewIdCards', lang), t('permViewIdCardsDesc', lang), Contact, 'bg-cyan-50', 'text-cyan-600')}
+              {renderToggleRow('canPrintCards', t('permPrintCards', lang), t('permPrintCardsDesc', lang), Printer, 'bg-emerald-50', 'text-emerald-600')}
             </div>
           </div>
 
-          {/* Section 4: Routine & Notice */}
+          {/* Section 4: Routine & Communication */}
           <div>
             <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2.5 flex items-center gap-1.5">
               <span>{t('secAcademicNotice', lang)}</span>
@@ -234,17 +259,21 @@ export default function TeacherPermissionsModal({ isOpen, onClose }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {renderToggleRow('canManageTimetable', t('permManageTimetable', lang), t('permManageTimetableDesc', lang), Calendar, 'bg-amber-50', 'text-amber-600')}
               {renderToggleRow('canPostNotices', t('permPostNotices', lang), t('permPostNoticesDesc', lang), Megaphone, 'bg-yellow-50', 'text-yellow-600')}
+              {renderToggleRow('canSendWhatsApp', t('permSendWhatsApp', lang), t('permSendWhatsAppDesc', lang), MessageSquare, 'bg-green-50', 'text-green-600')}
             </div>
           </div>
 
-          {/* Section 5: Finance & Admin */}
+          {/* Section 5: Finance, School Status & Admin */}
           <div>
             <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-2.5 flex items-center gap-1.5">
               <span>{t('secFinanceAdmin', lang)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {renderToggleRow('canViewSchoolStatus', t('permViewSchoolStatus', lang), t('permViewSchoolStatusDesc', lang), Activity, 'bg-blue-100', 'text-blue-700')}
               {renderToggleRow('canCollectFees', t('permCollectFees', lang), t('permCollectFeesDesc', lang), CreditCard, 'bg-fuchsia-50', 'text-fuchsia-600')}
+              {renderToggleRow('canViewFeeStatus', t('permViewFeeStatus', lang), t('permViewFeeStatusDesc', lang), Coins, 'bg-violet-50', 'text-violet-600')}
               {renderToggleRow('canExportReports', t('permExportReports', lang), t('permExportReportsDesc', lang), FileSpreadsheet, 'bg-sky-50', 'text-sky-600')}
+              {renderToggleRow('canViewFacultyList', t('permViewFacultyList', lang), t('permViewFacultyListDesc', lang), UserCheck, 'bg-purple-50', 'text-purple-600')}
               {renderToggleRow('canViewTransport', t('permViewTransport', lang), t('permViewTransportDesc', lang), Bus, 'bg-teal-50', 'text-teal-600')}
             </div>
           </div>
