@@ -501,18 +501,39 @@ export default function TimetableView() {
       doc.setFontSize(8.5);
       doc.text('DAY', M + dayColW / 2, y + 6.5, { align: 'center' });
 
+      const defaultPeriodTimes = {
+        1: '09:00 - 09:45',
+        2: '09:45 - 10:30',
+        3: '10:45 - 11:30',
+        4: '11:30 - 12:15',
+        5: '01:00 - 01:45',
+        6: '01:45 - 02:30',
+      };
+
       let curX = M + dayColW;
       // Prayer Column
       doc.setFillColor(217, 119, 6);
       doc.rect(curX, y, prayerColW, headerH, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.text('PRAYER', curX + prayerColW / 2, y + 6.5, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.text('PRAYER', curX + prayerColW / 2, y + 4.2, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.2);
+      doc.text('08:30 - 09:00', curX + prayerColW / 2, y + 8.0, { align: 'center' });
       curX += prayerColW;
 
       // Periods 1 to 4
       for (let p = 1; p <= 4; p++) {
         doc.setFillColor(30, 58, 138);
-        doc.text(`PERIOD ${p}`, curX + periodColW / 2, y + 6.5, { align: 'center' });
+        doc.rect(curX, y, periodColW, headerH, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.text(`PERIOD ${p}`, curX + periodColW / 2, y + 4.2, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.2);
+        doc.text(defaultPeriodTimes[p] || '', curX + periodColW / 2, y + 8.0, { align: 'center' });
         curX += periodColW;
       }
 
@@ -520,13 +541,25 @@ export default function TimetableView() {
       doc.setFillColor(5, 150, 105);
       doc.rect(curX, y, lunchColW, headerH, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.text('LUNCH', curX + lunchColW / 2, y + 6.5, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.text('LUNCH', curX + lunchColW / 2, y + 4.2, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.2);
+      doc.text('12:15 - 01:00', curX + lunchColW / 2, y + 8.0, { align: 'center' });
       curX += lunchColW;
 
       // Periods 5 to 6
       for (let p = 5; p <= 6; p++) {
         doc.setFillColor(30, 58, 138);
-        doc.text(`PERIOD ${p}`, curX + periodColW / 2, y + 6.5, { align: 'center' });
+        doc.rect(curX, y, periodColW, headerH, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.text(`PERIOD ${p}`, curX + periodColW / 2, y + 4.2, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.2);
+        doc.text(defaultPeriodTimes[p] || '', curX + periodColW / 2, y + 8.0, { align: 'center' });
         curX += periodColW;
       }
 
@@ -649,17 +682,23 @@ export default function TimetableView() {
       const rightSigX = W - M - 75;
       const rightCenterX = rightSigX + 32;
 
+      const stampScale = Number(settings.stampScale) || 1.0;
+      const sigScale = Number(settings.signatureScale) || 1.0;
+
       // Stamp centered at Director signature position
       if (stampData) {
         try {
-          doc.addImage(stampData, 'PNG', rightCenterX - 11, footerY - 16, 22, 22);
+          const sSize = 22 * stampScale;
+          doc.addImage(stampData, 'PNG', rightCenterX - sSize / 2, footerY - sSize / 2 - 5, sSize, sSize);
         } catch (e) {}
       }
 
       // Signature layered naturally inside / over the stamp
       if (sigData) {
         try {
-          doc.addImage(sigData, 'PNG', rightCenterX - 19, footerY - 13, 38, 12);
+          const sW = 38 * sigScale;
+          const sH = 12 * sigScale;
+          doc.addImage(sigData, 'PNG', rightCenterX - sW / 2, footerY - sH / 2 - 3, sW, sH);
         } catch (e) {}
       }
 
@@ -743,7 +782,15 @@ export default function TimetableView() {
       const numPeriods = 6;
       const periodColW = (contentW - classColW - prayerColW - lunchColW) / numPeriods;
       const tableW = contentW;
-      const headerH = 8.5;
+      const headerH = 9.5;
+      const defaultPeriodTimes = {
+        1: '09:00 - 09:45',
+        2: '09:45 - 10:30',
+        3: '10:45 - 11:30',
+        4: '11:30 - 12:15',
+        5: '01:00 - 01:45',
+        6: '01:45 - 02:30',
+      };
 
       // Header row
       doc.setFillColor(30, 58, 138);
@@ -751,19 +798,31 @@ export default function TimetableView() {
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
-      doc.text('CLASS', M + classColW / 2, y + 5.5, { align: 'center' });
+      doc.text('CLASS', M + classColW / 2, y + 6.0, { align: 'center' });
 
       let curX = M + classColW;
       // Prayer Column Header
       doc.setFillColor(217, 119, 6);
       doc.rect(curX, y, prayerColW, headerH, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.text('PRAYER (08:30)', curX + prayerColW / 2, y + 5.5, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.text('PRAYER', curX + prayerColW / 2, y + 4.0, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.0);
+      doc.text('08:30 - 09:00', curX + prayerColW / 2, y + 7.8, { align: 'center' });
       curX += prayerColW;
 
       for (let p = 1; p <= 4; p++) {
         doc.setFillColor(30, 58, 138);
-        doc.text(`PERIOD ${p}`, curX + periodColW / 2, y + 5.5, { align: 'center' });
+        doc.rect(curX, y, periodColW, headerH, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.text(`PERIOD ${p}`, curX + periodColW / 2, y + 4.0, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.0);
+        doc.text(defaultPeriodTimes[p] || '', curX + periodColW / 2, y + 7.8, { align: 'center' });
         curX += periodColW;
       }
 
@@ -771,12 +830,24 @@ export default function TimetableView() {
       doc.setFillColor(5, 150, 105);
       doc.rect(curX, y, lunchColW, headerH, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.text('LUNCH (12:15)', curX + lunchColW / 2, y + 5.5, { align: 'center' });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.text('LUNCH', curX + lunchColW / 2, y + 4.0, { align: 'center' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.0);
+      doc.text('12:15 - 01:00', curX + lunchColW / 2, y + 7.8, { align: 'center' });
       curX += lunchColW;
 
       for (let p = 5; p <= 6; p++) {
         doc.setFillColor(30, 58, 138);
-        doc.text(`PERIOD ${p}`, curX + periodColW / 2, y + 5.5, { align: 'center' });
+        doc.rect(curX, y, periodColW, headerH, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.text(`PERIOD ${p}`, curX + periodColW / 2, y + 4.0, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.0);
+        doc.text(defaultPeriodTimes[p] || '', curX + periodColW / 2, y + 7.8, { align: 'center' });
         curX += periodColW;
       }
 
@@ -890,17 +961,23 @@ export default function TimetableView() {
       const rightSigX = W - M - 75;
       const rightCenterX = rightSigX + 32;
 
+      const stampScale = Number(settings.stampScale) || 1.0;
+      const sigScale = Number(settings.signatureScale) || 1.0;
+
       // Stamp centered at Director signature position
       if (stampData) {
         try {
-          doc.addImage(stampData, 'PNG', rightCenterX - 10, footerY - 14, 20, 20);
+          const sSize = 20 * stampScale;
+          doc.addImage(stampData, 'PNG', rightCenterX - sSize / 2, footerY - sSize / 2 - 4, sSize, sSize);
         } catch (e) {}
       }
 
       // Signature layered naturally inside / over the stamp
       if (sigData) {
         try {
-          doc.addImage(sigData, 'PNG', rightCenterX - 18, footerY - 11, 36, 11);
+          const sW = 36 * sigScale;
+          const sH = 11 * sigScale;
+          doc.addImage(sigData, 'PNG', rightCenterX - sW / 2, footerY - sH / 2 - 3, sW, sH);
         } catch (e) {}
       }
 

@@ -741,6 +741,32 @@ export default function SettingsView() {
                         Remove Signature
                       </button>
                     )}
+
+                    {/* PDF Signature Size Slider */}
+                    <div className="pt-2 border-t border-border/70 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-text">
+                        <span>PDF Signature Size</span>
+                        <span className="text-primary font-mono">{Math.round((formData.signatureScale || 1.0) * 100)}% ({(38 * (formData.signatureScale || 1.0)).toFixed(1)}mm)</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.6"
+                        max="1.6"
+                        step="0.05"
+                        value={formData.signatureScale || 1.0}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setFormData(prev => ({ ...prev, signatureScale: val }));
+                          updateSettings({ signatureScale: val });
+                        }}
+                        className="w-full h-1.5 bg-surface rounded-lg appearance-none cursor-pointer accent-primary"
+                      />
+                      <div className="flex justify-between text-[9px] text-text-muted">
+                        <span>Compact (60%)</span>
+                        <span>Default (100%)</span>
+                        <span>Large (160%)</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -893,6 +919,32 @@ export default function SettingsView() {
                       <p className="text-[10.5px] text-text-secondary leading-tight">
                         Paste a direct image URL (PNG/JPG) to host your official seal on the cloud and sync across all devices.
                       </p>
+                    </div>
+
+                    {/* PDF Stamp Size Slider */}
+                    <div className="pt-2 border-t border-border/70 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-text">
+                        <span>PDF Stamp Size</span>
+                        <span className="text-emerald-600 font-mono">{Math.round((formData.stampScale || 1.0) * 100)}% ({(22 * (formData.stampScale || 1.0)).toFixed(1)}mm)</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.6"
+                        max="1.6"
+                        step="0.05"
+                        value={formData.stampScale || 1.0}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setFormData(prev => ({ ...prev, stampScale: val }));
+                          updateSettings({ stampScale: val });
+                        }}
+                        className="w-full h-1.5 bg-surface rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                      />
+                      <div className="flex justify-between text-[9px] text-text-muted">
+                        <span>Compact (60%)</span>
+                        <span>Default (100%)</span>
+                        <span>Large (160%)</span>
+                      </div>
                     </div>
                   </div>
                 </div>

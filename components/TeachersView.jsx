@@ -2,10 +2,11 @@
 
 import TeacherPermissionsModal from './TeacherPermissionsModal';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSchoolStore, getNextTeacherId, getActiveSchoolId } from '../lib/store';
 import { t } from '../lib/translations';
 import { exportFacultyToExcel, exportFacultyPDF } from '../lib/exportUtils';
+import ImageCropperModal from './ImageCropperModal';
 import {
   GraduationCap,
   Plus,
@@ -29,7 +30,10 @@ import {
   BookOpen,
   Briefcase,
   Award,
-  CreditCard
+  CreditCard,
+  Camera,
+  Upload,
+  Crop
 } from 'lucide-react';
 
 export default function TeachersView() {
@@ -52,6 +56,35 @@ export default function TeachersView() {
   const [selectedTeacherForHistory, setSelectedTeacherForHistory] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const photoInputRef = useRef(null);
+
+  const handlePhotoFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        showToast('Please select a valid image file.', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target.result;
+        setImageToCrop(dataUrl);
+        setIsCropperOpen(true);
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+  };
+
+  const handleCropComplete = (croppedDataUrl) => {
+    setFormData(prev => ({
+      ...prev,
+      photoUrl: croppedDataUrl
+    }));
+    showToast('Teacher profile photo cropped & applied!', 'success');
+  };
 
   const defaultFormData = {
     name: '',
@@ -258,8 +291,12 @@ export default function TeachersView() {
                 <div>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-primary text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0">
-                        {teacher.name?.charAt(0) || 'T'}
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-primary text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0 overflow-hidden">
+                        {teacher.photoUrl ? (
+                          <img src={teacher.photoUrl} alt={teacher.name} className="w-full h-full object-cover" />
+                        ) : (
+                          teacher.name?.charAt(0) || 'T'
+                        )}
                       </div>
                       <div className="min-w-0">
                         <h4 className="font-bold text-sm text-text truncate">{teacher.name}</h4>
@@ -432,6 +469,74 @@ export default function TeachersView() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 text-xs max-h-[80vh] overflow-y-auto">
+              {/* Photo Avatar with Actions (Identical to Student) */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 bg-surface2/60 p-3.5 rounded-2xl border border-border/80">
+                <div className="w-20 h-24 rounded-2xl bg-slate-900 border-2 border-dashed border-amber-400/60 overflow-hidden relative flex items-center justify-center text-text-muted group shadow-xs shrink-0">
+                  {formData.photoUrl ? (
+                    <img
+                      src={formData.photoUrl}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-slate-400 p-2 text-center">
+                      <User className="w-8 h-8 mb-1 text-slate-400/80" />
+                      <span className="text-[9px] font-bold text-slate-400">No Photo</span>
+                    </div>
+                  )}
+
+                  <label className="absolute inset-0 bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-[10px] font-bold">
+                    <Camera className="w-4 h-4 mb-1 text-amber-300" />
+                    <span>{formData.photoUrl ? 'Change' : 'Upload'}</span>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="flex flex-col gap-1.5 text-center sm:text-left">
+                  <span className="font-bold text-xs text-text">Teacher Profile Photo (DP)</span>
+                  <span className="text-[10px] text-text-muted">High-res compressed photo (&lt;100KB, 3:4 aspect ratio)</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      className="px-2.5 py-1 rounded-lg bg-primary hover:bg-primary-dark text-white text-[11px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer transition-colors"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>{formData.photoUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                    </button>
+                    {formData.photoUrl && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImageToCrop(formData.photoUrl);
+                            setIsCropperOpen(true);
+                          }}
+                          className="px-2 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 text-[11px] font-bold flex items-center gap-1 shadow-2xs cursor-pointer transition-colors"
+                        >
+                          <Crop className="w-3 h-3" />
+                          <span>Crop</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, photoUrl: '' }))}
+                          className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-bold cursor-pointer transition-colors"
+                          title="Remove Photo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* SECTION 1: Personal Information */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 pb-1 border-b border-border text-primary font-bold text-xs uppercase tracking-wider">
@@ -790,6 +895,16 @@ export default function TeachersView() {
           onClose={() => setIsPermsModalOpen(false)}
         />
       )}
+
+      {/* Teacher Photo Cropper Modal */}
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        imageSrc={imageToCrop}
+        title="Crop Teacher Profile Photo (DP)"
+        initialAspect="3:4"
+        onCropComplete={handleCropComplete}
+        onClose={() => setIsCropperOpen(false)}
+      />
     </div>
   );
 }
