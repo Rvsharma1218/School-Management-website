@@ -252,23 +252,20 @@ export default function PrintResultModal({ result: propResult, student: propStud
                 </div>
               </div>
 
-              {/* Right: Stamp on Left of Principal's Sign */}
-              <div className="flex items-end gap-3.5">
-                {stampSrc && (
-                  <div className="flex flex-col items-center mb-0.5">
-                    <img src={stampSrc} alt="School Seal" className="h-12 w-12 object-contain" />
-                    <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Official Seal</span>
-                  </div>
-                )}
-                <div className="text-center space-y-1 flex flex-col items-center">
-                  {sigSrc ? (
-                    <img src={sigSrc} alt="Principal Signature" className="h-8 max-w-[120px] object-contain mb-0.5" />
-                  ) : (
-                    <div className="h-8" />
+              {/* Right: Stamp & Director Sign */}
+              <div className="flex flex-col items-center">
+                <div className="relative flex items-center justify-center min-w-[130px] h-14 mb-1">
+                  {stampSrc && (
+                    <img src={stampSrc} alt="School Seal" className="absolute inset-0 m-auto h-14 w-14 object-contain opacity-85" style={{ mixBlendMode: 'multiply' }} />
                   )}
-                  <div className="w-36 border-b border-indigo-950" />
-                  <div className="text-[10px] font-bold uppercase text-slate-700">Principal's Sign</div>
+                  {sigSrc ? (
+                    <img src={sigSrc} alt="Director Signature" className="relative z-10 h-9 max-w-[130px] object-contain mb-0.5" />
+                  ) : (
+                    <div className="h-9" />
+                  )}
                 </div>
+                <div className="w-36 border-b border-indigo-950" />
+                <div className="text-[10px] font-bold uppercase text-slate-700 tracking-tight mt-1">Director Sign</div>
               </div>
             </div>
           </div>

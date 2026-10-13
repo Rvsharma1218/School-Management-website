@@ -421,13 +421,13 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
               <div className="font-semibold text-slate-800">
                 Class Teacher Sign.
               </div>
-              <div className="text-right">
-                <div className="flex items-end justify-end gap-3 mb-1">
+              <div className="text-right flex flex-col items-center">
+                <div className="relative flex items-center justify-center min-w-[110px] h-12 mb-1">
                   {(settings.schoolStamp || settings.stampUrl || settings.sealUrl) && (
                     <img
                       src={settings.schoolStamp || settings.stampUrl || settings.sealUrl}
                       alt="Official Stamp"
-                      className="h-10 w-10 object-contain"
+                      className="absolute inset-0 m-auto h-12 w-12 object-contain opacity-90"
                       style={{ mixBlendMode: 'multiply' }}
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
@@ -435,14 +435,16 @@ export default function PrintReceiptModal({ payment, student, onClose }) {
                   {(settings.principalSignature || settings.signatureUrl || settings.signaturePath || settings.signature) && (
                     <img
                       src={settings.principalSignature || settings.signatureUrl || settings.signaturePath || settings.signature}
-                      alt="Authorized Signature"
-                      className="h-9 max-h-9 w-auto object-contain"
+                      alt="Director Signature"
+                      className="relative z-10 h-8 max-h-8 w-auto object-contain"
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                   )}
                 </div>
-                <div className="font-bold uppercase text-slate-900 tracking-tight">
-                  FOR {settings.instituteName || 'MY SCHOOL & COMPUTER INSTITUTE'}
+                <div className="w-28 border-t border-slate-900 pt-0.5 text-center">
+                  <div className="font-bold text-slate-900 tracking-tight text-[11px]">
+                    Director Sign
+                  </div>
                 </div>
               </div>
             </div>
