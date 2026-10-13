@@ -252,20 +252,23 @@ export default function PrintResultModal({ result: propResult, student: propStud
                 </div>
               </div>
 
-              <div className="text-center space-y-1 flex flex-col items-center">
-                {sigSrc ? (
-                  <img src={sigSrc} alt="Principal Signature" className="h-8 max-w-[120px] object-contain mb-0.5" />
-                ) : (
-                  <div className="h-8" />
-                )}
-                <div className="w-36 border-b border-indigo-950" />
-                <div className="text-[10px] font-bold uppercase text-slate-700">Principal's Sign</div>
+              {/* Right: Stamp on Left of Principal's Sign */}
+              <div className="flex items-end gap-3.5">
                 {stampSrc && (
-                  <div className="mt-1 flex flex-col items-center">
-                    <img src={stampSrc} alt="School Seal" className="h-11 w-11 object-contain" />
-                    <span className="text-[8px] font-bold text-slate-500 uppercase">Official Seal</span>
+                  <div className="flex flex-col items-center mb-0.5">
+                    <img src={stampSrc} alt="School Seal" className="h-12 w-12 object-contain" />
+                    <span className="text-[7.5px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">Official Seal</span>
                   </div>
                 )}
+                <div className="text-center space-y-1 flex flex-col items-center">
+                  {sigSrc ? (
+                    <img src={sigSrc} alt="Principal Signature" className="h-8 max-w-[120px] object-contain mb-0.5" />
+                  ) : (
+                    <div className="h-8" />
+                  )}
+                  <div className="w-36 border-b border-indigo-950" />
+                  <div className="text-[10px] font-bold uppercase text-slate-700">Principal's Sign</div>
+                </div>
               </div>
             </div>
           </div>

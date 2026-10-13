@@ -7,7 +7,7 @@ import {
   Plus, Trash2, CheckCircle, School, ArrowRight,
   Info, Sparkles, Check, UploadCloud, Image as ImageIcon, Camera, X, FileSignature, Crop,
   Shield, Languages, HelpCircle, Headphones, MessageCircle, PhoneCall, Mail,
-  ExternalLink, GraduationCap, Lock, CheckCircle2, AlertCircle, ChevronRight, Stamp
+  ExternalLink, GraduationCap, Lock, CheckCircle2, AlertCircle, ChevronRight, Stamp, Link2
 } from 'lucide-react';
 import { removeSignatureBackground } from '../lib/exportUtils';
 import ImageCropperModal from './ImageCropperModal';
@@ -839,6 +839,61 @@ export default function SettingsView() {
                         </button>
                       </div>
                     )}
+
+                    {/* Stamp Photo / Image URL Input & Server Sync */}
+                    <div className="pt-2.5 border-t border-border/70 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-text-secondary">
+                        <span className="flex items-center gap-1.5 text-text">
+                          <Link2 className="w-3.5 h-3.5 text-primary" />
+                          <span>Stamp Image URL (Direct Link)</span>
+                        </span>
+                        {formData.stampUrl && formData.stampUrl.startsWith('http') && (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">Cloud Link Active</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="url"
+                          placeholder="https://example.com/stamp.png"
+                          value={formData.stampUrl || (formData.schoolStamp?.startsWith('http') ? formData.schoolStamp : '')}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormData(prev => ({
+                              ...prev,
+                              stampUrl: val
+                            }));
+                          }}
+                          className="flex-1 py-1.5 px-3 rounded-xl border border-border bg-surface text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-text-secondary/50"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = (formData.stampUrl || '').trim();
+                            if (!url) {
+                              showToast('Please enter an image URL', 'error');
+                              return;
+                            }
+                            setFormData(prev => ({
+                              ...prev,
+                              schoolStamp: url,
+                              stampUrl: url
+                            }));
+                            updateSettings({
+                              schoolStamp: url,
+                              stampUrl: url,
+                              sealUrl: url
+                            });
+                            showToast('School stamp URL saved & synced to server!', 'success');
+                          }}
+                          className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                        >
+                          Apply URL
+                        </button>
+                      </div>
+                      <p className="text-[10.5px] text-text-secondary leading-tight">
+                        Paste a direct image URL (PNG/JPG) to host your official seal on the cloud and sync across all devices.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

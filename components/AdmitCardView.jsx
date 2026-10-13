@@ -897,29 +897,31 @@ export default function AdmitCardView() {
                         <div className="w-28 border-b border-gray-400 mb-1" />
                         <span className="text-gray-700">Candidate Signature</span>
                       </div>
-                      <div className="text-center flex flex-col items-center relative">
-                        {sigSrc ? (
-                          <img
-                            src={sigSrc}
-                            alt="Signature"
-                            className="h-8 object-contain mb-1"
-                          />
-                        ) : (
-                          <div className="h-8" />
-                        )}
-                        <div className="w-36 border-b-2 border-[#1E3A8A] mb-1" />
-                        <span className="text-[#1E3A8A] font-black uppercase tracking-wider text-[8.5px]">
-                          Principal / Controller of Exam
-                        </span>
+                      <div className="flex items-end gap-3">
                         {(settings.schoolStamp || settings.stampUrl || settings.sealUrl) && (
                           <img
                             src={settings.schoolStamp || settings.stampUrl || settings.sealUrl}
                             alt="Stamp"
-                            className="h-9 w-9 object-contain mt-1"
+                            className="h-10 w-10 object-contain mb-1"
                             style={{ mixBlendMode: 'multiply' }}
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         )}
+                        <div className="text-center flex flex-col items-center">
+                          {sigSrc ? (
+                            <img
+                              src={sigSrc}
+                              alt="Signature"
+                              className="h-8 object-contain mb-1"
+                            />
+                          ) : (
+                            <div className="h-8" />
+                          )}
+                          <div className="w-36 border-b-2 border-[#1E3A8A] mb-1" />
+                          <span className="text-[#1E3A8A] font-black uppercase tracking-wider text-[8.5px]">
+                            Principal / Controller of Exam
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1067,20 +1069,31 @@ export default function AdmitCardView() {
                         <div className="w-36 border-b border-gray-400 mb-1.5" />
                         <span className="text-gray-700">Candidate Signature</span>
                       </div>
-                      <div className="text-center flex flex-col items-center">
-                        {sigSrc ? (
+                      <div className="flex items-end gap-3.5">
+                        {(settings.schoolStamp || settings.stampUrl || settings.sealUrl) && (
                           <img
-                            src={sigSrc}
-                            alt="Signature"
-                            className="h-9 object-contain mb-1"
+                            src={settings.schoolStamp || settings.stampUrl || settings.sealUrl}
+                            alt="Stamp"
+                            className="h-11 w-11 object-contain mb-1"
+                            style={{ mixBlendMode: 'multiply' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
-                        ) : (
-                          <div className="h-9" />
                         )}
-                        <div className="w-44 border-b-2 border-[#1E3A8A] mb-1.5" />
-                        <span className="text-[#1E3A8A] font-black uppercase tracking-wider">
-                          Principal / Controller of Exam
-                        </span>
+                        <div className="text-center flex flex-col items-center">
+                          {sigSrc ? (
+                            <img
+                              src={sigSrc}
+                              alt="Signature"
+                              className="h-9 object-contain mb-1"
+                            />
+                          ) : (
+                            <div className="h-9" />
+                          )}
+                          <div className="w-44 border-b-2 border-[#1E3A8A] mb-1.5" />
+                          <span className="text-[#1E3A8A] font-black uppercase tracking-wider">
+                            Principal / Controller of Exam
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
