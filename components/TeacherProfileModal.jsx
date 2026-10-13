@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { useSchoolStore } from '../lib/store';
+import React, { useState, useRef, useEffect } from 'react';
+import { useSchoolStore, getActiveSchoolId } from '../lib/store';
 import {
   X,
   User,
@@ -26,7 +26,13 @@ import {
   Crop,
   Download,
   Share2,
-  Check
+  Check,
+  AlertTriangle,
+  KeyRound,
+  FileText,
+  Printer,
+  ChevronRight,
+  Clock
 } from 'lucide-react';
 import ImageCropperModal from './ImageCropperModal';
 
@@ -36,17 +42,56 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
     updateTeacher,
     deleteTeacher,
     showToast,
-    teacherAttendance
+    teacherAttendance,
+    markTeacherAttendance
   } = useSchoolStore();
 
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'professional' | 'credentials' | 'attendance'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'professional' | 'salary' | 'credentials' | 'attendance'
   const [showPassword, setShowPassword] = useState(false);
   const [copiedField, setCopiedField] = useState(null);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
   const photoInputRef = useRef(null);
 
+  // Modals for Actions
+  const [isToggleActiveModalOpen, setIsToggleActiveModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isPaySalaryModalOpen, setIsPaySalaryModalOpen] = useState(false);
+
+  // Form states
+  const [resetPasswordVal, setResetPasswordVal] = useState('123456');
+  const [salaryAmount, setSalaryAmount] = useState(teacher?.salary || 25000);
+  const [salaryMonth, setSalaryMonth] = useState(() => {
+    const d = new Date();
+    return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  });
+  const [salaryMode, setSalaryMode] = useState('Bank Transfer');
+  const [salaryNote, setSalaryNote] = useState('');
+
+  // Local Salary History
+  const [salaryHistory, setSalaryHistory] = useState([]);
+
+  const activeSchoolId = getActiveSchoolId();
+  const teacherKey = teacher?.authUid || teacher?.id || teacher?.teacherId;
+
+  // Load salary history from localStorage
+  useEffect(() => {
+    if (!teacherKey) return;
+    try {
+      const stored = localStorage.getItem(`teacher_salary_history_${activeSchoolId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed[teacherKey]) {
+          setSalaryHistory(parsed[teacherKey]);
+        }
+      }
+    } catch (_) {}
+  }, [teacherKey, activeSchoolId]);
+
   if (!teacher) return null;
+
+  const isActive = teacher.active !== false && teacher.status !== 'disabled';
 
   const handleCopy = (text, fieldName) => {
     if (!text) return;
@@ -85,9 +130,216 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
     }
   };
 
-  const handleDelete = () => {
-    deleteTeacher(teacher);
-    onClose();
+  // ─── TOGGLE ACTIVE CONFIRMATION (YES / NO) ──────────────────────────────────
+  const handleConfirmToggleActive = async () => {
+    try {
+      const uid = teacher.authUid || teacher.id || teacher.teacherId;
+      const newStatus = !isActive;
+      await updateTeacher(uid, {
+        ...teacher,
+        active: newStatus,
+        status: newStatus ? 'active' : 'disabled'
+      });
+      setIsToggleActiveModalOpen(false);
+      showToast(`${teacher.name} is now ${newStatus ? 'Active' : 'Disabled'}!`, 'success');
+    } catch (err) {
+      showToast(`Failed to update status: ${err.message || err}`, 'error');
+    }
+  };
+
+  // ─── RESET PASSWORD CONFIRMATION ───────────────────────────────────────────
+  const handleConfirmResetPassword = async () => {
+    if (resetPasswordVal.trim().length < 6) {
+      showToast('Password must be at least 6 characters.', 'error');
+      return;
+    }
+    try {
+      const uid = teacher.authUid || teacher.id || teacher.teacherId;
+      await updateTeacher(uid, {
+        ...teacher,
+        password: resetPasswordVal.trim()
+      });
+      setIsResetPasswordModalOpen(false);
+      showToast('Portal password updated! Share new password with teacher.', 'success');
+    } catch (err) {
+      showToast(`Failed to reset password: ${err.message || err}`, 'error');
+    }
+  };
+
+  // ─── DELETE TEACHER CONFIRMATION ───────────────────────────────────────────
+  const handleConfirmDelete = async () => {
+    try {
+      deleteTeacher(teacher);
+      setIsDeleteModalOpen(false);
+      onClose();
+    } catch (err) {
+      showToast(`Failed to delete teacher: ${err.message || err}`, 'error');
+    }
+  };
+
+  // ─── PAY SALARY & RECORD HISTORY & PRINT VOUCHER ────────────────────────────
+  const handlePaySalarySubmit = (e) => {
+    e.preventDefault();
+    const amt = Number(salaryAmount) || teacher.salary || 25000;
+    const now = new Date();
+    const record = {
+      teacherId: teacher.teacherId || teacher.id,
+      teacherName: teacher.name,
+      month: salaryMonth,
+      amount: amt,
+      mode: salaryMode,
+      note: salaryNote.trim(),
+      date: now.toISOString(),
+      timestampFormatted: now.toLocaleString('en-US', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
+    };
+
+    const updatedList = [record, ...salaryHistory];
+    setSalaryHistory(updatedList);
+
+    try {
+      const stored = localStorage.getItem(`teacher_salary_history_${activeSchoolId}`);
+      const parsed = stored ? JSON.parse(stored) : {};
+      parsed[teacherKey] = updatedList;
+      localStorage.setItem(`teacher_salary_history_${activeSchoolId}`, JSON.stringify(parsed));
+    } catch (_) {}
+
+    setIsPaySalaryModalOpen(false);
+    showToast(`Salary payment recorded for ${teacher.name}!`, 'success');
+    printSalarySlip(record);
+  };
+
+  // ─── OFFICIAL PRINTABLE SALARY SLIP (STAMP + SIGN + DATE/TIME) ─────────────
+  const printSalarySlip = (record) => {
+    const schoolName = settings.instituteName || settings.schoolName || 'SMART HIGH SCHOOL';
+    const schoolAddress = settings.address || 'Main Campus';
+    const schoolPhone = settings.phone || settings.mobile || 'Support Line';
+    const schoolEmail = settings.email || 'info@school.com';
+    const stampImg = settings.schoolStamp || settings.stamp || '';
+    const sigImg = settings.principalSignature || settings.rawSignature || settings.signature || '';
+    const printDate = record.timestampFormatted || new Date().toLocaleString();
+
+    const slipWindow = window.open('', '_blank', 'width=800,height=900');
+    if (!slipWindow) {
+      showToast('Popup blocker prevented voucher print window. Please allow popups.', 'error');
+      return;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Salary_Slip_${(teacher.name || 'Teacher').replace(/\s+/g, '_')}_${record.month}</title>
+          <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; color: #1e293b; padding: 30px; }
+            .voucher-card { border: 2px solid #334155; border-radius: 12px; padding: 25px; max-width: 720px; margin: 0 auto; position: relative; }
+            .header-row { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 14px; }
+            .school-title { font-size: 20px; font-weight: 900; color: #1e3a8a; text-transform: uppercase; letter-spacing: -0.5px; }
+            .school-sub { font-size: 11px; color: #64748b; margin-top: 3px; }
+            .badge-title { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; text-align: center; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; font-size: 12.5px; margin-bottom: 18px; }
+            .info-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 4px; }
+            .info-label { font-weight: 700; color: #475569; }
+            .info-val { font-weight: 600; color: #0f172a; }
+            .amount-box { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+            .amount-label { font-size: 13px; font-weight: 800; color: #1e293b; }
+            .amount-val { font-size: 22px; font-weight: 900; color: #047857; font-family: monospace; }
+            .words-row { font-size: 11.5px; font-style: italic; color: #475569; margin-bottom: 30px; }
+            .sig-section { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; }
+            .sig-col { text-align: center; width: 220px; position: relative; }
+            .sig-line { border-top: 1.5px solid #475569; margin-top: 8px; padding-top: 4px; font-size: 11px; font-weight: 700; color: #1e293b; }
+            .stamp-sig-box { height: 75px; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: -15px; }
+            .stamp-img { height: 65px; width: auto; opacity: 0.88; object-fit: contain; }
+            .sig-img { height: 45px; width: auto; object-fit: contain; position: absolute; z-index: 2; }
+            .footer-note { margin-top: 25px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 8px; }
+            @media print {
+              body { padding: 0; }
+              .voucher-card { border: 1.5px solid #000; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="voucher-card">
+            <div class="header-row">
+              <div>
+                <div class="school-title">${schoolName}</div>
+                <div class="school-sub">${schoolAddress} | Phone: ${schoolPhone} | Email: ${schoolEmail}</div>
+              </div>
+            </div>
+
+            <div class="badge-title">Official Staff Salary Disbursement Voucher</div>
+
+            <div class="info-grid">
+              <div class="info-item"><span class="info-label">Faculty Name:</span><span class="info-val">${teacher.name}</span></div>
+              <div class="info-item"><span class="info-label">Teacher ID:</span><span class="info-val">${teacher.teacherId || 'T001'}</span></div>
+              <div class="info-item"><span class="info-label">Designation:</span><span class="info-val">${teacher.designation || 'Teacher'}</span></div>
+              <div class="info-item"><span class="info-label">Assigned Class / Sub:</span><span class="info-val">${teacher.assignedClass ? 'Class ' + teacher.assignedClass : (teacher.subject || 'Faculty')}</span></div>
+              <div class="info-item"><span class="info-label">Salary Month:</span><span class="info-val">${record.month}</span></div>
+              <div class="info-item"><span class="info-label">Payment Mode:</span><span class="info-val">${record.mode}</span></div>
+              <div class="info-item"><span class="info-label">Transaction Ref:</span><span class="info-val">${record.note || 'N/A'}</span></div>
+              <div class="info-item"><span class="info-label">Date & Time:</span><span class="info-val">${printDate}</span></div>
+            </div>
+
+            <div class="amount-box">
+              <span class="amount-label">NET SALARY PAID:</span>
+              <span class="amount-val">₹ ${Number(record.amount).toLocaleString('en-IN')}</span>
+            </div>
+
+            <div class="words-row">
+              Amount in Words: <strong>Rupees ${Number(record.amount).toLocaleString('en-IN')} Only</strong>
+            </div>
+
+            <div class="sig-section">
+              <div class="sig-col">
+                <div style="height: 50px;"></div>
+                <div class="sig-line">Teacher's Signature</div>
+              </div>
+
+              <div class="sig-col">
+                <div class="stamp-sig-box">
+                  ${stampImg ? `<img src="${stampImg}" class="stamp-img" alt="Stamp" />` : ''}
+                  ${sigImg ? `<img src="${sigImg}" class="sig-img" alt="Principal Sign" />` : ''}
+                </div>
+                <div class="sig-line">Director / Principal Sign & Stamp</div>
+              </div>
+            </div>
+
+            <div class="footer-note">
+              This is a computer-generated official payment receipt issued by ${schoolName}.
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    slipWindow.document.open();
+    slipWindow.document.write(htmlContent);
+    slipWindow.document.close();
+  };
+
+  // ─── 1-CLICK ATTENDANCE (PRESENT, ABSENT, HALF DAY, LEAVE) ──────────────────
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStatus = teacherAttendance?.[todayStr]?.[teacherKey] || null;
+
+  const handle1ClickAttendance = async (status) => {
+    try {
+      await markTeacherAttendance(todayStr, teacherKey, status);
+      showToast(`Marked ${teacher.name} as ${status.toUpperCase()} for Today!`, 'success');
+    } catch (err) {
+      showToast(`Failed to mark attendance: ${err.message || err}`, 'error');
+    }
   };
 
   const isClassTeacher = teacher.assignedClass && teacher.assignedClass !== 'none' && teacher.assignedClass !== 'None';
@@ -110,9 +362,11 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
             <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-white font-mono font-extrabold text-[11px] shadow-xs">
               {teacher.teacherId || 'T-ID'}
             </span>
-            <span className="px-2.5 py-1 rounded-full bg-emerald-500/80 backdrop-blur-md text-white font-bold text-[10px] flex items-center gap-1 shadow-xs">
+            <span className={`px-2.5 py-1 rounded-full backdrop-blur-md text-white font-bold text-[10px] flex items-center gap-1 shadow-xs ${
+              isActive ? 'bg-emerald-500/80' : 'bg-rose-500/80'
+            }`}>
               <CheckCircle className="w-3 h-3" />
-              <span>Active Faculty</span>
+              <span>{isActive ? 'Active Faculty' : 'Account Disabled'}</span>
             </span>
           </div>
 
@@ -138,7 +392,6 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
                 )}
               </div>
               
-              {/* Photo Change Action Overlay */}
               <button
                 onClick={() => photoInputRef.current?.click()}
                 className="absolute inset-0 m-auto w-full h-full rounded-2xl bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 cursor-pointer"
@@ -180,35 +433,34 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
             </div>
           </div>
 
-          {/* Quick Action Buttons */}
-          <div className="flex items-center gap-2 self-start sm:self-end pt-1">
-            {onOpenPermissions && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenPermissions(teacher);
-                }}
-                className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 font-bold text-xs border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                title="Configure Teacher Access & Permissions"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Access</span>
-              </button>
-            )}
-
+          {/* Top Actions: Edit, Disable, Delete */}
+          <div className="flex items-center gap-2 self-start sm:self-end pt-1 flex-wrap">
             <button
               onClick={() => {
                 onClose();
                 onEdit(teacher);
               }}
-              className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+              className="px-3 py-1.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
             >
               <Edit className="w-3.5 h-3.5" />
               <span>Edit</span>
             </button>
 
+            {/* Toggle Disable / Enable with Yes/No Modal */}
             <button
-              onClick={handleDelete}
+              onClick={() => setIsToggleActiveModalOpen(true)}
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs border flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 ${
+                isActive
+                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100'
+                  : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
+              }`}
+            >
+              <span>{isActive ? 'Disable' : 'Enable'}</span>
+            </button>
+
+            {/* Delete button */}
+            <button
+              onClick={() => setIsDeleteModalOpen(true)}
               className="p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 font-bold text-xs border border-rose-200 dark:border-rose-900 cursor-pointer transition-all active:scale-95"
               title="Delete Teacher"
             >
@@ -221,18 +473,19 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
         <div className="flex border-b border-border bg-surface2 px-5 sm:px-6 gap-1 overflow-x-auto">
           {[
             { id: 'overview', label: 'Personal Info', icon: User },
-            { id: 'professional', label: 'Academic & Salary', icon: Briefcase },
-            { id: 'credentials', label: 'Portal Login', icon: Mail },
+            { id: 'professional', label: 'Academic Info', icon: Briefcase },
+            { id: 'salary', label: 'Salary & Slips', icon: CreditCard },
+            { id: 'credentials', label: 'Portal Login', icon: KeyRound },
             { id: 'attendance', label: 'Attendance', icon: Calendar }
           ].map(tab => {
             const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+            const isTabActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-3 px-3.5 text-xs font-bold border-b-2 flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-                  isActive
+                  isTabActive
                     ? 'border-primary text-primary'
                     : 'border-transparent text-text-secondary hover:text-text'
                 }`}
@@ -246,6 +499,7 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
 
         {/* Tab Content Body */}
         <div className="p-5 sm:p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
@@ -309,6 +563,7 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
             </div>
           )}
 
+          {/* TAB 2: ACADEMIC */}
           {activeTab === 'professional' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
@@ -348,25 +603,91 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
                   </span>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Annual CTC Badge */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 flex items-center justify-between text-xs">
+          {/* TAB 3: SALARY & PAYMENT HISTORY */}
+          {activeTab === 'salary' && (
+            <div className="space-y-4">
+              {/* Current Salary Card with Pay Salary Button */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 block">Annual Estimated CTC</span>
-                  <span className="text-[10px] text-text-secondary">Based on base monthly salary allocation</span>
+                  <span className="text-[11px] uppercase font-extrabold tracking-wider text-emerald-100 block">
+                    Configured Monthly Compensation
+                  </span>
+                  <span className="text-2xl font-black font-mono block mt-1">
+                    ₹{Number(teacher.salary || 25000).toLocaleString('en-IN')} / month
+                  </span>
+                  <span className="text-[11px] text-emerald-100 block mt-0.5">
+                    Annual CTC Estimate: ₹{(Number(teacher.salary || 25000) * 12).toLocaleString('en-IN')}
+                  </span>
                 </div>
-                <span className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400">
-                  ₹{(Number(teacher.salary || 25000) * 12).toLocaleString('en-IN')} / yr
-                </span>
+
+                <button
+                  onClick={() => {
+                    setSalaryAmount(teacher.salary || 25000);
+                    setIsPaySalaryModalOpen(true);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-white text-emerald-700 font-extrabold text-xs shadow-md hover:bg-emerald-50 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>Pay Salary</span>
+                </button>
+              </div>
+
+              {/* Salary Slips & History List */}
+              <div className="rounded-xl border border-border overflow-hidden bg-card">
+                <div className="px-4 py-2.5 bg-surface2 border-b border-border flex items-center justify-between">
+                  <span className="text-xs font-bold text-text">Salary Payment History & Slips</span>
+                  <span className="text-[10.5px] text-text-muted">{salaryHistory.length} disbursements recorded</span>
+                </div>
+
+                {salaryHistory.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-text-muted">
+                    No salary payments logged yet.
+                    <p className="text-[11px] mt-1 text-text-secondary">Click "Pay Salary" above to record a payment and print official salary voucher.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border max-h-56 overflow-y-auto">
+                    {salaryHistory.map((item, idx) => (
+                      <div key={idx} className="px-4 py-3 flex items-center justify-between text-xs hover:bg-surface2/50 transition-colors">
+                        <div>
+                          <div className="font-bold text-text flex items-center gap-2">
+                            <span>₹{Number(item.amount).toLocaleString('en-IN')} Disbursed</span>
+                            <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                              {item.mode}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-text-secondary mt-0.5">
+                            Month: <strong>{item.month}</strong> {item.note ? `• ${item.note}` : ''}
+                          </div>
+                          <div className="text-[10px] text-text-muted">
+                            {item.timestampFormatted || item.date}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => printSalarySlip(item)}
+                          className="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 font-bold text-xs flex items-center gap-1 cursor-pointer transition-all border border-indigo-200 dark:border-indigo-800"
+                          title="Print / View Salary Slip Voucher (Mohar & Sign)"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Slip</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
+          {/* TAB 4: PORTAL CREDENTIALS */}
           {activeTab === 'credentials' && (
             <div className="space-y-4">
               <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200">
                 <span className="font-bold block mb-0.5">Faculty Portal Credentials:</span>
-                Teachers can log in directly using this unique Auth Email and Password to mark attendance, manage timetable, and view records.
+                Teachers can log in directly using this unique Auth Email and Password to mark attendance and manage records.
               </div>
 
               <div className="space-y-3 text-xs">
@@ -387,7 +708,7 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
                   </button>
                 </div>
 
-                {/* Password with Reveal */}
+                {/* Password with Reveal & Reset Action */}
                 <div className="p-3.5 rounded-xl bg-surface2 border border-border/70 flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <span className="text-[10.5px] text-text-muted font-medium block">Portal Password</span>
@@ -404,11 +725,15 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                     <button
-                      onClick={() => handleCopy(teacher.password || '123456', 'Password')}
-                      className="px-2.5 py-1.5 rounded-lg bg-card hover:bg-surface border border-border text-text font-bold text-xs flex items-center gap-1 cursor-pointer transition-all"
+                      onClick={() => {
+                        setResetPasswordVal(teacher.password || '123456');
+                        setIsResetPasswordModalOpen(true);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs flex items-center gap-1 cursor-pointer transition-all"
+                      title="Reset Portal Password"
                     >
-                      {copiedField === 'Password' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedField === 'Password' ? 'Copied' : 'Copy'}</span>
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Reset</span>
                     </button>
                   </div>
                 </div>
@@ -431,8 +756,8 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
             </div>
           )}
 
+          {/* TAB 5: ATTENDANCE & 1-CLICK MARKING */}
           {activeTab === 'attendance' && (() => {
-            const teacherKey = teacher.id || teacher.teacherId || teacher.authUid;
             const historyLogs = [];
             let totalDays = 0;
             let presentDays = 0;
@@ -458,12 +783,44 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
 
             return (
               <div className="space-y-4">
+                {/* 1-Click Today Attendance Bar */}
+                <div className="p-4 rounded-xl bg-surface2 border border-border/80">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <span className="text-xs font-bold text-text">
+                      Today's Attendance ({todayStr}):
+                    </span>
+                    {todayStatus && (
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                        Logged: {todayStatus}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { key: 'present', label: 'Present', color: 'hover:bg-emerald-500 hover:text-white', activeColor: 'bg-emerald-600 text-white' },
+                      { key: 'absent', label: 'Absent', color: 'hover:bg-rose-500 hover:text-white', activeColor: 'bg-rose-600 text-white' },
+                      { key: 'half_day', label: 'Half Day', color: 'hover:bg-amber-500 hover:text-white', activeColor: 'bg-amber-600 text-white' },
+                      { key: 'leave', label: 'Leave', color: 'hover:bg-purple-500 hover:text-white', activeColor: 'bg-purple-600 text-white' }
+                    ].map(btn => (
+                      <button
+                        key={btn.key}
+                        onClick={() => handle1ClickAttendance(btn.key)}
+                        className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all border border-border cursor-pointer ${
+                          todayStatus === btn.key ? btn.activeColor : `bg-card text-text ${btn.color}`
+                        }`}
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Metrics row */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
                     <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300 block">Attendance Rate</span>
                     <span className="text-xl font-extrabold text-emerald-800 dark:text-emerald-200 block mt-0.5">{attendanceRate}%</span>
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block">{presentDays} / {totalDays} logged days</span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block">{presentDays} / {totalDays} days</span>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-surface2 border border-border/70">
@@ -475,13 +832,13 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
                   <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900">
                     <span className="text-[10px] uppercase font-bold text-rose-700 dark:text-rose-300 block">Absent</span>
                     <span className="text-xl font-extrabold text-rose-800 dark:text-rose-200 block mt-0.5">{absentDays}</span>
-                    <span className="text-[10px] text-rose-600 dark:text-rose-400 block">Days recorded absent</span>
+                    <span className="text-[10px] text-rose-600 dark:text-rose-400 block">Days absent</span>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900">
-                    <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-300 block">Leave / Half Day</span>
+                    <span className="text-[10px] uppercase font-bold text-amber-700 dark:text-amber-300 block">Leave</span>
                     <span className="text-xl font-extrabold text-amber-800 dark:text-amber-200 block mt-0.5">{leaveDays}</span>
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 block">Official leave logged</span>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 block">Leave logged</span>
                   </div>
                 </div>
 
@@ -495,7 +852,7 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
                   {historyLogs.length === 0 ? (
                     <div className="py-8 text-center text-xs text-text-muted">
                       No attendance logged for this faculty member yet.
-                      <p className="text-[11px] mt-1 text-text-secondary">Mark daily teacher attendance in the Attendance module.</p>
+                      <p className="text-[11px] mt-1 text-text-secondary">Use the 1-click buttons above to log today's status.</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-border max-h-56 overflow-y-auto">
@@ -544,6 +901,207 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
         </div>
 
       </div>
+
+      {/* ─── MODAL 1: CONFIRM DISABLE / ENABLE (YES / NO) ────────────────── */}
+      {isToggleActiveModalOpen && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                isActive ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
+              }`}>
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-text">
+                  {isActive ? 'Disable Faculty Account?' : 'Enable Faculty Account?'}
+                </h4>
+                <p className="text-xs text-text-muted">
+                  {isActive
+                    ? `Are you sure you want to disable ${teacher.name}'s account? They will not be able to log in.`
+                    : `Are you sure you want to enable ${teacher.name}'s account? They will be granted portal access.`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsToggleActiveModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-border bg-card text-text font-bold text-xs hover:bg-surface cursor-pointer"
+              >
+                No
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmToggleActive}
+                className={`px-4 py-2 rounded-xl text-white font-bold text-xs cursor-pointer ${
+                  isActive ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                Yes, {isActive ? 'Disable' : 'Enable'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 2: RESET PASSWORD ───────────────────────────────────────── */}
+      {isResetPasswordModalOpen && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <h4 className="font-bold text-sm text-text flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-primary" />
+              <span>Reset Portal Password</span>
+            </h4>
+            <p className="text-xs text-text-muted">
+              Enter a new login password for <strong>{teacher.name}</strong> (minimum 6 characters):
+            </p>
+            <input
+              type="text"
+              value={resetPasswordVal}
+              onChange={(e) => setResetPasswordVal(e.target.value)}
+              className="w-full px-3.5 py-2 rounded-xl border border-border bg-surface text-text font-mono text-xs focus:outline-hidden focus:border-primary"
+              placeholder="e.g. 123456"
+            />
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsResetPasswordModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-border bg-card text-text font-bold text-xs hover:bg-surface cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmResetPassword}
+                className="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-dark cursor-pointer"
+              >
+                Save New Password
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 3: CONFIRM DELETE ───────────────────────────────────────── */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-text">Permanently Delete Teacher?</h4>
+                <p className="text-xs text-text-muted">
+                  Are you sure you want to delete <strong>{teacher.name}</strong>? This action cannot be reversed.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 rounded-xl border border-border bg-card text-text font-bold text-xs hover:bg-surface cursor-pointer"
+              >
+                No, Keep
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs hover:bg-rose-700 cursor-pointer"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL 4: PAY SALARY FORM ──────────────────────────────────────── */}
+      {isPaySalaryModalOpen && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h4 className="font-bold text-sm text-text flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-emerald-600" />
+                <span>Pay Salary — {teacher.name}</span>
+              </h4>
+              <button onClick={() => setIsPaySalaryModalOpen(false)} className="text-text-muted hover:text-text cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePaySalarySubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="font-bold text-text block mb-1">Salary Amount (₹)</label>
+                <input
+                  type="number"
+                  value={salaryAmount}
+                  onChange={(e) => setSalaryAmount(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-surface text-text font-mono font-bold text-sm focus:outline-hidden focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-text block mb-1">Salary Month</label>
+                <input
+                  type="text"
+                  value={salaryMonth}
+                  onChange={(e) => setSalaryMonth(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-surface text-text text-xs focus:outline-hidden focus:border-primary"
+                  placeholder="e.g. October 2026"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-text block mb-1">Payment Mode</label>
+                <select
+                  value={salaryMode}
+                  onChange={(e) => setSalaryMode(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-surface text-text text-xs focus:outline-hidden focus:border-primary"
+                >
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="UPI / Online">UPI / Online</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Cheque">Cheque</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-text block mb-1">Transaction Ref / Note</label>
+                <input
+                  type="text"
+                  value={salaryNote}
+                  onChange={(e) => setSalaryNote(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-surface text-text text-xs focus:outline-hidden focus:border-primary"
+                  placeholder="e.g. Txn #987623 / UTR / Cheque #"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsPaySalaryModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-border bg-card text-text font-bold text-xs hover:bg-surface cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-md flex items-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Confirm & Print Voucher</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Embedded Photo Cropper */}
       {isCropperOpen && (

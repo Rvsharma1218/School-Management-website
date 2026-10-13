@@ -450,144 +450,84 @@ export default function TeachersView() {
               <div
                 key={teacherKey}
                 onClick={() => setSelectedTeacherForProfile(teacher)}
-                className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
+                className="bg-card border border-border rounded-2xl p-4 shadow-xs flex flex-col justify-between hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group"
               >
-                <div>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* DP Avatar */}
-                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-indigo-600 to-primary text-white flex items-center justify-center font-bold text-base shadow-xs shrink-0 overflow-hidden border-2 border-border/80 group-hover:scale-105 transition-transform">
-                        {teacher.photoUrl ? (
-                          <img src={teacher.photoUrl} alt={teacher.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span>{teacher.name?.charAt(0) || 'T'}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="font-extrabold text-sm text-text truncate group-hover:text-primary transition-colors">
-                          {teacher.name}
-                        </h4>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] text-primary font-mono font-bold">
-                            {teacher.teacherId || `T${String(idx + 1).padStart(3, '0')}`}
-                          </span>
-                          {teacher.designation && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface2 text-text-secondary font-medium">
-                              {teacher.designation}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => setSelectedTeacherForProfile(teacher)}
-                        className="p-1.5 rounded-lg bg-surface2 hover:bg-primary/10 text-text-muted hover:text-primary cursor-pointer transition-colors"
-                        title="View Full Profile"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenEdit(teacher)}
-                        className="p-1.5 rounded-lg bg-surface2 hover:bg-border text-text-muted hover:text-text cursor-pointer transition-colors"
-                        title="Edit Teacher"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => deleteTeacher(teacher)}
-                        className="p-1.5 rounded-lg bg-surface2 hover:bg-rose-100 text-text-muted hover:text-rose-600 cursor-pointer transition-colors"
-                        title="Delete Teacher"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                <div className="flex items-start gap-3.5">
+                  {/* Circular Avatar 56x56 */}
+                  <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg shrink-0 overflow-hidden border-2 border-border/80 group-hover:scale-105 transition-transform">
+                    {teacher.photoUrl ? (
+                      <img src={teacher.photoUrl} alt={teacher.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span>{teacher.name?.charAt(0)?.toUpperCase() || 'T'}</span>
+                    )}
                   </div>
 
-                  <div className="space-y-2 py-2.5 border-y border-border/60 text-xs">
-                    {/* Assigned Class / Role */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-text-secondary font-medium">Role / Class:</span>
-                      {teacher.assignedClass && teacher.assignedClass !== 'none' && teacher.assignedClass !== 'None' ? (
-                        <span className="font-bold text-primary px-2 py-0.5 rounded-md bg-primary/10 text-[11px]">
-                          Class {teacher.assignedClass}{teacher.assignedSection ? ` — Sec ${teacher.assignedSection}` : ''}
-                        </span>
-                      ) : (
-                        <span className="font-bold text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 text-[11px] flex items-center gap-1">
-                          <BookOpen className="w-3 h-3 text-emerald-600" />
-                          <span>Subject Teacher (All Classes)</span>
-                        </span>
+                  {/* Teacher Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <h4 className="font-bold text-sm text-text truncate group-hover:text-primary transition-colors">
+                        {teacher.name}
+                      </h4>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                        Staff
+                      </span>
+                    </div>
+
+                    {/* Row 1: Numbers/ID + Email */}
+                    <div className="flex items-center gap-1.5 text-[11px] text-text-muted mt-0.5">
+                      <span className="font-mono font-bold text-primary">
+                        {teacher.teacherId || `T${String(idx + 1).padStart(3, '0')}`}
+                      </span>
+                      <span>•</span>
+                      <span className="truncate max-w-[150px] font-mono text-[10.5px]">
+                        {displayEmail}
+                      </span>
+                    </div>
+
+                    {/* Row 2: Assigned Class / Subject */}
+                    <div className="flex items-center gap-1.5 text-[11px] text-text font-medium mt-1">
+                      <GraduationCap className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="truncate">
+                        {teacher.assignedClass && teacher.assignedClass !== 'none' && teacher.assignedClass !== 'None'
+                          ? `Class ${teacher.assignedClass}${teacher.assignedSection ? ` - ${teacher.assignedSection}` : ''}`
+                          : (teacher.subject ? `Subject: ${teacher.subject}` : 'General Faculty')}
+                      </span>
+                    </div>
+
+                    {/* Row 3: Father / Desig + Phone */}
+                    <div className="flex items-center gap-1.5 text-[11px] text-text-muted mt-1">
+                      <User className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate max-w-[110px]">
+                        {teacher.fatherName || teacher.designation || 'Teacher'}
+                      </span>
+                      {teacher.mobile && (
+                        <>
+                          <Phone className="w-3.5 h-3.5 shrink-0 ml-1" />
+                          <span className="font-mono">{teacher.mobile}</span>
+                        </>
                       )}
                     </div>
 
-                    {teacher.subject && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-text-secondary font-medium">Subject(s):</span>
-                        <span className="font-semibold text-text text-[11px]">{teacher.subject}</span>
-                      </div>
-                    )}
-
-                    {teacher.qualification && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-text-secondary font-medium">Qualification:</span>
-                        <span className="font-semibold text-text text-[11px]">{teacher.qualification}</span>
-                      </div>
-                    )}
-
-                    {/* Auth Login Email */}
-                    <div className="flex items-center justify-between gap-1" onClick={(e) => e.stopPropagation()}>
-                      <span className="text-text-secondary font-medium shrink-0">Auth Email:</span>
-                      <div className="flex items-center gap-1 min-w-0">
-                        <span className="font-mono text-[11px] text-indigo-950 dark:text-indigo-200 font-bold truncate max-w-[170px]" title={displayEmail}>
-                          {displayEmail}
+                    {/* Row 4: Status Chip + Salary Chip */}
+                    <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/60">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          teacher.active !== false && teacher.status !== 'disabled'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                        }`}>
+                          {teacher.active !== false && teacher.status !== 'disabled' ? 'Active' : 'Disabled'}
                         </span>
-                        <button
-                          onClick={() => handleCopyEmail(displayEmail, teacherKey)}
-                          className="p-1 text-slate-400 hover:text-primary rounded cursor-pointer"
-                          title="Copy Email"
-                        >
-                          <Copy className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {teacher.mobile && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-text-secondary font-medium">Mobile:</span>
-                        <span className="font-mono text-text font-semibold">{teacher.mobile}</span>
-                      </div>
-                    )}
-
-                    {/* Salary & History */}
-                    <div className="flex items-center justify-between pt-1" onClick={(e) => e.stopPropagation()}>
-                      <span className="text-text-secondary font-medium">Base Salary:</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-emerald-600 font-mono text-[11px] bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">
                           ₹{Number(teacher.salary || 25000).toLocaleString('en-IN')} / mo
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedTeacherForHistory(teacher)}
-                          className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold border border-indigo-200 dark:border-indigo-800 cursor-pointer transition-colors"
-                        >
-                          History
-                        </button>
                       </div>
+
+                      <span className="text-text-muted group-hover:text-primary transition-colors text-xs font-bold">
+                        →
+                      </span>
                     </div>
                   </div>
-                </div>
-
-                <div className="pt-3 flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                    <CheckCircle className="w-3 h-3" />
-                    <span>Active Faculty</span>
-                  </span>
-                  <span className="text-[10px] text-primary font-bold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                    <span>View Profile</span>
-                    <span>→</span>
-                  </span>
                 </div>
               </div>
             );
