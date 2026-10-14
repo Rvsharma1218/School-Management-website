@@ -23,13 +23,36 @@ export default function SecurityPermissionModal({
   const [isRevoked, setIsRevoked] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [locationStatus, setLocationStatus] = useState('pending');
-  const [cameraStatus, setCameraStatus] = useState('pending');
-  const [notifStatus, setNotifStatus] = useState('pending');
-  const [micStatus, setMicStatus] = useState('pending');
+  const [locationStatus, setLocationStatus] = useState(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('sch_security_loc_verified') === 'true') return 'granted';
+    return 'pending';
+  });
+  const [cameraStatus, setCameraStatus] = useState(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('sch_security_cam_verified') === 'true') return 'granted';
+    return 'pending';
+  });
+  const [notifStatus, setNotifStatus] = useState(() => {
+    if (typeof window !== 'undefined' && (sessionStorage.getItem('sch_security_notif_verified') === 'true' || (typeof Notification !== 'undefined' && Notification.permission === 'granted'))) return 'granted';
+    return 'pending';
+  });
+  const [micStatus, setMicStatus] = useState(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('sch_security_mic_verified') === 'true') return 'granted';
+    return 'pending';
+  });
 
-  const [locationDetails, setLocationDetails] = useState(null);
-  const [cameraSnapshot, setCameraSnapshot] = useState(null);
+  const [locationDetails, setLocationDetails] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem('sch_cached_location');
+        if (raw) return JSON.parse(raw);
+      } catch (_) {}
+    }
+    return null;
+  });
+  const [cameraSnapshot, setCameraSnapshot] = useState(() => {
+    if (typeof window !== 'undefined') return sessionStorage.getItem('sch_cached_cam_snapshot') || null;
+    return null;
+  });
   const [errorMessage, setErrorMessage] = useState('');
 
   const isLocationRequired = securityConfig?.isLocationRequired === true;
