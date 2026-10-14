@@ -257,6 +257,13 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
     const stampSrc = formatImgSrc(rawStamp);
     const sigSrc = formatImgSrc(rawSig);
 
+    const stampScale = Number(settings.stampScale) || 1.0;
+    const signatureScale = Number(settings.signatureScale) || 1.0;
+    const stampHeight = Math.round(68 * stampScale);
+    const sigHeight = Math.round(44 * signatureScale);
+    const boxHeight = Math.max(stampHeight, sigHeight) + 12;
+    const boxWidth = Math.max(160, Math.round(stampHeight * 1.3), Math.round(sigHeight * 2.5));
+
     const slipWindow = window.open('', '_blank', 'width=800,height=900');
     if (!slipWindow) {
       showToast('Popup blocker prevented voucher print window. Please allow popups.', 'error');
@@ -288,9 +295,9 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
             .sig-section { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; }
             .sig-col { text-align: center; width: 220px; position: relative; }
             .sig-line { border-top: 1.5px solid #475569; margin-top: 8px; padding-top: 4px; font-size: 11px; font-weight: 700; color: #1e293b; }
-            .stamp-sig-box { height: 75px; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: -10px; width: 160px; margin-left: auto; margin-right: auto; }
-            .stamp-img { height: 68px; width: auto; opacity: 0.90; object-fit: contain; mix-blend-mode: multiply; filter: contrast(115%); }
-            .sig-img { height: 44px; width: auto; object-fit: contain; position: absolute; z-index: 2; mix-blend-mode: multiply; filter: contrast(130%); }
+            .stamp-sig-box { min-height: 75px; height: ${boxHeight}px; width: ${boxWidth}px; position: relative; display: flex; align-items: center; justify-content: center; margin-left: auto; margin-right: auto; margin-bottom: 2px; }
+            .stamp-img { height: ${stampHeight}px; max-width: 100%; width: auto; opacity: 0.90; object-fit: contain; mix-blend-mode: multiply; filter: contrast(115%); }
+            .sig-img { height: ${sigHeight}px; max-width: 90%; width: auto; object-fit: contain; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; mix-blend-mode: multiply; filter: contrast(130%); }
             .footer-note { margin-top: 25px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 8px; }
             @media print {
               body { padding: 0; }

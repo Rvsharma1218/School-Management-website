@@ -32,6 +32,8 @@ export default function AttendanceView() {
     showToast
   } = useSchoolStore();
 
+  const lang = settings?.appLanguage || 'en';
+
   const [selectedTeacherDate, setSelectedTeacherDate] = useState(new Date().toISOString().split('T')[0]);
   const [localTeacherStatus, setLocalTeacherStatus] = useState({});
   const [isSavingTeacherAtt, setIsSavingTeacherAtt] = useState(false);
@@ -234,7 +236,7 @@ export default function AttendanceView() {
               }`}
             >
               <GraduationCap className="w-3.5 h-3.5" />
-              <span>Teacher Attendance (शिक्षक हाजिरी)</span>
+              <span>{lang === 'hi' ? 'शिक्षक उपस्थिति' : 'Teacher Attendance'}</span>
             </button>
           )}
         </div>
@@ -454,13 +456,10 @@ export default function AttendanceView() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl lg:text-2xl font-bold text-text tracking-tight flex items-center gap-2">
-                <span>Teacher Daily Attendance</span>
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  शिक्षक उपस्थिति
-                </span>
+                <span>{lang === 'hi' ? 'शिक्षक दैनिक उपस्थिति' : 'Teacher Daily Attendance'}</span>
               </h2>
               <p className="text-xs text-text-secondary mt-0.5">
-                Mark, update, and sync faculty daily presence & leave status.
+                {lang === 'hi' ? 'शिक्षकों की दैनिक उपस्थिति और अवकाश दर्ज व अद्यतन करें।' : 'Mark, update, and sync faculty daily presence & leave status.'}
               </p>
             </div>
 

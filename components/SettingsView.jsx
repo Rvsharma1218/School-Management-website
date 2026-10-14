@@ -1551,7 +1551,7 @@ export default function SettingsView() {
         <ImageCropperModal
           isOpen={isStampCropperOpen}
           imageSrc={stampToCrop}
-          title="Crop School Stamp / Mohar (मोहर)"
+          title={formData.appLanguage === 'hi' ? 'स्कूल मुहर क्रॉप करें' : 'Crop School Stamp'}
           initialAspect="1:1"
           onClose={() => setIsStampCropperOpen(false)}
           onCropComplete={handleStampCropComplete}
