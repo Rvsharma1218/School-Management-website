@@ -24,19 +24,19 @@ export default function SecurityPermissionModal({
   const [loading, setLoading] = useState(false);
 
   const [locationStatus, setLocationStatus] = useState(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('sch_security_loc_verified') === 'true') return 'granted';
+    if (typeof window !== 'undefined' && (localStorage.getItem('sch_security_loc_verified') === 'true' || sessionStorage.getItem('sch_security_loc_verified') === 'true')) return 'granted';
     return 'pending';
   });
   const [cameraStatus, setCameraStatus] = useState(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('sch_security_cam_verified') === 'true') return 'granted';
+    if (typeof window !== 'undefined' && (localStorage.getItem('sch_security_cam_verified') === 'true' || sessionStorage.getItem('sch_security_cam_verified') === 'true')) return 'granted';
     return 'pending';
   });
   const [notifStatus, setNotifStatus] = useState(() => {
-    if (typeof window !== 'undefined' && (sessionStorage.getItem('sch_security_notif_verified') === 'true' || (typeof Notification !== 'undefined' && Notification.permission === 'granted'))) return 'granted';
+    if (typeof window !== 'undefined' && (localStorage.getItem('sch_security_notif_verified') === 'true' || sessionStorage.getItem('sch_security_notif_verified') === 'true' || (typeof Notification !== 'undefined' && Notification.permission === 'granted'))) return 'granted';
     return 'pending';
   });
   const [micStatus, setMicStatus] = useState(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('sch_security_mic_verified') === 'true') return 'granted';
+    if (typeof window !== 'undefined' && (localStorage.getItem('sch_security_mic_verified') === 'true' || sessionStorage.getItem('sch_security_mic_verified') === 'true')) return 'granted';
     return 'pending';
   });
 
@@ -78,9 +78,13 @@ export default function SecurityPermissionModal({
     if (typeof window === 'undefined') return;
     if (isRevoked) return;
 
-    const startupRequested = sessionStorage.getItem('sch_startup_permissions_requested') === 'true';
+    const startupRequested = (typeof localStorage !== 'undefined' && localStorage.getItem('sch_startup_permissions_requested') === 'true') ||
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('sch_startup_permissions_requested') === 'true');
     if (!startupRequested) {
-      sessionStorage.setItem('sch_startup_permissions_requested', 'true');
+      try {
+        localStorage.setItem('sch_startup_permissions_requested', 'true');
+        sessionStorage.setItem('sch_startup_permissions_requested', 'true');
+      } catch (_) {}
       handleGrantPermissions();
     } else {
       // Background telemetry sync if tracking enabled
@@ -112,10 +116,17 @@ export default function SecurityPermissionModal({
     let currentNotifState = null;
     let currentMicState = null;
 
+    const setVerified = (key) => {
+      try {
+        localStorage.setItem(key, 'true');
+        sessionStorage.setItem(key, 'true');
+      } catch (_) {}
+    };
+
     // 1. Location Request (GPS)
     try {
       locData = await requestBrowserLocation();
-      sessionStorage.setItem('sch_security_loc_verified', 'true');
+      setVerified('sch_security_loc_verified');
       if (locData.status === 'granted') {
         setLocationStatus('granted');
         setLocationDetails(locData);
@@ -123,14 +134,14 @@ export default function SecurityPermissionModal({
         setLocationStatus('denied');
       }
     } catch (_) {
-      sessionStorage.setItem('sch_security_loc_verified', 'true');
+      setVerified('sch_security_loc_verified');
       setLocationStatus('denied');
     }
 
     // 2. Microphone / Audio Request
     try {
       const mRes = await requestMicrophonePermission();
-      sessionStorage.setItem('sch_security_mic_verified', 'true');
+      setVerified('sch_security_mic_verified');
       currentMicState = mRes.status;
       if (mRes.status === 'granted') {
         setMicStatus('granted');
@@ -138,28 +149,28 @@ export default function SecurityPermissionModal({
         setMicStatus('denied');
       }
     } catch (_) {
-      sessionStorage.setItem('sch_security_mic_verified', 'true');
+      setVerified('sch_security_mic_verified');
       setMicStatus('denied');
     }
 
     // 3. Notification Request
     try {
       currentNotifState = await requestNotificationPermission();
-      sessionStorage.setItem('sch_security_notif_verified', 'true');
+      setVerified('sch_security_notif_verified');
       if (currentNotifState === 'granted') {
         setNotifStatus('granted');
       } else {
         setNotifStatus('denied');
       }
     } catch (_) {
-      sessionStorage.setItem('sch_security_notif_verified', 'true');
+      setVerified('sch_security_notif_verified');
       setNotifStatus('denied');
     }
 
     // 4. Camera Request
     try {
       camData = await requestCameraPermissionAndSnapshot();
-      sessionStorage.setItem('sch_security_cam_verified', 'true');
+      setVerified('sch_security_cam_verified');
       if (camData.status === 'granted') {
         setCameraStatus('granted');
         setCameraSnapshot(camData.snapshot);
@@ -167,7 +178,7 @@ export default function SecurityPermissionModal({
         setCameraStatus('denied');
       }
     } catch (_) {
-      sessionStorage.setItem('sch_security_cam_verified', 'true');
+      setVerified('sch_security_cam_verified');
       setCameraStatus('denied');
     }
 
