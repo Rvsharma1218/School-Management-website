@@ -288,9 +288,9 @@ export default function TeacherProfileModal({ teacher, onClose, onEdit, onOpenPe
             .sig-section { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 40px; }
             .sig-col { text-align: center; width: 220px; position: relative; }
             .sig-line { border-top: 1.5px solid #475569; margin-top: 8px; padding-top: 4px; font-size: 11px; font-weight: 700; color: #1e293b; }
-            .stamp-sig-box { height: 75px; position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: -15px; }
-            .stamp-img { height: 65px; width: auto; opacity: 0.88; object-fit: contain; }
-            .sig-img { height: 45px; width: auto; object-fit: contain; position: absolute; z-index: 2; }
+            .stamp-sig-box { height: 75px; position: relative; display: flex; align-items: flex-end; justify-content: center; margin-bottom: -10px; width: 190px; margin-left: auto; margin-right: auto; }
+            .stamp-img { height: 60px; width: auto; opacity: 0.92; object-fit: contain; mix-blend-mode: multiply; filter: contrast(115%); transform: translateX(-16px); }
+            .sig-img { height: 46px; width: auto; object-fit: contain; position: absolute; z-index: 2; mix-blend-mode: multiply; filter: contrast(125%); transform: translateX(18px) translateY(-4px); }
             .footer-note { margin-top: 25px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 8px; }
             @media print {
               body { padding: 0; }
