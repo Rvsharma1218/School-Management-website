@@ -48,12 +48,12 @@ export default function AttendanceView() {
   }, [selectedTeacherDate, teacherAttendance, teachers]);
 
   const isPrincipal = currentUser?.role === 'principal';
-  const assignedClass = currentUser?.assignedClass || '10th';
+  const assignedClass = currentUser?.assignedClass && currentUser.assignedClass !== 'none' && currentUser.assignedClass !== 'None' ? currentUser.assignedClass : '';
 
   const [activeTab, setActiveTab] = useState('daily'); // default directly to daily register for teacher ease
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedType, setSelectedType] = useState('all'); // 'all' | 'school' | 'computer'
-  const [selectedClass, setSelectedClass] = useState(isPrincipal ? 'all' : assignedClass);
+  const [selectedClass, setSelectedClass] = useState(isPrincipal || !assignedClass ? 'all' : assignedClass);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Auto-switch to teachers tab if navigated from Teacher Profile or query param
@@ -80,9 +80,9 @@ export default function AttendanceView() {
     }
   }, []);
 
-  // Reset to assigned class on view mount or role change
+  // Reset to assigned class on view mount or role change (if teacher has specific assigned class)
   useEffect(() => {
-    if (!isPrincipal && assignedClass) {
+    if (!isPrincipal && assignedClass && assignedClass !== 'all') {
       setSelectedClass(assignedClass);
     }
   }, [assignedClass, isPrincipal]);

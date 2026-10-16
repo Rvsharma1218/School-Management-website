@@ -46,6 +46,9 @@ import SetupWizardView from '../components/SetupWizardView';
 import AccessDeniedView from '../components/AccessDeniedView';
 import UserManagementView from '../components/UserManagementView';
 import ProfileView from '../components/ProfileView';
+import ParentPortalView from '../components/ParentPortalView';
+import ParentComplaintsView from '../components/ParentComplaintsView';
+import ConnectedDevicesView from '../components/ConnectedDevicesView';
 
 function AppContent() {
   const {
@@ -307,6 +310,30 @@ function AppContent() {
     return <SetupWizardView />;
   }
 
+  // ── Render 2.5: Parent Portal (Dedicated Student & Parent Experience)
+  if (currentUser?.role === 'parent') {
+    return (
+      <>
+        <ParentPortalView />
+        {printReceiptData && (
+          <PrintReceiptModal
+            payment={printReceiptData.payment || printReceiptData}
+            student={printReceiptData.student || currentUser.student || students.find(s => s.id === printReceiptData.studentId)}
+            onClose={() => setPrintReceiptData(null)}
+          />
+        )}
+        {printResultData && (
+          <PrintResultModal
+            result={printResultData.result || printResultData}
+            student={printResultData.student || currentUser.student || students.find(s => s.id === printResultData.studentId)}
+            onClose={() => setPrintResultData(null)}
+          />
+        )}
+        <ToastContainer />
+      </>
+    );
+  }
+
   // ── Render 3: Authenticated App Frame (Sidebar & Header)
   return (
     <div className="min-h-screen bg-bg text-text font-sans transition-colors duration-200 flex">
@@ -355,6 +382,8 @@ function AppContent() {
             {currentPath === '/subscription' && <SubscriptionView />}
             {currentPath === '/users' && <UserManagementView />}
             {currentPath === '/profile' && <ProfileView />}
+            {currentPath === '/complaints' && <ParentComplaintsView />}
+            {currentPath === '/devices' && <ConnectedDevicesView />}
             {currentPath === '/access-denied' && <AccessDeniedView />}
           </div>
         </main>

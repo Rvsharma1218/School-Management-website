@@ -8,10 +8,13 @@ import {
 } from 'lucide-react';
 
 export default function SignInView() {
-  const { signIn, teacherSignIn, fetchSchoolTeachersByEmail, teachers, settings, currentUser, navigate, demoSignIn } = useSchoolStore();
+  const { signIn, teacherSignIn, parentSignIn, fetchSchoolTeachersByEmail, teachers, settings, currentUser, navigate, demoSignIn } = useSchoolStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('principal'); // 'principal' | 'teacher'
+  const [role, setRole] = useState('principal'); // 'principal' | 'teacher' | 'parent'
+  const [parentSchoolIdentifier, setParentSchoolIdentifier] = useState('');
+  const [parentAdmissionNo, setParentAdmissionNo] = useState('');
+  const [parentMobile, setParentMobile] = useState('');
   const [selectedTeacherId, setSelectedTeacherId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -44,7 +47,12 @@ export default function SignInView() {
     setLoading(true);
 
     try {
-      if (role === 'teacher') {
+      if (role === 'parent') {
+        if (!parentAdmissionNo.trim()) {
+          throw new Error("Please enter your child's Admission Number or Roll Number.");
+        }
+        await parentSignIn(parentSchoolIdentifier.trim(), parentAdmissionNo.trim(), parentMobile.trim());
+      } else if (role === 'teacher') {
         if (!selectedTeacherId) {
           throw new Error("Please select your teacher name from the dropdown.");
         }
@@ -157,36 +165,51 @@ export default function SignInView() {
               <p className="text-xs text-[#464553] mt-1">
                 {role === 'principal'
                   ? 'Enter principal credentials to access full administrative controls.'
-                  : 'Enter School Email and select your Teacher name to login.'}
+                  : role === 'teacher'
+                  ? 'Enter School Email and select your Teacher name to login.'
+                  : 'Enter School Email/Code, Student Admission No & Mobile to access Parent Portal.'}
               </p>
             </div>
 
-            {/* Role Toggle Selector */}
-            <div className="grid grid-cols-2 p-1 bg-[#dce9ff] rounded-2xl gap-1">
+            {/* Role Toggle Selector (3 Tabs) */}
+            <div className="grid grid-cols-3 p-1 bg-[#dce9ff] rounded-2xl gap-1">
               <button
                 type="button"
                 onClick={() => { setRole('principal'); setError(''); }}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   role === 'principal'
                     ? 'bg-white text-[#1f108e] shadow-sm'
                     : 'text-[#464553] hover:text-[#0b1c30]'
                 }`}
               >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Principal / Admin</span>
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Principal</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => { setRole('teacher'); setError(''); }}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   role === 'teacher'
                     ? 'bg-white text-[#1f108e] shadow-sm'
                     : 'text-[#464553] hover:text-[#0b1c30]'
                 }`}
               >
-                <UserCheck className="w-4 h-4" />
-                <span>Teacher / Faculty</span>
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Teacher</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setRole('parent'); setError(''); }}
+                className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  role === 'parent'
+                    ? 'bg-white text-[#1f108e] shadow-sm'
+                    : 'text-[#464553] hover:text-[#0b1c30]'
+                }`}
+              >
+                <GraduationCap className="w-3.5 h-3.5" />
+                <span>Parent</span>
               </button>
             </div>
 
@@ -201,7 +224,7 @@ export default function SignInView() {
                   No Password Needed
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
                   onClick={() => {
@@ -211,10 +234,10 @@ export default function SignInView() {
                       setPassword('123456');
                     }
                   }}
-                  className="py-2 px-3 rounded-xl bg-[#1f108e] hover:bg-[#150b69] text-white text-[11px] font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                  className="py-2 px-2 rounded-xl bg-[#1f108e] hover:bg-[#150b69] text-white text-[10px] font-bold shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Principal (Admin)</span>
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Principal</span>
                 </button>
                 <button
                   type="button"
@@ -226,10 +249,25 @@ export default function SignInView() {
                       setPassword('123456');
                     }
                   }}
-                  className="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-[#1f108e] border border-[#1f108e]/30 text-[11px] font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                  className="py-2 px-2 rounded-xl bg-white hover:bg-slate-100 text-[#1f108e] border border-[#1f108e]/30 text-[10px] font-bold shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
                 >
-                  <UserCheck className="w-3.5 h-3.5" />
-                  <span>Class Teacher</span>
+                  <UserCheck className="w-3 h-3" />
+                  <span>Teacher</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (demoSignIn) demoSignIn('parent');
+                    else {
+                      setRole('parent');
+                      setParentAdmissionNo('ADM-2026-001');
+                      setParentMobile('9876543210');
+                    }
+                  }}
+                  className="py-2 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                >
+                  <GraduationCap className="w-3 h-3" />
+                  <span>Parent</span>
                 </button>
               </div>
             </div>
@@ -245,95 +283,160 @@ export default function SignInView() {
             {/* Sign In Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               
-              {/* 1. Main School Email Input */}
-              <div>
-                <label className="block text-xs font-bold text-[#0b1c30] mb-1.5">
-                  {role === 'teacher' ? "School's Main Email Address" : "Principal / Admin Email"}
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@example.com"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-medium text-[#0b1c30] placeholder-[#777584] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all"
-                  />
-                </div>
-                {role === 'teacher' && (
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    Enter the school email registered by your Principal.
-                  </p>
-                )}
-              </div>
-
-              {/* 2. Teacher Dropdown (Only visible in Teacher mode) */}
-              {role === 'teacher' && (
-                <div className="animate-in fade-in duration-200">
-                  <label className="block text-xs font-bold text-[#0b1c30] mb-1.5">
-                    Select Your Teacher Name *
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <select
-                      required
-                      value={selectedTeacherId}
-                      onChange={(e) => setSelectedTeacherId(e.target.value)}
-                      className="w-full pl-10 pr-10 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-semibold text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all appearance-none cursor-pointer"
-                    >
-                      <option value="">-- Choose Your Teacher Profile --</option>
-                      {teachers.map(t => (
-                        <option key={t.authUid || t.id} value={t.authUid || t.id}>
-                          {t.name} (Class {t.assignedClass} - Sec {t.assignedSection || 'A'})
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-[#777584] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              {/* PARENT MODE FORM FIELDS */}
+              {role === 'parent' ? (
+                <div className="space-y-3.5 animate-in fade-in duration-200">
+                  <div>
+                    <label className="block text-xs font-bold text-[#0b1c30] mb-1">
+                      School Email or Code (Optional)
+                    </label>
+                    <div className="relative">
+                      <School className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={parentSchoolIdentifier}
+                        onChange={(e) => setParentSchoolIdentifier(e.target.value)}
+                        placeholder="e.g. mnpschooledu@gmail.com or SCHOOL_007 (leave empty for default)"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-medium text-[#0b1c30] placeholder-[#777584] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all"
+                      />
+                    </div>
                   </div>
-                  {teachers.length === 0 && (
-                    <p className="text-[10px] text-amber-600 font-medium mt-1">
-                      No teachers found. Please ask Principal to add faculty profiles in Faculty Management.
-                    </p>
-                  )}
-                </div>
-              )}
 
-              {/* 3. Password Input with Show/Hide */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-[#0b1c30]">
-                    {role === 'teacher' ? "Teacher Password" : "Password"}
-                  </label>
-                  {role === 'principal' && (
-                    <button
-                      type="button"
-                      onClick={() => navigate('/forgot-password')}
-                      className="text-[11px] font-bold text-[#0051d5] hover:underline cursor-pointer"
-                    >
-                      Forgot Password?
-                    </button>
+                  <div>
+                    <label className="block text-xs font-bold text-[#0b1c30] mb-1">
+                      Child's Admission Number or Roll No *
+                    </label>
+                    <div className="relative">
+                      <GraduationCap className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        required
+                        value={parentAdmissionNo}
+                        onChange={(e) => setParentAdmissionNo(e.target.value)}
+                        placeholder="e.g. ADM-2026-001 or 1"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-medium text-[#0b1c30] placeholder-[#777584] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all font-mono"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      Find on school fee receipt, student ID card or report card.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#0b1c30] mb-1">
+                      Registered Mobile Number *
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="tel"
+                        required
+                        maxLength={10}
+                        value={parentMobile}
+                        onChange={(e) => setParentMobile(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="e.g. 9876543210 (10 digits)"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-medium text-[#0b1c30] placeholder-[#777584] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all font-mono"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      The contact phone registered at the time of student admission.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* PRINCIPAL & TEACHER MODE FORM FIELDS */
+                <>
+                  {/* 1. Main School Email Input */}
+                  <div>
+                    <label className="block text-xs font-bold text-[#0b1c30] mb-1.5">
+                      {role === 'teacher' ? "School's Main Email Address" : "Principal / Admin Email"}
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="admin@example.com"
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-medium text-[#0b1c30] placeholder-[#777584] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all"
+                      />
+                    </div>
+                    {role === 'teacher' && (
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        Enter the school email registered by your Principal.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 2. Teacher Dropdown (Only visible in Teacher mode) */}
+                  {role === 'teacher' && (
+                    <div className="animate-in fade-in duration-200">
+                      <label className="block text-xs font-bold text-[#0b1c30] mb-1.5">
+                        Select Your Teacher Name *
+                      </label>
+                      <div className="relative">
+                        <User className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <select
+                          required
+                          value={selectedTeacherId}
+                          onChange={(e) => setSelectedTeacherId(e.target.value)}
+                          className="w-full pl-10 pr-10 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-semibold text-[#0b1c30] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all appearance-none cursor-pointer"
+                        >
+                          <option value="">-- Choose Your Teacher Profile --</option>
+                          {teachers.map(t => (
+                            <option key={t.authUid || t.id} value={t.authUid || t.id}>
+                              {t.name} (Class {t.assignedClass} - Sec {t.assignedSection || 'A'})
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-[#777584] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                      {teachers.length === 0 && (
+                        <p className="text-[10px] text-amber-600 font-medium mt-1">
+                          No teachers found. Please ask Principal to add faculty profiles in Faculty Management.
+                        </p>
+                      )}
+                    </div>
                   )}
-                </div>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={role === 'teacher' ? "Enter your teacher password (default: 123456)" : "Enter your secret password"}
-                    className="w-full pl-10 pr-10 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-medium text-[#0b1c30] placeholder-[#777584] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(p => !p)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#777584] hover:text-[#0b1c30] cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-primary" />}
-                  </button>
-                </div>
-              </div>
+
+                  {/* 3. Password Input with Show/Hide */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-[#0b1c30]">
+                        {role === 'teacher' ? "Teacher Password" : "Password"}
+                      </label>
+                      {role === 'principal' && (
+                        <button
+                          type="button"
+                          onClick={() => navigate('/forgot-password')}
+                          className="text-[11px] font-bold text-[#0051d5] hover:underline cursor-pointer"
+                        >
+                          Forgot Password?
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-[#777584] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={role === 'teacher' ? "Enter your teacher password (default: 123456)" : "Enter your secret password"}
+                        className="w-full pl-10 pr-10 py-3 rounded-xl bg-white border border-[#c8c4d5] text-xs font-medium text-[#0b1c30] placeholder-[#777584] focus:outline-none focus:ring-2 focus:ring-[#1f108e]/30 focus:border-[#1f108e] transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(p => !p)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#777584] hover:text-[#0b1c30] cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-primary" />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Remember Me Checkbox */}
               <div className="flex items-center justify-between pt-1">
@@ -358,7 +461,13 @@ export default function SignInView() {
                   <span>Authenticating...</span>
                 ) : (
                   <>
-                    <span>Sign In to {role === 'principal' ? 'Admin Dashboard' : 'Teacher Portal'}</span>
+                    <span>
+                      {role === 'principal'
+                        ? 'Sign In to Admin Dashboard'
+                        : role === 'teacher'
+                        ? 'Sign In to Teacher Portal'
+                        : 'Sign In to Parent Portal'}
+                    </span>
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}

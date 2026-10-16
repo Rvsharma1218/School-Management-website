@@ -40,18 +40,18 @@ export default function StudentsView() {
   } = useSchoolStore();
 
   const isPrincipal = currentUser?.role === 'principal';
-  const assignedClass = currentUser?.assignedClass || '10th';
+  const assignedClass = currentUser?.assignedClass && currentUser.assignedClass !== 'none' && currentUser.assignedClass !== 'None' ? currentUser.assignedClass : '';
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedClass, setSelectedClass] = useState(isPrincipal ? 'all' : assignedClass);
+  const [selectedClass, setSelectedClass] = useState(isPrincipal || !assignedClass ? 'all' : assignedClass);
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
   const photoInputRef = useRef(null);
   
-  // Reset to assigned class whenever teacher opens StudentsView
+  // Reset to assigned class whenever teacher opens StudentsView (if assigned)
   useEffect(() => {
-    if (!isPrincipal && assignedClass) {
+    if (!isPrincipal && assignedClass && assignedClass !== 'all') {
       setSelectedClass(assignedClass);
     }
   }, [assignedClass, isPrincipal]);
@@ -264,7 +264,7 @@ export default function StudentsView() {
                 onChange={e => setSelectedClass(e.target.value)}
                 className="px-3 py-2 rounded-xl bg-white border border-border text-xs text-text font-bold focus:outline-none cursor-pointer"
               >
-                <option value="all">Course / Grade</option>
+                <option value="all">All Classes & Courses</option>
                 {settings.schoolClasses?.map(c => <option key={c} value={c}>Class {c}</option>)}
                 {settings.computerCourses?.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
