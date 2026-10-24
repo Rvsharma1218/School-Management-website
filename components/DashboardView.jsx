@@ -47,8 +47,13 @@ export default function DashboardView() {
     students, payments, attendance, results, settings, stats,
     setSelectedStudentId, setIsAddStudentOpen, currentUser, navigate,
     setFeeDetailStudent, setIsFeeDetailSelectorOpen, setWhatsAppReminderData,
-    teacherPermissions, openSettings
+    teacherPermissions, openSettings,
+    admissionEnquiries = [], teacherApplications = [], openEnquiriesModal
   } = useSchoolStore();
+
+  const pendingAdmissionsCount = admissionEnquiries.filter(a => (a.status || 'pending') === 'pending').length;
+  const pendingTeachersCount = teacherApplications.filter(t => (t.status || 'pending') === 'pending').length;
+  const pendingEnquiriesTotal = pendingAdmissionsCount + pendingTeachersCount;
 
   const isPrincipal = currentUser?.role === 'principal';
   const assignedClass = currentUser?.assignedClass || '10th';
@@ -86,21 +91,42 @@ export default function DashboardView() {
     <div className="space-y-6 pb-16 w-full animate-in fade-in duration-300 font-sans">
 
       {/* ── Top Header Banner ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-[#eff4ff] via-[#dce9ff] to-[#eff4ff] p-4 sm:p-5 rounded-2xl border border-[#c8c4d5]/40 shadow-xs">
+      <div
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 sm:p-6 rounded-3xl border border-amber-500/40 shadow-lg text-white relative overflow-hidden transition-all group"
+        style={{
+          backgroundImage: "linear-gradient(to right, rgba(6, 20, 44, 0.94), rgba(10, 32, 66, 0.86), rgba(6, 20, 44, 0.95)), url('/school_hero_banner.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center"
+        }}
+      >
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/80 text-[11px] font-bold text-[#1f108e] mb-1.5 shadow-2xs">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/90 text-[11px] font-black text-slate-950 mb-1.5 shadow-sm">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>Welcome back, {currentUser?.name || 'Administrator'}</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-[#0b1c30] tracking-tight">
-            {isPrincipal ? `${settings.instituteName || 'Smart School'} Executive Overview` : `Class ${assignedClass} Faculty Desk`}
+          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-sm">
+            {isPrincipal ? `${settings.instituteName || 'Mission Navodaya Public School'} Executive Overview` : `Class ${assignedClass} Faculty Desk`}
           </h2>
-          <p className="text-xs text-[#464553] font-medium mt-0.5">
+          <p className="text-xs text-amber-300 font-bold mt-0.5 drop-shadow-2xs">
             Academic Session {settings.currentSession || '2026-27'} &nbsp;·&nbsp; Live Cloud Synchronized
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          {isPrincipal && (
+            <button
+              onClick={() => openEnquiriesModal && openEnquiriesModal('admissions')}
+              className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-white" />
+              <span>Online Enquiries</span>
+              {pendingEnquiriesTotal > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-white text-[#0c2340] text-[10px] font-black">
+                  {pendingEnquiriesTotal}
+                </span>
+              )}
+            </button>
+          )}
           {isPrincipal && (
             <button
               onClick={() => setIsAddStudentOpen(true)}
@@ -124,7 +150,7 @@ export default function DashboardView() {
       {isPrincipal ? (
         <div className="space-y-3.5">
           {/* Top 5 Sleek Web KPI Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
             <CompactKpiCard
               icon={GraduationCap}
               iconBg="bg-blue-50"
@@ -179,6 +205,17 @@ export default function DashboardView() {
               badge={settings.campusLatitude ? 'GPS Active' : 'Setup'}
               badgeColor="bg-indigo-50 text-indigo-700 border border-indigo-200/80"
               onClick={() => openSettings('geofence')}
+            />
+            <CompactKpiCard
+              icon={Sparkles}
+              iconBg="bg-amber-50"
+              iconColor="text-amber-600"
+              label="Online Enquiries"
+              value={pendingEnquiriesTotal}
+              sub={`${pendingAdmissionsCount} Adm · ${pendingTeachersCount} Staff`}
+              badge={pendingEnquiriesTotal > 0 ? `${pendingEnquiriesTotal} New` : 'Live'}
+              badgeColor={pendingEnquiriesTotal > 0 ? "bg-amber-400 text-[#0c2340] border border-amber-300 font-black animate-pulse" : "bg-slate-100 text-slate-600 border border-slate-200"}
+              onClick={() => openEnquiriesModal && openEnquiriesModal('admissions')}
             />
           </div>
 
