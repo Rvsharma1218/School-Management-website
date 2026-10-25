@@ -222,32 +222,34 @@ export default function SignUpView() {
             e.preventDefault();
             navigate('/signin');
           }}
-          className="flex items-center gap-3 cursor-pointer group min-w-0"
+          className="flex items-center gap-2 sm:gap-3 cursor-pointer group min-w-0 flex-1"
         >
-          <div className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 drop-shadow-md">
+          <div className="w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 drop-shadow-md">
             <img src={logoSrc} alt={schoolName} className="w-full h-full object-contain" />
           </div>
-          <div className="min-w-0">
-            <h1 className="text-sm sm:text-base font-black tracking-tight text-white uppercase group-hover:text-[#F4B323] transition-colors truncate">
-              {language === 'hi' ? 'मिशन नवोदय पब्लिक स्कूल' : schoolName}
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xs sm:text-base font-black tracking-tight text-white uppercase group-hover:text-[#F4B323] transition-colors truncate">
+              <span className="sm:hidden">{language === 'hi' ? 'मिशन नवोदय' : 'MNP School'}</span>
+              <span className="hidden sm:inline">{language === 'hi' ? 'मिशन नवोदय पब्लिक स्कूल' : schoolName}</span>
             </h1>
             <p className="text-[10px] sm:text-[11px] text-[#F4B323] font-bold flex items-center gap-1.5 mt-0.5 truncate">
               <span className="w-1.5 h-1.5 rounded-full bg-[#F4B323] animate-pulse flex-shrink-0" />
-              <span>{language === 'hi' ? 'ऑनलाइन प्रवेश एवं शिक्षक भर्ती • सत्र 2026-27' : 'Online Admission & Faculty Desk • Session 2026-27'}</span>
+              <span className="sm:hidden">{language === 'hi' ? 'प्रवेश सत्र 2026-27' : 'Admission 2026-27'}</span>
+              <span className="hidden sm:inline">{language === 'hi' ? 'ऑनलाइन प्रवेश एवं शिक्षक भर्ती • सत्र 2026-27' : 'Online Admission & Faculty Desk • Session 2026-27'}</span>
             </p>
           </div>
         </a>
 
         {/* Header Right Actions */}
-        <div className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
           {/* Language Switcher Pill */}
           <button
             type="button"
             onClick={toggleLanguage}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-bold text-slate-100 transition-all cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-xs font-bold text-slate-100 transition-all cursor-pointer shadow-2xs flex-shrink-0"
             title="Switch Language"
           >
-            <Globe className="w-3.5 h-3.5 text-[#F4B323]" />
+            <Globe className="w-3.5 h-3.5 text-[#F4B323] flex-shrink-0" />
             <span className="hidden sm:inline">{language === 'en' ? 'हिन्दी में देखें' : 'English'}</span>
             <span className="sm:hidden">{language === 'en' ? 'हिन्दी' : 'EN'}</span>
           </button>
@@ -255,10 +257,11 @@ export default function SignUpView() {
           <button
             type="button"
             onClick={() => navigate('/signin')}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 py-1.5 rounded-xl bg-[#F4B323] hover:bg-[#e0a21a] text-[#091A32] text-xs font-black transition-all cursor-pointer shadow-md"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F4B323] hover:bg-[#e0a21a] text-[#091A32] text-xs font-black transition-all cursor-pointer shadow-md flex-shrink-0"
           >
-            <ArrowLeft className="w-3.5 h-3.5 text-[#091A32]" />
-            <span>{language === 'hi' ? 'मुख्य वेबसाइट' : 'Main Website'}</span>
+            <ArrowLeft className="w-3.5 h-3.5 text-[#091A32] flex-shrink-0" />
+            <span className="hidden sm:inline">{language === 'hi' ? 'मुख्य वेबसाइट' : 'Main Website'}</span>
+            <span className="sm:hidden">{language === 'hi' ? 'होम' : 'Home'}</span>
           </button>
         </div>
       </header>
@@ -290,34 +293,19 @@ export default function SignUpView() {
                     : 'Join the committed teaching faculty at Mission Navodaya Public School, Mora Bazar. We welcome qualified and passionate educators.')}
             </p>
 
-            {/* Form Mode Selector Tabs */}
-            <div className="mt-6 flex flex-wrap gap-2.5">
-              <button
-                type="button"
-                onClick={() => { setActiveFormTab('student'); if (setSignUpFormTab) setSignUpFormTab('student'); setSubmitted(false); setError(''); }}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
-                  activeFormTab === 'student'
-                    ? 'bg-amber-400 text-[#0c2340] shadow-sm'
-                    : 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
-                }`}
-              >
-                <BookOpen className="w-4 h-4" />
-                <span>{language === 'hi' ? '1. छात्र प्रवेश प्रपत्र (Student Admission)' : '1. Student Admission Form'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setActiveFormTab('teacher'); if (setSignUpFormTab) setSignUpFormTab('teacher'); setSubmitted(false); setError(''); }}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
-                  activeFormTab === 'teacher'
-                    ? 'bg-amber-400 text-[#0c2340] shadow-sm'
-                    : 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
-                }`}
-              >
-                <GraduationCap className="w-4 h-4" />
-                <span>{language === 'hi' ? '2. शिक्षक भर्ती आवेदन (Teacher Recruitment)' : '2. Join as Faculty / Teacher'}</span>
-              </button>
-            </div>
+            {/* When viewing teacher recruitment, show return to admission button */}
+            {activeFormTab === 'teacher' && (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => { setActiveFormTab('student'); if (setSignUpFormTab) setSignUpFormTab('student'); setSubmitted(false); setError(''); }}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white/15 hover:bg-white/25 border border-white/20 text-white inline-flex items-center gap-1.5 cursor-pointer transition-all"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>{language === 'hi' ? '← छात्र प्रवेश प्रपत्र पर जाएं' : '← Back to Student Admission Form'}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="p-6 sm:p-8">
@@ -420,8 +408,8 @@ export default function SignUpView() {
                             {language === 'hi' ? 'माध्यम / Instruction Medium' : 'Instruction Medium *'}
                           </label>
                           <div className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-[#0c2340] flex items-center justify-between">
-                            <span>English Medium (CBSE Pattern)</span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">100% English</span>
+                            <span>English Medium</span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">English Medium</span>
                           </div>
                         </div>
 
@@ -691,6 +679,18 @@ export default function SignUpView() {
                             <ArrowRight className="w-4 h-4" />
                           </>
                         )}
+                      </button>
+                    </div>
+
+                    {/* Alternate link for Teacher Recruitment */}
+                    <div className="pt-2 text-center text-xs text-slate-500 border-t border-slate-100">
+                      <span>{language === 'hi' ? 'शिक्षक अथवा संकाय पद हेतु आवेदन करना चाहते हैं? ' : 'Looking to join as faculty or teacher? '}</span>
+                      <button
+                        type="button"
+                        onClick={() => { setActiveFormTab('teacher'); if (setSignUpFormTab) setSignUpFormTab('teacher'); setSubmitted(false); setError(''); }}
+                        className="text-[#0c2340] font-bold hover:underline cursor-pointer"
+                      >
+                        {language === 'hi' ? 'शिक्षक भर्ती आवेदन प्रपत्र यहाँ भरें →' : 'Submit Teacher Application Here →'}
                       </button>
                     </div>
 
