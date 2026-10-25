@@ -86,10 +86,10 @@ export default function PrintIdCardsModal({ students, template, onClose }) {
                     ) : null}
                     <div className="min-w-0 flex-1">
                       <h3 className="font-black text-[13px] tracking-wide uppercase text-white leading-tight truncate">
-                        {settings.instituteName || "MISSION NAVODAYA PUBLIC SCHOOL"}
+                        {settings.instituteName || "SMART MODERN PUBLIC SCHOOL"}
                       </h3>
                       <p className="text-[8.5px] text-[#FFD700] tracking-wide truncate mt-0.5 font-semibold">
-                        {settings.address || "Mora Mairi, Bhagwaanpur, Siwan, Bihar 841507"}
+                        {settings.address || "Main Campus, Institutional Area, New Delhi"}
                       </p>
                     </div>
                   </div>
@@ -143,7 +143,7 @@ export default function PrintIdCardsModal({ students, template, onClose }) {
                   {/* Bottom Footer Bar */}
                   <div className="bg-[#05091E] px-3.5 py-1 flex items-center justify-between text-[7.5px] border-t border-[#FFD700]/20 relative">
                     <span className="text-slate-400 font-semibold uppercase truncate max-w-[220px]">
-                      PROPERTY OF {settings.instituteName || "MISSION NAVODAYA PUBLIC SCHOOL"}
+                      PROPERTY OF {settings.instituteName || "SMART MODERN PUBLIC SCHOOL"}
                     </span>
                     <div className="relative flex items-center justify-end">
                       {settings.principalSignature || settings.signatureUrl ? (
@@ -184,10 +184,10 @@ export default function PrintIdCardsModal({ students, template, onClose }) {
                     <div className="flex items-end justify-between text-[8.5px] text-slate-300">
                       <div className="space-y-0.5 leading-tight max-w-[220px]">
                         <p className="font-bold text-white text-[10px]">
-                          {settings.instituteName || "Mission Navodaya Public School"}
+                          {settings.instituteName || "Smart Modern Public School"}
                         </p>
                         <p>Ph: {settings.mobile || "9876543210"}</p>
-                        <p className="truncate">{settings.address || "Mora Mairi, Bhagwaanpur, Siwan, Bihar 841507"}</p>
+                        <p className="truncate">{settings.address || "Main Campus, Institutional Area, New Delhi"}</p>
                       </div>
 
                       <div className="text-center flex-shrink-0 relative">

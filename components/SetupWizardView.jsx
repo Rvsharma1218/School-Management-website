@@ -8,9 +8,9 @@ export default function SetupWizardView() {
   const { settings, currentUser, updateSettings, navigate } = useSchoolStore();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    instituteName: currentUser?.instituteName || (settings.instituteName !== 'Mission Navodaya Public School' ? settings.instituteName : '') || '',
+    instituteName: currentUser?.instituteName || (settings.instituteName !== 'Smart Modern Public School' ? settings.instituteName : '') || '',
     instituteType: 'School',
-    address: (settings.address !== 'Mora Mairi, Bhagwaanpur, Siwan, Bihar 841507' ? settings.address : '') || '',
+    address: (settings.address !== 'Main Campus, Institutional Area, New Delhi' ? settings.address : '') || '',
     mobile: currentUser?.mobile || (settings.mobile !== '9876543210' ? settings.mobile : '') || '',
     email: currentUser?.email || (settings.email !== 'contact@school.edu.in' ? settings.email : '') || '',
     currentSession: settings.currentSession || '2026-27'
