@@ -952,7 +952,7 @@ export default function ResultsView() {
                                 className="p-1 rounded-lg hover:bg-rose-50 text-rose-600 cursor-pointer"
                                 title="Delete"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
@@ -1617,7 +1617,7 @@ export default function ResultsView() {
                           className="p-2 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-600 cursor-pointer transition-all active:scale-95"
                           title="Delete Exam"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       )}
                     </div>
