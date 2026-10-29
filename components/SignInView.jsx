@@ -1009,6 +1009,24 @@ export default function SignInView() {
                     />
                   </div>
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const code = prompt("Scan/Enter Student QR Code (from Marksheet, ID Card, or Receipt):");
+                      if (code && code.trim()) {
+                        let clean = code.trim();
+                        const match = clean.match(/STUDENT:([^|]+)/i) || clean.match(/ID:([^|]+)/i) || clean.match(/ADM:([^|]+)/i);
+                        if (match && match[1]) {
+                          clean = match[1].trim();
+                        }
+                        setParentAdmissionNo(clean);
+                      }
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                  >
+                    <span>📷 Scan/Paste Student QR Code (Marksheet / ID Card)</span>
+                  </button>
+
                   <div className="space-y-1.5">
                     <label className="font-bold text-slate-200">Student Admission No or Roll No *</label>
                     <input
