@@ -13,7 +13,7 @@ export default function IdCardView() {
 
   // State configurations matching mockup
   const [selectedTemplate, setSelectedTemplate] = useState('modern'); // 'modern' | 'classic' | 'minimal'
-  const [primaryColor, setPrimaryColor] = useState('#1f108e'); // brand colors
+  const [primaryColor, setPrimaryColor] = useState('#0A1128'); // brand colors
   const [showBackSide, setShowBackSide] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -134,10 +134,12 @@ export default function IdCardView() {
               <span className="text-xs text-text-secondary font-medium">Primary Color</span>
               <div className="flex items-center gap-3">
                 {[
-                  { hex: '#1f108e', name: 'Navy' },
-                  { hex: '#ba1a1a', name: 'Red' },
-                  { hex: '#0051d5', name: 'Blue' },
-                  { hex: '#0b1c30', name: 'Slate' }
+                  { hex: '#0A1128', name: 'Royal Navy' },
+                  { hex: '#1E3A8A', name: 'Classic Blue' },
+                  { hex: '#064E3B', name: 'Emerald Green' },
+                  { hex: '#831843', name: 'Maroon Crimson' },
+                  { hex: '#3B0764', name: 'Deep Purple' },
+                  { hex: '#0F172A', name: 'Sleek Dark' }
                 ].map(c => (
                   <button
                     key={c.hex}
@@ -313,7 +315,7 @@ export default function IdCardView() {
           {/* Live Preview Card */}
           <div className="bg-white border border-border rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center">
             {previewStudent ? (
-              <div className="relative w-full max-w-[400px] h-[252px] rounded-xl shadow-xl overflow-hidden flex flex-col border border-amber-400/40 bg-gradient-to-br from-[#0A1128] to-[#1C2541] text-white select-none">
+              <div className="relative w-full max-w-[400px] h-[252px] rounded-xl shadow-xl overflow-hidden flex flex-col border border-amber-400/40 text-white select-none transition-colors duration-200" style={{ backgroundColor: primaryColor }}>
                 {!showBackSide ? (
                   /* FRONT OF CARD */
                   <div className="flex-1 flex flex-col justify-between">
@@ -326,12 +328,14 @@ export default function IdCardView() {
                     {/* Institute Header */}
                     <div className="bg-[#0A1128] px-3 py-1.5 text-center border-b border-[#FFD700]/40 flex items-center justify-center gap-2.5">
                       {settings.logoUrl || settings.logoPath || settings.logo ? (
-                        <img
-                          src={settings.logoUrl || settings.logoPath || settings.logo}
-                          alt="Logo"
-                          className="w-8 h-8 object-contain flex-shrink-0"
-                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        />
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-white border border-[#FFD700] flex items-center justify-center flex-shrink-0">
+                          <img
+                            src={settings.logoUrl || settings.logoPath || settings.logo}
+                            alt="Logo"
+                            className="w-full h-full object-cover rounded-full"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        </div>
                       ) : null}
                       <div className="min-w-0 flex-1">
                         <h3 className="font-black text-[13px] tracking-wide uppercase text-white leading-tight truncate">

@@ -77,12 +77,14 @@ export default function PrintIdCardsModal({ students, template, onClose }) {
                   {/* Institute Header */}
                   <div className="bg-[#0A1128] px-3 py-1.5 text-center border-b border-[#FFD700]/40 flex items-center justify-center gap-2.5">
                     {settings.logoUrl || settings.logoPath || settings.logo ? (
-                      <img
-                        src={settings.logoUrl || settings.logoPath || settings.logo}
-                        alt="Logo"
-                        className="w-8 h-8 object-contain flex-shrink-0"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-white border border-[#FFD700] flex items-center justify-center flex-shrink-0">
+                        <img
+                          src={settings.logoUrl || settings.logoPath || settings.logo}
+                          alt="Logo"
+                          className="w-full h-full object-cover rounded-full"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      </div>
                     ) : null}
                     <div className="min-w-0 flex-1">
                       <h3 className="font-black text-[13px] tracking-wide uppercase text-white leading-tight truncate">
