@@ -344,10 +344,10 @@ export default function IdCardView() {
                       ) : null}
                       <div className="min-w-0 flex-1">
                         <h3 className="font-black text-[13px] tracking-wide uppercase text-white leading-tight truncate">
-                          {settings.instituteName || "SMART MODERN PUBLIC SCHOOL"}
+                          {settings.instituteName || "MISSION NAVODAYA PUBLIC SCHOOL"}
                         </h3>
                         <p className="text-[8.5px] text-[#FFD700] tracking-wide truncate mt-0.5 font-semibold">
-                          {settings.address || "Main Campus, Institutional Area, New Delhi"}
+                          {settings.address || "Mora Mairi, Bhagwaanpur, Siwan, Bihar 841507"}
                         </p>
                       </div>
                     </div>
@@ -398,39 +398,20 @@ export default function IdCardView() {
                       </div>
                     </div>
 
-                    {/* Bottom Footer Bar */}
-                    <div className="bg-[#05091E] px-3.5 py-1 flex items-center justify-between text-[7.5px] border-t border-[#FFD700]/20 relative">
-                      <span className="text-slate-400 font-semibold uppercase truncate max-w-[220px]">
-                        PROPERTY OF {settings.instituteName || "SMART MODERN PUBLIC SCHOOL"}
-                      </span>
-                      <div className="relative flex flex-col items-center justify-end">
-                        <div className="relative flex items-center justify-center min-w-[80px] h-[32px] -mt-6 mb-0.5">
-                          {settings.schoolStamp || settings.stampUrl || settings.sealUrl ? (
-                            <img
-                              src={settings.schoolStamp || settings.stampUrl || settings.sealUrl}
-                              alt="Stamp"
-                              className="absolute inset-0 m-auto object-contain pointer-events-none opacity-85"
-                              style={{
-                                width: `${Math.round(32 * (Number(settings.stampScale) || 1.0))}px`,
-                                height: `${Math.round(32 * (Number(settings.stampScale) || 1.0))}px`,
-                                mixBlendMode: 'multiply'
-                              }}
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          ) : null}
-                          {settings.principalSignature || settings.signatureUrl ? (
-                            <img
-                              src={settings.principalSignature || settings.signatureUrl}
-                              alt="Sign"
-                              className="relative z-10 object-contain pointer-events-none"
-                              style={{
-                                height: `${Math.round(30 * (Number(settings.signatureScale) || 1.0))}px`,
-                                maxWidth: `${Math.round(90 * (Number(settings.signatureScale) || 1.0))}px`
-                              }}
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          ) : null}
-                        </div>
+                    {/* Signature and Auth Signature at Bottom-Right (NO dark footer bar, NO stamp) */}
+                    <div className="px-3.5 pb-2 pt-0.5 flex items-center justify-end">
+                      <div className="flex flex-col items-center justify-end">
+                        {settings.principalSignature || settings.signatureUrl ? (
+                          <img
+                            src={settings.principalSignature || settings.signatureUrl}
+                            alt="Sign"
+                            className="h-8 max-w-[100px] object-contain pointer-events-none mb-0.5"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <span className="font-serif italic font-bold text-amber-300 text-xs mb-0.5">Principal Sign</span>
+                        )}
+                        <div className="w-20 border-t border-amber-400/80 mb-0.5" />
                         <span className="text-[#FFD700] font-black uppercase tracking-wider text-[7.5px]">
                           AUTH SIGNATURE
                         </span>
@@ -461,10 +442,10 @@ export default function IdCardView() {
                       <div className="flex items-end justify-between text-[8.5px] text-slate-300">
                         <div className="space-y-0.5 leading-tight max-w-[220px]">
                           <p className="font-bold text-white text-[10px]">
-                            {settings.instituteName || "Smart Modern Public School"}
+                            {settings.instituteName || "Mission Navodaya Public School"}
                           </p>
                           <p>Ph: {settings.mobile || "9876543210"}</p>
-                          <p className="truncate">{settings.address || "Main Campus, Institutional Area, New Delhi"}</p>
+                          <p className="truncate">{settings.address || "Mora Mairi, Bhagwaanpur, Siwan, Bihar 841507"}</p>
                         </div>
 
                         <div className="text-center flex-shrink-0 relative">
@@ -480,6 +461,12 @@ export default function IdCardView() {
                           <span className="text-[8px] uppercase font-bold text-slate-400">Principal Sign</span>
                         </div>
                       </div>
+                    </div>
+                    {/* PROPERTY OF SCHOOL ON BACK SIDE */}
+                    <div className="bg-black/35 px-3.5 py-1 text-center border-t border-white/10">
+                      <span className="text-amber-300 font-extrabold uppercase tracking-wider text-[8px]">
+                        PROPERTY OF {settings.instituteName || "MISSION NAVODAYA PUBLIC SCHOOL"}
+                      </span>
                     </div>
                   </div>
                 )}

@@ -997,7 +997,7 @@ export default function ResultsView() {
                                 className="p-1 rounded-lg hover:bg-rose-50 text-rose-600 cursor-pointer"
                                 title="Delete"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>

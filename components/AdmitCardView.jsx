@@ -166,9 +166,9 @@ export default function AdmitCardView() {
         format: 'a4',
       });
 
-      const schoolName = (settings.instituteName || settings.schoolName || 'SMART MODERN SCHOOL').toUpperCase();
+      const schoolName = (settings.instituteName || settings.schoolName || 'MISSION NAVODAYA').toUpperCase();
       const session = settings.currentSession || settings.academicYear || '2026-27';
-      const address = settings.address || 'Main Campus, Institutional Area, New Delhi';
+      const address = settings.address || 'Mora Mairi, BagwaanPur hat ,Siwan,Bihar 841507';
 
       // Preload School Logo and Principal Signature
       const logoData = await getImageDataUrl(settings.logoUrl || settings.logoPath || settings.logo);
@@ -826,10 +826,10 @@ export default function AdmitCardView() {
                         )}
                         <div className="min-w-0">
                           <h3 className="font-black text-xs uppercase leading-tight tracking-wide text-white truncate">
-                            {settings.instituteName || settings.schoolName || 'SMART MODERN SCHOOL'}
+                            {settings.instituteName || settings.schoolName || 'MISSION NAVODAYA'}
                           </h3>
                           <p className="text-[8.5px] text-white/90 font-medium truncate">
-                            {settings.address || 'Main Campus, Institutional Area, New Delhi'}
+                            {settings.address || 'Mora Mairi, BagwaanPur hat ,Siwan,Bihar 841507'}
                           </p>
                         </div>
                       </div>
@@ -1007,10 +1007,10 @@ export default function AdmitCardView() {
                         )}
                         <div>
                           <h2 className="font-black text-base uppercase leading-tight tracking-wide text-white">
-                            {settings.instituteName || settings.schoolName || 'SMART MODERN SCHOOL'}
+                            {settings.instituteName || settings.schoolName || 'MISSION NAVODAYA'}
                           </h2>
                           <p className="text-[10px] text-white/90 font-medium">
-                            {settings.address || 'Main Campus, Institutional Area, New Delhi'}
+                            {settings.address || 'Mora Mairi, BagwaanPur hat ,Siwan,Bihar 841507'}
                           </p>
                         </div>
                       </div>

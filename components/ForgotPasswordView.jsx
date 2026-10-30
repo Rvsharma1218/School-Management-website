@@ -14,10 +14,10 @@ export default function ForgotPasswordView() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const schoolName = settings?.instituteName || settings?.schoolName || 'Smart Modern Public School';
+  const schoolName = settings?.instituteName || settings?.schoolName || 'Mission Navodaya Public School';
   const logoSrc = settings?.logoUrl || settings?.logoPath || settings?.logo || '/logo.png';
-  const phone = settings?.phone || '9162724680';
-  const officialEmail = settings?.email || 'admin@smartschoolerp.com';
+  const phone = settings?.phone || '8603481865';
+  const officialEmail = settings?.email || 'mnpschooledu@gmail.com';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,7 +53,7 @@ export default function ForgotPasswordView() {
           </div>
           <div>
             <h1 className="text-base font-black tracking-tight text-[#0c2340]">{schoolName}</h1>
-            <p className="text-[11px] text-[#64748b] font-medium">Administrative Security Portal &bull; Main Campus</p>
+            <p className="text-[11px] text-[#64748b] font-medium">Administrative Security Portal &bull; Mora Bazar</p>
           </div>
         </div>
 
@@ -127,7 +127,7 @@ export default function ForgotPasswordView() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. admin@smartschoolerp.com"
+                    placeholder="e.g. mnpschooledu@gmail.com"
                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-xs font-medium text-[#0f172a] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0c2340]/20 focus:border-[#0c2340] transition-all"
                   />
                 </div>
@@ -187,7 +187,7 @@ export default function ForgotPasswordView() {
 
       {/* Footer */}
       <footer className="w-full px-6 py-4 text-center text-xs text-[#64748b] border-t border-slate-200 bg-white">
-        <span>&copy; {new Date().getFullYear()} {schoolName} &bull; Main Institutional Campus. All Rights Reserved.</span>
+        <span>&copy; {new Date().getFullYear()} {schoolName} &bull; Mora Bazar Campus. All Rights Reserved.</span>
       </footer>
 
     </div>

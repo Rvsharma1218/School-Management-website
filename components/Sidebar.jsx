@@ -99,8 +99,8 @@ export default function Sidebar({ isOpen, onClose, collapsed, onCollapseChange }
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <div className="font-extrabold text-xs sm:text-[13px] text-[#1f108e] leading-snug line-clamp-2" title={settings.instituteName || 'Smart Modern Public School'}>
-                {settings.instituteName || 'Smart Modern Public School'}
+              <div className="font-extrabold text-xs sm:text-[13px] text-[#1f108e] leading-snug line-clamp-2" title={settings.instituteName || 'Mission Navodaya Public School'}>
+                {settings.instituteName || 'Mission Navodaya Public School'}
               </div>
               <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#dce9ff] text-[10px] font-bold text-[#0051d5]">
                 <span>Session {settings.currentSession || '2026-27'}</span>

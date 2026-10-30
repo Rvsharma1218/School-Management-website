@@ -43,9 +43,9 @@ export default function OnlineEnquiriesModal({ isOpen, onClose, initialTab = 'ad
 
   if (!isOpen) return null;
 
-  const schoolName = settings?.instituteName || settings?.schoolName || 'Smart Modern Public School';
+  const schoolName = settings?.instituteName || settings?.schoolName || 'Mission Navodaya Public School';
   const logoSrc = settings?.logoUrl || settings?.logoPath || settings?.logo || '/logo.png';
-  const schoolPhone = settings?.phone || '9162724680';
+  const schoolPhone = settings?.phone || '8603481865';
 
   // ── Filtered Admission Enquiries ──
   const filteredAdmissions = admissionEnquiries.filter(item => {

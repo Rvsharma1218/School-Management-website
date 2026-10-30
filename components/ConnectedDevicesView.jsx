@@ -13,7 +13,7 @@ import {
 
 export default function ConnectedDevicesView() {
   const { settings, currentUser, showToast } = useSchoolStore();
-  const schoolId = settings?.schoolId || settings?.instituteId || currentUser?.schoolId || 'SCHOOL_001';
+  const schoolId = settings?.schoolId || settings?.instituteId || currentUser?.schoolId || 'mnp_school';
 
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -303,7 +303,7 @@ export default function ConnectedDevicesView() {
           <h3 className="text-base font-bold text-slate-700">No Devices Found</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
             {devices.length === 0
-              ? 'Devices will appear automatically in real-time as teachers, parents and staff log into the Smart School mobile app.'
+              ? 'Devices will appear automatically in real-time as teachers, parents and staff log into the MNP School mobile app.'
               : 'No devices match your current search and filter criteria.'}
           </p>
         </div>
@@ -577,7 +577,7 @@ export default function ConnectedDevicesView() {
 
             <p className="text-xs leading-relaxed text-slate-600 mb-6">
               {revokeTarget.status === 'revoked'
-                ? `Are you sure you want to restore access for ${revokeTarget.userName || 'this device'}? The user will immediately be permitted to use the Smart School app again.`
+                ? `Are you sure you want to restore access for ${revokeTarget.userName || 'this device'}? The user will immediately be permitted to use the MNP School app again.`
                 : `Are you sure you want to block ${revokeTarget.userName || 'this device'}? The device will be immediately locked out and denied access to all school databases.`}
             </p>
 

@@ -582,7 +582,7 @@ export default function SettingsView() {
                       required
                       value={formData.instituteName || formData.schoolName || ''}
                       onChange={(e) => setFormData({ ...formData, instituteName: e.target.value, schoolName: e.target.value })}
-                      placeholder="e.g. SMART MODERN PUBLIC SCHOOL"
+                      placeholder="e.g. MISSION NAVODAYA PUBLIC SCHOOL"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-white dark:bg-surface text-text text-xs font-medium focus:outline-hidden focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>

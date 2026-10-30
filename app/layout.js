@@ -17,17 +17,17 @@ export const viewport = {
 };
 
 export const metadata = {
-  title: "Smart School ERP | Next-Gen Cloud School Management Software & SaaS Platform",
-  description: "Complete all-in-one School Management Software & ERP for schools, academies, and coaching institutes. Manage student admissions, fee desk with WhatsApp alerts, attendance, timetable, results, ID & admit cards, and subscription plans.",
+  title: "Mission Navodaya Public School | Mora, Bihar · Session 2026-27",
+  description: "Official digital campus of Mission Navodaya Public School, Mora, Bihar. Quality education, discipline, creativity, holistic development, online admissions, and parent portal.",
   openGraph: {
-    title: "Smart School ERP | Cloud School Management Software & SaaS Platform",
-    description: "Complete all-in-one School Management Software & ERP for schools, academies, and coaching institutes. Manage student admissions, fee desk with WhatsApp alerts, attendance, timetable, results, ID & admit cards, and subscription plans.",
+    title: "Mission Navodaya Public School | Mora, Bihar · Session 2026-27",
+    description: "Official digital campus of Mission Navodaya Public School, Mora, Bihar. Quality education, discipline, creativity, holistic development, online admissions, and parent portal.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Smart School ERP | Cloud School Management Software & SaaS Platform",
-    description: "Complete all-in-one School Management Software & ERP for schools, academies, and coaching institutes. Manage student admissions, fee desk with WhatsApp alerts, attendance, timetable, results, ID & admit cards, and subscription plans.",
+    title: "Mission Navodaya Public School | Mora, Bihar · Session 2026-27",
+    description: "Official digital campus of Mission Navodaya Public School, Mora, Bihar. Quality education, discipline, creativity, holistic development, online admissions, and parent portal.",
   },
 };
 
