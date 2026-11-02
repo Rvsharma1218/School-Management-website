@@ -1462,7 +1462,7 @@ export default function ParentPortalView() {
                   <span>Student Identity Card</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Official verified student identity card issued by {settings.schoolName || 'Mission Navodaya Public School'}.
+                  Official verified student identity card issued by {settings.schoolName || 'Smart Modern Public School'}.
                 </p>
               </div>
 
@@ -1568,12 +1568,12 @@ export default function ParentPortalView() {
                             className="w-full h-full object-cover rounded-full"
                           />
                         ) : (
-                          <span className="font-black text-amber-400 text-sm">MNP</span>
+                          <span className="font-black text-amber-400 text-sm">Smart School</span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <h4 className="font-black text-xs uppercase tracking-tight text-white leading-tight truncate">
-                          {settings.schoolName || 'MISSION NAVODAYA PUBLIC SCHOOL'}
+                          {settings.schoolName || 'SMART MODERN PUBLIC SCHOOL'}
                         </h4>
                         <p className="text-[10px] text-amber-300 font-bold truncate mt-0.5">
                           {settings.tagline || 'Excellence in Education'} • {settings.currentSession || '2026-27'}
@@ -1660,7 +1660,7 @@ export default function ParentPortalView() {
 
                     <div className="border-t border-white/15 pt-3 space-y-1 text-center">
                       <p className="text-[10px] font-bold text-[#FFD700] uppercase tracking-wide">
-                        {settings.schoolName || 'MISSION NAVODAYA PUBLIC SCHOOL'}
+                        {settings.schoolName || 'SMART MODERN PUBLIC SCHOOL'}
                       </p>
                       <p className="text-[9px] text-slate-300">
                         {settings.address || 'Campus Road, Education Hub'} • Helpline: {settings.mobile || '8568643490'}

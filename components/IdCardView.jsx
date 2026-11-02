@@ -344,7 +344,7 @@ export default function IdCardView() {
                       ) : null}
                       <div className="min-w-0 flex-1">
                         <h3 className="font-black text-[13px] tracking-wide uppercase text-white leading-tight truncate">
-                          {settings.instituteName || "MISSION NAVODAYA PUBLIC SCHOOL"}
+                          {settings.instituteName || "SMART MODERN PUBLIC SCHOOL"}
                         </h3>
                         <p className="text-[8.5px] text-[#FFD700] tracking-wide truncate mt-0.5 font-semibold">
                           {settings.address || "Mora Mairi, Bhagwaanpur, Siwan, Bihar 841507"}
@@ -442,7 +442,7 @@ export default function IdCardView() {
                       <div className="flex items-end justify-between text-[8.5px] text-slate-300">
                         <div className="space-y-0.5 leading-tight max-w-[220px]">
                           <p className="font-bold text-white text-[10px]">
-                            {settings.instituteName || "Mission Navodaya Public School"}
+                            {settings.instituteName || "Smart Modern Public School"}
                           </p>
                           <p>Ph: {settings.mobile || "9876543210"}</p>
                           <p className="truncate">{settings.address || "Mora Mairi, Bhagwaanpur, Siwan, Bihar 841507"}</p>
@@ -465,7 +465,7 @@ export default function IdCardView() {
                     {/* PROPERTY OF SCHOOL ON BACK SIDE */}
                     <div className="bg-black/35 px-3.5 py-1 text-center border-t border-white/10">
                       <span className="text-amber-300 font-extrabold uppercase tracking-wider text-[8px]">
-                        PROPERTY OF {settings.instituteName || "MISSION NAVODAYA PUBLIC SCHOOL"}
+                        PROPERTY OF {settings.instituteName || "SMART MODERN PUBLIC SCHOOL"}
                       </span>
                     </div>
                   </div>

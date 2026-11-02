@@ -49,12 +49,12 @@ export default function SignInView() {
   const [loading, setLoading] = useState(false);
 
   // Institution Verified Details from Official School Settings
-  const schoolName = settings?.instituteName || settings?.schoolName || 'MISSION NAVODAYA PUBLIC SCHOOL';
+  const schoolName = settings?.instituteName || settings?.schoolName || 'SMART MODERN PUBLIC SCHOOL';
   const schoolSubtitle = 'PUBLIC SCHOOL, MORA';
   const schoolLocation = 'Mora Bazar, Siwan (Bihar)';
   const logoSrc = settings?.logoUrl || settings?.logoPath || settings?.logo || '/logo.png';
-  const primaryPhone = settings?.phone || settings?.mobile || '8603481865';
-  const officialEmail = settings?.email || 'mnpschooledu@gmail.com';
+  const primaryPhone = settings?.phone || settings?.mobile || '9162724680';
+  const officialEmail = settings?.email || 'admin@smartschoolerp.com';
   const currentSession = settings?.currentSession || settings?.academicYear || '2026-27';
   const isAdmissionOpen = settings?.isAdmissionOpen !== false;
   const admissionClasses = settings?.admissionClasses || 'For Classes Nursery to 8th';
@@ -213,7 +213,7 @@ export default function SignInView() {
             <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105 drop-shadow-md">
               <img
                 src={logoSrc}
-                alt={isHi ? "मिशन नवोदय पब्लिक स्कूल मोरा आधिकारिक मुहर" : "Mission Navodaya Public School Mora Official Seal"}
+                alt={isHi ? "मिशन नवोदय पब्लिक स्कूल मोरा आधिकारिक मुहर" : "Smart Modern Public School Mora Official Seal"}
                 className="w-full h-full object-contain"
                 onError={(e) => {
                   e.currentTarget.onerror = null;
@@ -223,7 +223,7 @@ export default function SignInView() {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs sm:text-base lg:text-lg font-black tracking-tight text-white leading-tight truncate uppercase">
-                <span className="sm:hidden">{isHi ? 'मिशन नवोदय स्कूल' : 'MNP School Mora'}</span>
+                <span className="sm:hidden">{isHi ? 'मिशन नवोदय स्कूल' : 'Smart School Mora'}</span>
                 <span className="hidden sm:inline">{isHi ? 'मिशन नवोदय पब्लिक स्कूल' : schoolName}</span>
               </div>
               <div className="text-[10px] sm:text-[11px] font-bold text-[#F4B323] tracking-wide truncate flex items-center gap-1.5 mt-0.5">
@@ -698,7 +698,7 @@ export default function SignInView() {
                     <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 flex items-center justify-center transition-transform group-hover:scale-105 drop-shadow-2xl">
                       <img
                         src={logoSrc}
-                        alt="Mission Navodaya Public School Crest"
+                        alt="Smart Modern Public School Crest"
                         className="w-full h-full object-contain drop-shadow-xl"
                         onError={(e) => {
                           e.currentTarget.onerror = null;
@@ -721,7 +721,7 @@ export default function SignInView() {
                       {isHi ? (
                         <>मिशन नवोदय <span className="text-[#F4B323]">पब्लिक स्कूल</span>, मोरा</>
                       ) : (
-                        <>MISSION NAVODAYA <span className="text-[#F4B323]">PUBLIC SCHOOL</span>, MORA</>
+                        <>SMART MODERN PUBLIC SCHOOL <span className="text-[#F4B323]">PUBLIC SCHOOL</span>, MORA</>
                       )}
                     </h1>
 
@@ -832,7 +832,7 @@ export default function SignInView() {
                   {isHi ? 'कैंपस विशेषताएं' : 'CAMPUS EXCELLENCE'}
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-black text-[#14243B] tracking-tight">
-                  {isHi ? 'मिशन नवोदय पब्लिक स्कूल के 5 मुख्य आधार' : '5 Pillars of Mission Navodaya Public School'}
+                  {isHi ? 'मिशन नवोदय पब्लिक स्कूल के 5 मुख्य आधार' : '5 Pillars of Smart Modern Public School'}
                 </h2>
                 <p className="text-xs sm:text-sm text-[#65748B] max-w-xl mx-auto">
                   {isHi
@@ -934,7 +934,7 @@ export default function SignInView() {
                 <p className="text-xs sm:text-sm text-[#65748B] max-w-xl mx-auto">
                   {isHi
                     ? 'मिशन नवोदय पब्लिक स्कूल को शैक्षणिक उत्कृष्टता और संस्कारयुक्त शिक्षा की ओर ले जाने वाली नेतृत्व टीम।'
-                    : 'Meet the leadership team steering Mission Navodaya Public School toward academic excellence and values-driven education.'}
+                    : 'Meet the leadership team steering Smart Modern Public School toward academic excellence and values-driven education.'}
                 </p>
               </div>
 
@@ -945,7 +945,7 @@ export default function SignInView() {
                     <div className="relative h-72 sm:h-80 w-full overflow-hidden bg-slate-100">
                       <img
                         src="/chairman_uday_shankar_patel.jpg"
-                        alt="Uday Shankar Patel — Chairman, Mission Navodaya Public School"
+                        alt="Uday Shankar Patel — Chairman, Smart Modern Public School"
                         className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                       />
                       <div className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-[#F4B323] text-[#091A32] font-black text-[10px] tracking-wider uppercase shadow-md flex items-center gap-1.5">
@@ -978,7 +978,7 @@ export default function SignInView() {
                     <div className="relative h-72 sm:h-80 w-full overflow-hidden bg-slate-100">
                       <img
                         src="/director_vishal_patel.jpg"
-                        alt="Vishal Patel — Managing Director, Mission Navodaya Public School"
+                        alt="Vishal Patel — Managing Director, Smart Modern Public School"
                         className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                       />
                       <div className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-[#102747] text-white font-black text-[10px] tracking-wider uppercase shadow-md flex items-center gap-1.5 border border-white/20">
@@ -1011,7 +1011,7 @@ export default function SignInView() {
                     <div className="relative h-72 sm:h-80 w-full overflow-hidden bg-slate-100">
                       <img
                         src="/principal_soni_madam.jpg"
-                        alt="Soni Madam — Principal, Mission Navodaya Public School"
+                        alt="Soni Madam — Principal, Smart Modern Public School"
                         className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                       />
                       <div className="absolute top-3.5 left-3.5 px-3 py-1 rounded-full bg-emerald-700 text-white font-black text-[10px] tracking-wider uppercase shadow-md flex items-center gap-1.5">
@@ -1047,7 +1047,7 @@ export default function SignInView() {
                   {isHi ? 'कैंपस गैलरी' : 'CAMPUS GALLERY'}
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-black text-[#14243B] tracking-tight">
-                  {isHi ? 'मिशन नवोदय पब्लिक स्कूल, मोरा का जीवंत परिसर' : 'Life at Mission Navodaya Public School, Mora'}
+                  {isHi ? 'मिशन नवोदय पब्लिक स्कूल, मोरा का जीवंत परिसर' : 'Life at Smart Modern Public School, Mora'}
                 </h2>
                 <p className="text-xs sm:text-sm text-[#65748B] max-w-xl mx-auto">
                   {isHi
@@ -1062,7 +1062,7 @@ export default function SignInView() {
                   <div className="aspect-[4/3] overflow-hidden bg-slate-100">
                     <img
                       src="/school_gate_banner.jpg"
-                      alt="Main Campus Entrance - Mission Navodaya Public School"
+                      alt="Main Campus Entrance - Smart Modern Public School"
                       loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
@@ -1078,7 +1078,7 @@ export default function SignInView() {
                   <div className="aspect-[4/3] overflow-hidden bg-slate-100">
                     <img
                       src="/campus_playground.jpg"
-                      alt="Sports & Football Arena - Mission Navodaya Public School"
+                      alt="Sports & Football Arena - Smart Modern Public School"
                       loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
@@ -1094,7 +1094,7 @@ export default function SignInView() {
                   <div className="aspect-[4/3] overflow-hidden bg-slate-100">
                     <img
                       src="/campus_building.jpg"
-                      alt="Academic Building Block - Mission Navodaya Public School"
+                      alt="Academic Building Block - Smart Modern Public School"
                       loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
@@ -1110,7 +1110,7 @@ export default function SignInView() {
                   <div className="aspect-[4/3] overflow-hidden bg-slate-100">
                     <img
                       src="/school_entrance.jpg"
-                      alt="Student Arrival & Campus Life - Mission Navodaya Public School"
+                      alt="Student Arrival & Campus Life - Smart Modern Public School"
                       loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
@@ -1309,7 +1309,7 @@ export default function SignInView() {
                       {isHi ? 'संपर्क करें' : 'REACH OUT'}
                     </span>
                     <h2 className="text-2xl sm:text-3xl font-black text-[#14243B] tracking-tight mt-2">
-                      {isHi ? 'मिशन नवोदय पब्लिक स्कूल से संपर्क करें' : 'Reach Out to Mission Navodaya Public School'}
+                      {isHi ? 'मिशन नवोदय पब्लिक स्कूल से संपर्क करें' : 'Reach Out to Smart Modern Public School'}
                     </h2>
                     <p className="text-xs sm:text-sm text-[#65748B] mt-1">
                       {isHi

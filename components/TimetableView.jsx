@@ -466,7 +466,7 @@ export default function TimetableView() {
       doc.setTextColor(30, 58, 138);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(16);
-      doc.text((settings.instituteName || settings.schoolName || 'MISSION NAVODAYA PUBLIC SCHOOL').toUpperCase(), W / 2, y + 4, { align: 'center' });
+      doc.text((settings.instituteName || settings.schoolName || 'SMART MODERN PUBLIC SCHOOL').toUpperCase(), W / 2, y + 4, { align: 'center' });
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
@@ -757,7 +757,7 @@ export default function TimetableView() {
       doc.setTextColor(30, 58, 138);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(15);
-      doc.text((settings.instituteName || settings.schoolName || 'MISSION NAVODAYA PUBLIC SCHOOL').toUpperCase(), W / 2, y + 4, { align: 'center' });
+      doc.text((settings.instituteName || settings.schoolName || 'SMART MODERN PUBLIC SCHOOL').toUpperCase(), W / 2, y + 4, { align: 'center' });
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
@@ -1218,7 +1218,7 @@ export default function TimetableView() {
             <div className="border-b-2 border-indigo-950 pb-4 mb-5 flex items-center justify-between">
               <div>
                 <h2 className="font-black text-lg uppercase text-indigo-950">
-                  {settings.instituteName || settings.schoolName || 'MISSION NAVODAYA PUBLIC SCHOOL'}
+                  {settings.instituteName || settings.schoolName || 'SMART MODERN PUBLIC SCHOOL'}
                 </h2>
                 <p className="text-xs text-gray-700 font-semibold mt-0.5">
                   Class Routine · <strong>Class {selectedClass} ({activeDay})</strong>

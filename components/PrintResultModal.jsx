@@ -324,7 +324,7 @@ export default function PrintResultModal({ result: propResult, student: propStud
                 </div>
               )}
               <h1 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-blue-950 leading-tight">
-                {settings.instituteName || settings.schoolName || 'Mission Navodaya Public School'}
+                {settings.instituteName || settings.schoolName || 'Smart Modern Public School'}
               </h1>
               <p className="text-[10px] sm:text-xs text-slate-600 font-medium">
                 {settings.address || 'Main Campus'} • Affiliation: {settings.affiliationNumber || 'CBSE/Govt. Recognized'}
@@ -568,7 +568,7 @@ export default function PrintResultModal({ result: propResult, student: propStud
 
             {/* Footer Disclaimer */}
             <div className="text-center pt-2 text-[8px] sm:text-[9px] text-slate-400 border-t border-slate-200">
-              Generated on {new Date().toLocaleDateString('en-GB')} • Official Academic Record of {settings.instituteName || 'Mission Navodaya Public School'}
+              Generated on {new Date().toLocaleDateString('en-GB')} • Official Academic Record of {settings.instituteName || 'Smart Modern Public School'}
             </div>
 
           </div>

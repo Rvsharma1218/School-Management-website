@@ -89,10 +89,10 @@ export default function SignUpView() {
   const [enquiryRef, setEnquiryRef] = useState('');
   const [error, setError] = useState('');
 
-  const schoolName = settings?.instituteName || settings?.schoolName || 'Mission Navodaya Public School';
+  const schoolName = settings?.instituteName || settings?.schoolName || 'Smart Modern Public School';
   const logoSrc = settings?.logoUrl || settings?.logoPath || settings?.logo || '/logo.png';
-  const phone = settings?.phone || '8603481865';
-  const email = settings?.email || 'mnpschooledu@gmail.com';
+  const phone = settings?.phone || '9162724680';
+  const email = settings?.email || 'admin@smartschoolerp.com';
   const currentSession = settings?.currentSession || settings?.academicYear || '2026-27';
   const isAdmissionOpen = settings?.isAdmissionOpen !== false;
 
@@ -107,7 +107,7 @@ export default function SignUpView() {
 
     setLoading(true);
     const sessionDigits = currentSession.replace(/\D/g, '').slice(0, 4) || '2026';
-    const generatedRef = `MNP-ADM-${sessionDigits}-${Date.now().toString().slice(-4)}`;
+    const generatedRef = `Smart School-ADM-${sessionDigits}-${Date.now().toString().slice(-4)}`;
 
     try {
       const targetSchoolId = settings?.schoolId || getActiveSchoolId() || 'SCHOOL_007';
@@ -166,7 +166,7 @@ export default function SignUpView() {
     }
 
     setLoading(true);
-    const generatedRef = `MNP-FAC-2026-${Date.now().toString().slice(-4)}`;
+    const generatedRef = `Smart School-FAC-2026-${Date.now().toString().slice(-4)}`;
 
     try {
       const targetSchoolId = settings?.schoolId || 'SCHOOL_001';
@@ -232,7 +232,7 @@ export default function SignUpView() {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-xs sm:text-base font-black tracking-tight text-white uppercase group-hover:text-[#F4B323] transition-colors truncate">
-              <span className="sm:hidden">{language === 'hi' ? 'मिशन नवोदय' : 'MNP School'}</span>
+              <span className="sm:hidden">{language === 'hi' ? 'मिशन नवोदय' : 'Smart School'}</span>
               <span className="hidden sm:inline">{language === 'hi' ? 'मिशन नवोदय पब्लिक स्कूल' : schoolName}</span>
             </h1>
             <p className="text-[10px] sm:text-[11px] text-[#F4B323] font-bold flex items-center gap-1.5 mt-0.5 truncate">
@@ -290,10 +290,10 @@ export default function SignUpView() {
               {activeFormTab === 'student'
                 ? (language === 'hi' 
                     ? 'मिशन नवोदय पब्लिक स्कूल, मोरा बाजार में नए नामांकन हेतु जानकारी दर्ज करें। हमारा प्रवेश कार्यालय आपसे अतिशीघ्र संपर्क करेगा।'
-                    : 'Submit your child’s details for new admission at Mission Navodaya Public School, Mora Bazar. Our admissions office will get in touch shortly.')
+                    : 'Submit your child’s details for new admission at Smart Modern Public School, Mora Bazar. Our admissions office will get in touch shortly.')
                 : (language === 'hi'
                     ? 'मिशन नवोदय पब्लिक स्कूल के समर्पित शैक्षणिक परिवार से जुड़ें। योग्य एवं अनुभवी शिक्षकों का सादर स्वागत है।'
-                    : 'Join the committed teaching faculty at Mission Navodaya Public School, Mora Bazar. We welcome qualified and passionate educators.')}
+                    : 'Join the committed teaching faculty at Smart Modern Public School, Mora Bazar. We welcome qualified and passionate educators.')}
             </p>
 
             {/* When viewing teacher recruitment, show return to admission button */}
@@ -967,7 +967,7 @@ export default function SignUpView() {
                       <label className="block text-xs font-bold text-slate-700">
                         {language === 'hi' 
                           ? 'आप मिशन नवोदय पब्लिक स्कूल क्यों जॉइन करना चाहते हैं? (संक्षिप्त विचार)' 
-                          : 'Why do you wish to join Mission Navodaya Public School? (Brief Note)'}
+                          : 'Why do you wish to join Smart Modern Public School? (Brief Note)'}
                       </label>
                       <textarea
                         rows={3}
