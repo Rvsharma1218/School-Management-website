@@ -1253,12 +1253,6 @@ class FirestoreService {
       futures.add(s001.collection('settings').doc('config').set(map, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_007 config write note: $e'); }));
       futures.add(s001.set(rootMap, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_007 root write note: $e'); }));
 
-      // 3. Explicit SCHOOL_001 (fallback/legacy ID)
-      final s001 = _db!.collection('schools').doc('SCHOOL_001');
-      futures.add(s001.collection('settings').doc('school').set(map, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_001 school write note: $e'); }));
-      futures.add(s001.collection('settings').doc('config').set(map, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_001 config write note: $e'); }));
-      futures.add(s001.set(rootMap, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_001 root write note: $e'); }));
-
       // 4. Public schoolDirectory entries (guaranteed public read & write)
       final dirData = <String, dynamic>{
         'schoolId': 'SCHOOL_001',
