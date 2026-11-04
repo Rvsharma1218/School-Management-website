@@ -1,7 +1,7 @@
 name: school_app
 description: Smart School ERP - Multi-Tenant School Management Platform
 publish_to: 'none'
-version: 2.0.4+2011
+version: 2.0.5+2012
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
