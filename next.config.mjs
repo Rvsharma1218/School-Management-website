@@ -3,6 +3,30 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/app-arm64-v8a-release.apk',
+        destination: 'https://github.com/Rvsharma1218/School-Management-website/releases/download/v2.0.10-build2024/app-arm64-v8a-release.apk',
+        permanent: false,
+      },
+      {
+        source: '/app-armeabi-v7a-release.apk',
+        destination: 'https://github.com/Rvsharma1218/School-Management-website/releases/download/v2.0.10-build2024/app-armeabi-v7a-release.apk',
+        permanent: false,
+      },
+      {
+        source: '/School_App_arm64-v8a.apk',
+        destination: 'https://github.com/Rvsharma1218/School-Management-website/releases/download/v2.0.10-build2024/app-arm64-v8a-release.apk',
+        permanent: false,
+      },
+      {
+        source: '/School_App_armeabi-v7a.apk',
+        destination: 'https://github.com/Rvsharma1218/School-Management-website/releases/download/v2.0.10-build2024/app-armeabi-v7a-release.apk',
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
