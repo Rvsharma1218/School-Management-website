@@ -40,7 +40,7 @@ import {
   Volume2,
   VolumeX
 } from 'lucide-react';
-import { exportSingleAdmitCardPDF, exportIdCardsPDF, openWhatsAppIdCardShare } from '../lib/exportUtils';
+import { exportSingleAdmitCardPDF, exportIdCardsPDF, openWhatsAppIdCardShare, isPrePrimaryClass } from '../lib/exportUtils';
 import { QRCodeSVG } from 'qrcode.react';
 import { db } from '../lib/firebase';
 import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
@@ -1163,10 +1163,16 @@ export default function ParentPortalView() {
                   const pct = total > 0 ? ((obt / total) * 100).toFixed(1) : '0.0';
                   const grade = Number(pct) >= 90 ? 'A+' : Number(pct) >= 80 ? 'A' : Number(pct) >= 70 ? 'B+' : Number(pct) >= 60 ? 'B' : Number(pct) >= 50 ? 'C' : Number(pct) >= 40 ? 'D' : 'F';
                   const numPct = Number(pct);
-                  const isPass = Number(pct) >= 33;
-                  let division = 'Needs Improvement';
-                  let shortDivision = 'FAIL';
-                  if (r.status === 'PROMOTED' || isPass) {
+                  const isPrePri = isPrePrimaryClass(r.className || student?.className);
+                  const isPass = isPrePri || Number(pct) >= 33;
+                  let division = isPrePri ? 'Promoted (Good)' : 'Needs Improvement';
+                  let shortDivision = isPrePri ? 'PROMOTED' : 'FAIL';
+                  if (isPrePri) {
+                    if (numPct >= 85) { division = 'Promoted (Outstanding - A+)'; shortDivision = 'A+ (Outst.)'; }
+                    else if (numPct >= 70) { division = 'Promoted (Excellent - A)'; shortDivision = 'A (Excell.)'; }
+                    else if (numPct >= 50) { division = 'Promoted (Very Good - B)'; shortDivision = 'B (V.Good)'; }
+                    else { division = 'Promoted (Good - C)'; shortDivision = 'C (Good)'; }
+                  } else if (r.status === 'PROMOTED' || isPass) {
                     if (numPct >= 85) { division = '1st Division (Distinction)'; shortDivision = '1st (Dist.)'; }
                     else if (numPct >= 65) { division = '1st Division'; shortDivision = '1st Div'; }
                     else if (numPct >= 45) { division = '2nd Division'; shortDivision = '2nd Div'; }
@@ -1185,11 +1191,13 @@ export default function ParentPortalView() {
                               {r.examName || r.exam || 'Terminal Examination'}
                             </h4>
                             <span className={`px-2.5 py-0.5 rounded-full text-xs font-black border ${
-                              isPass
+                              isPrePri || r.status === 'PROMOTED'
+                                ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/60'
+                                : isPass
                                 ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200/60'
                                 : 'bg-rose-100 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200/60'
                             }`}>
-                              {isPass ? `PASSED (${shortDivision}) • ${grade} (${pct}%)` : `NEEDS IMPROVEMENT • ${grade} (${pct}%)`}
+                              {isPrePri ? `PROMOTED (${shortDivision}) • ${grade} (${pct}%)` : (isPass ? `PASSED (${shortDivision}) • ${grade} (${pct}%)` : `NEEDS IMPROVEMENT • ${grade} (${pct}%)`)}
                             </span>
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
@@ -1238,7 +1246,6 @@ export default function ParentPortalView() {
                           >
                             <Share2 className="w-3.5 h-3.5" />
                             <span>WhatsApp शेयर</span>
-                          </button>
                           </button>
 
                           {/* PDF Download */}
@@ -1485,7 +1492,7 @@ export default function ParentPortalView() {
                   <span>Student Identity Card</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Official verified student identity card issued by {settings.schoolName || 'Smart Modern Public School'}.
+                  Official verified student identity card issued by {settings.schoolName || 'Mission Navodaya Public School'}.
                 </p>
               </div>
 
@@ -1591,12 +1598,12 @@ export default function ParentPortalView() {
                             className="w-full h-full object-cover rounded-full"
                           />
                         ) : (
-                          <span className="font-black text-amber-400 text-sm">Smart School</span>
+                          <span className="font-black text-amber-400 text-sm">MNP</span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <h4 className="font-black text-xs uppercase tracking-tight text-white leading-tight truncate">
-                          {settings.schoolName || 'SMART MODERN PUBLIC SCHOOL'}
+                          {settings.schoolName || 'MISSION NAVODAYA PUBLIC SCHOOL'}
                         </h4>
                         <p className="text-[10px] text-amber-300 font-bold truncate mt-0.5">
                           {settings.tagline || 'Excellence in Education'} • {settings.currentSession || '2026-27'}
@@ -1683,7 +1690,7 @@ export default function ParentPortalView() {
 
                     <div className="border-t border-white/15 pt-3 space-y-1 text-center">
                       <p className="text-[10px] font-bold text-[#FFD700] uppercase tracking-wide">
-                        {settings.schoolName || 'SMART MODERN PUBLIC SCHOOL'}
+                        {settings.schoolName || 'MISSION NAVODAYA PUBLIC SCHOOL'}
                       </p>
                       <p className="text-[9px] text-slate-300">
                         {settings.address || 'Campus Road, Education Hub'} • Helpline: {settings.mobile || '8568643490'}
