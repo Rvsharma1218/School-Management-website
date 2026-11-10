@@ -6,7 +6,7 @@ import {
   User, Calendar, Hash, ChevronLeft, ChevronRight, Search, Share2
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { exportSingleResultPDF, exportBulkResultMarksheetsPDF, openWhatsAppResultShare } from '../lib/exportUtils';
+import { exportSingleResultPDF, exportBulkResultMarksheetsPDF, openWhatsAppResultShare, parseCleanClassAndSection } from '../lib/exportUtils';
 import { useSchoolStore } from '../lib/store';
 
 export default function PrintResultModal({ result: propResult, student: propStudent, data, onClose }) {
@@ -355,7 +355,7 @@ export default function PrintResultModal({ result: propResult, student: propStud
                 </div>
               )}
               <h1 className="text-lg sm:text-2xl font-black uppercase tracking-wider text-blue-950 leading-tight">
-                {settings.instituteName || settings.schoolName || 'Smart Modern Public School'}
+                {settings.instituteName || settings.schoolName || 'Mission Navodaya Public School'}
               </h1>
               <p className="text-[10px] sm:text-xs text-slate-600 font-medium">
                 {settings.address || 'Main Campus'} • Affiliation: {settings.affiliationNumber || 'CBSE/Govt. Recognized'}
@@ -395,7 +395,10 @@ export default function PrintResultModal({ result: propResult, student: propStud
                     Father's Name: <strong className="text-slate-800">{currentStudent?.fatherName || '—'}</strong>
                   </div>
                   <div className="text-[10px] sm:text-[11px] text-slate-600 truncate">
-                    Class / Course: <strong className="text-blue-900">{currentStudent?.studentType === 'school' ? `Class ${currentStudent?.className || ''} - ${currentStudent?.section || 'A'}` : (currentStudent?.course || currentResult?.className || currentResult?.class || 'General')}</strong>
+                    Class / Course: <strong className="text-blue-900">{(() => {
+                      const parsed = parseCleanClassAndSection(currentStudent?.className || currentResult?.className || currentResult?.class, currentStudent?.section || currentResult?.section);
+                      return currentStudent?.studentType === 'school' ? parsed.combined : (currentStudent?.course || parsed.combined);
+                    })()}</strong>
                   </div>
                 </div>
               </div>
@@ -616,7 +619,7 @@ export default function PrintResultModal({ result: propResult, student: propStud
 
             {/* Footer Disclaimer */}
             <div className="text-center pt-2 text-[8px] sm:text-[9px] text-slate-400 border-t border-slate-200">
-              Generated on {new Date().toLocaleDateString('en-GB')} • Official Academic Record of {settings.instituteName || 'Smart Modern Public School'}
+              Generated on {new Date().toLocaleDateString('en-GB')} • Official Academic Record of {settings.instituteName || 'Mission Navodaya Public School'}
             </div>
 
           </div>
