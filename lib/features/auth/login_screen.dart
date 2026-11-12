@@ -130,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen>
       _errorMsg = null;
     });
     try {
-      String schoolId = 'SCHOOL_001';
+      String schoolId = 'SCHOOL_007';
       if (_isSignUp) {
         schoolId = await AuthService.instance.signUp(
           email: _emailCtrl.text.trim(),
@@ -982,7 +982,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   const Icon(Icons.verified_rounded, size: 14, color: Color(0xFFDAA520)),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Smart Modern Public School',
+                                    'MISSION NAVODAYA PUBLIC SCHOOL MORA',
                                     style: TextStyle(
                                       color: Colors.amber.shade200,
                                       fontSize: 10.5,
@@ -1037,7 +1037,7 @@ class _LoginScreenState extends State<LoginScreen>
                             child: Column(
                               children: [
                                 Text(
-                                  'Smart Modern',
+                                  'Mission Navodaya',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: isShort ? 22 : 26,
@@ -1047,7 +1047,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  'PUBLIC SCHOOL',
+                                  'PUBLIC SCHOOL MORA',
                                   style: TextStyle(
                                     color: const Color(0xFFDAA520),
                                     fontSize: isShort ? 12 : 14,
@@ -1178,24 +1178,6 @@ class _LoginScreenState extends State<LoginScreen>
                           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                     ),
                   ),
-
-                  const SizedBox(height: 16),
-                  if (_role == _LoginRole.principal)
-                    TextButton(
-                      onPressed: _submitting ? null : _toggleMode,
-                      child: RichText(
-                        text: TextSpan(
-                          style: const TextStyle(color: Colors.white70, fontSize: 13.5),
-                          children: [
-                            TextSpan(text: _isSignUp ? 'Already have an account? ' : "Don't have an account? "),
-                            TextSpan(
-                              text: _isSignUp ? 'Sign In' : 'Create Account',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
 
                   SizedBox(height: MediaQuery.of(context).padding.bottom + (isShort ? 16 : 28)),
                 ],
