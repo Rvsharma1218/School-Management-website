@@ -363,7 +363,7 @@ class FirestoreService {
 
     if (!_admissionsInitialized) {
       _admissionsInitialized = true;
-      final targetSchools = <String>{_schoolId, 'SCHOOL_001', 'SCHOOL_001'};
+      final targetSchools = <String>{_schoolId, 'SCHOOL_007', 'SCHOOL_001'};
       for (final sId in targetSchools) {
         if (sId.isEmpty) continue;
         _db!
@@ -410,7 +410,7 @@ class FirestoreService {
 
     if (!_teachersInitialized) {
       _teachersInitialized = true;
-      final targetSchools = <String>{_schoolId, 'SCHOOL_001', 'SCHOOL_001'};
+      final targetSchools = <String>{_schoolId, 'SCHOOL_007', 'SCHOOL_001'};
       for (final sId in targetSchools) {
         if (sId.isEmpty) continue;
         _db!
@@ -445,6 +445,90 @@ class FirestoreService {
     return _teachersController!.stream;
   }
 
+  // ─── Website CMS Management (Live Dynamic Web Controls) ───────────────
+
+  Stream<Map<String, dynamic>> watchWebsiteConfig() {
+    if (!_enabled || _db == null) return const Stream.empty();
+    return _db!
+        .collection('schoolDirectory')
+        .doc('website_config')
+        .snapshots()
+        .map((snap) => snap.data() ?? {});
+  }
+
+  Stream<List<Map<String, dynamic>>> watchWebsiteGallery() {
+    if (!_enabled || _db == null) return const Stream.empty();
+    return _db!
+        .collection('schoolDirectory')
+        .doc('website_gallery')
+        .snapshots()
+        .map((snap) {
+      final items = snap.data()?['items'] as List<dynamic>? ?? [];
+      return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> watchWebsiteReviews() {
+    if (!_enabled || _db == null) return const Stream.empty();
+    return _db!
+        .collection('schoolDirectory')
+        .doc('website_reviews')
+        .snapshots()
+        .map((snap) {
+      final items = snap.data()?['items'] as List<dynamic>? ?? [];
+      return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> watchWebsiteLeadership() {
+    if (!_enabled || _db == null) return const Stream.empty();
+    return _db!
+        .collection('schoolDirectory')
+        .doc('website_leadership')
+        .snapshots()
+        .map((snap) {
+      final items = snap.data()?['items'] as List<dynamic>? ?? [];
+      return items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    });
+  }
+
+  Future<void> saveWebsiteConfig(Map<String, dynamic> config) async {
+    if (!_enabled || _db == null) return;
+    final payload = Map<String, dynamic>.from(config);
+    payload['updatedAt'] = FieldValue.serverTimestamp();
+    await Future.wait([
+      _db!.collection('schoolDirectory').doc('website_config').set(payload, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] saveWebsiteConfig error: $e'); }),
+      _db!.collection('schools').doc('SCHOOL_007').collection('website_content').doc('config').set(payload, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] saveWebsiteConfig s007 error: $e'); }),
+    ]);
+  }
+
+  Future<void> saveWebsiteGallery(List<Map<String, dynamic>> items) async {
+    if (!_enabled || _db == null) return;
+    final payload = {'items': items, 'updatedAt': FieldValue.serverTimestamp()};
+    await Future.wait([
+      _db!.collection('schoolDirectory').doc('website_gallery').set(payload, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] saveWebsiteGallery error: $e'); }),
+      _db!.collection('schools').doc('SCHOOL_007').collection('website_content').doc('gallery').set(payload, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] saveWebsiteGallery s007 error: $e'); }),
+    ]);
+  }
+
+  Future<void> saveWebsiteReviews(List<Map<String, dynamic>> items) async {
+    if (!_enabled || _db == null) return;
+    final payload = {'items': items, 'updatedAt': FieldValue.serverTimestamp()};
+    await Future.wait([
+      _db!.collection('schoolDirectory').doc('website_reviews').set(payload, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] saveWebsiteReviews error: $e'); }),
+      _db!.collection('schools').doc('SCHOOL_007').collection('website_content').doc('reviews').set(payload, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] saveWebsiteReviews s007 error: $e'); }),
+    ]);
+  }
+
+  Future<void> saveWebsiteLeadership(List<Map<String, dynamic>> items) async {
+    if (!_enabled || _db == null) return;
+    final payload = {'items': items, 'updatedAt': FieldValue.serverTimestamp()};
+    await Future.wait([
+      _db!.collection('schoolDirectory').doc('website_leadership').set(payload, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] saveWebsiteLeadership error: $e'); }),
+      _db!.collection('schools').doc('SCHOOL_007').collection('website_content').doc('leadership').set(payload, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] saveWebsiteLeadership s007 error: $e'); }),
+    ]);
+  }
+
   Future<void> updateAdmissionEnquiryStatus(String refNo, String status) async {
     if (!_enabled || _db == null) return;
     // Optimistic local update
@@ -457,7 +541,7 @@ class FirestoreService {
     _emitAdmissions();
 
     try {
-      final targets = <String>{'SCHOOL_001', 'SCHOOL_001'};
+      final targets = <String>{'SCHOOL_007', 'SCHOOL_001'};
       if (_schoolId.isNotEmpty) targets.add(_schoolId);
       await Future.wait(targets.map((sId) => _db!
           .collection('schoolDirectory')
@@ -483,7 +567,7 @@ class FirestoreService {
 
     // 2. Parallel remote deletion
     try {
-      final targets = <String>{'SCHOOL_001', 'SCHOOL_001'};
+      final targets = <String>{'SCHOOL_007', 'SCHOOL_001'};
       if (_schoolId.isNotEmpty) targets.add(_schoolId);
       final futures = <Future>[];
       for (final sId in targets) {
@@ -521,7 +605,7 @@ class FirestoreService {
     _emitTeachers();
 
     try {
-      final targets = <String>{'SCHOOL_001', 'SCHOOL_001'};
+      final targets = <String>{'SCHOOL_007', 'SCHOOL_001'};
       if (_schoolId.isNotEmpty) targets.add(_schoolId);
       await Future.wait(targets.map((sId) => _db!
           .collection('schoolDirectory')
@@ -547,7 +631,7 @@ class FirestoreService {
 
     // 2. Parallel remote deletion
     try {
-      final targets = <String>{'SCHOOL_001', 'SCHOOL_001'};
+      final targets = <String>{'SCHOOL_007', 'SCHOOL_001'};
       if (_schoolId.isNotEmpty) targets.add(_schoolId);
       final futures = <Future>[];
       for (final sId in targets) {
@@ -672,7 +756,7 @@ class FirestoreService {
     if (allIds.isEmpty) return;
 
     try {
-      final targets = <String>{'SCHOOL_001', 'SCHOOL_001'};
+      final targets = <String>{'SCHOOL_007', 'SCHOOL_001'};
       if (_schoolId.isNotEmpty) targets.add(_schoolId);
 
       for (final sId in targets) {
@@ -1250,15 +1334,21 @@ class FirestoreService {
       if (_root != null) futures.add(_root!.set(rootMap, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] _root write note: $e'); }));
 
       // 2. Explicit SCHOOL_007 (MNP School primary cloud ID)
+      final s007 = _db!.collection('schools').doc('SCHOOL_007');
+      futures.add(s007.collection('settings').doc('school').set(map, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_007 school write note: $e'); }));
+      futures.add(s007.collection('settings').doc('config').set(map, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_007 config write note: $e'); }));
+      futures.add(s007.set(rootMap, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_007 root write note: $e'); }));
+
+      // 3. Explicit SCHOOL_001 (fallback/legacy ID)
       final s001 = _db!.collection('schools').doc('SCHOOL_001');
-      futures.add(s001.collection('settings').doc('school').set(map, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_007 school write note: $e'); }));
-      futures.add(s001.collection('settings').doc('config').set(map, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_007 config write note: $e'); }));
-      futures.add(s001.set(rootMap, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_007 root write note: $e'); }));
+      futures.add(s001.collection('settings').doc('school').set(map, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_001 school write note: $e'); }));
+      futures.add(s001.collection('settings').doc('config').set(map, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_001 config write note: $e'); }));
+      futures.add(s001.set(rootMap, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] SCHOOL_001 root write note: $e'); }));
 
       // 4. Public schoolDirectory entries (guaranteed public read & write)
       final dirData = <String, dynamic>{
-        'schoolId': 'SCHOOL_001',
-        'schoolUid': 'SCHOOL_001',
+        'schoolId': 'SCHOOL_007',
+        'schoolUid': 'SCHOOL_007',
         'schoolName': settings.instituteName,
         'instituteName': settings.instituteName,
         'address': settings.address,
@@ -1271,8 +1361,9 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       };
       final dirCol = _db!.collection('schoolDirectory');
-      futures.add(dirCol.doc('admin@example.com').set(dirData, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] dir email write note: $e'); }));
-      futures.add(dirCol.doc('SCHOOL_001').set(dirData, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] dir 007 write note: $e'); }));
+      futures.add(dirCol.doc('mnps@mnpschool.in').set(dirData, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] dir mnpschool write note: $e'); }));
+      futures.add(dirCol.doc('mnpschooledu@gmail.com').set(dirData, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] dir email write note: $e'); }));
+      futures.add(dirCol.doc('SCHOOL_007').set(dirData, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] dir 007 write note: $e'); }));
       futures.add(dirCol.doc('SCHOOL_001').set(dirData, SetOptions(merge: true)).catchError((e) { debugPrint('[Firestore] dir 001 write note: $e'); }));
 
       await Future.wait(futures);
