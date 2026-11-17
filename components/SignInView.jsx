@@ -67,6 +67,16 @@ function resolveCmsField(obj, keyBase, fallbackEn, fallbackHi, isHi) {
   }
 }
 
+export function resolveDriveImageUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (trimmed.includes('lh3.googleusercontent.com/d/')) return trimmed;
+  const match1 = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match1 && match1[1]) return `https://lh3.googleusercontent.com/d/${match1[1]}`;
+  const match2 = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match2 && match2[1] && trimmed.includes('drive.google.com')) return `https://lh3.googleusercontent.com/d/${match2[1]}`;
+  return trimmed;
+}
 
 export default function SignInView() {
   const {
@@ -1272,8 +1282,8 @@ export default function SignInView() {
                   const bSub = resolveCmsField(
                     bConf,
                     'subheadline',
-                    `${bClasses} • Leading CBSE Pattern English Medium School in Siwan & Mora Bazar`,
-                    `${bClasses} • सीवान एवं मोरा बाज़ार का अग्रणी सीबीएसई पैटर्न अंग्रेजी माध्यम विद्यालय`,
+                    `${bClasses} • Leading English Medium School in Siwan & Mora Bazar`,
+                    `${bClasses} • सीवान एवं मोरा बाज़ार का अग्रणी अंग्रेजी माध्यम विद्यालय`,
                     isHi
                   );
                   const bPhone = bConf.phone || primaryPhone || '8603481865';
@@ -1976,9 +1986,9 @@ export default function SignInView() {
                       <div className="bg-gradient-to-br from-[#0c2340] via-[#102a4d] to-[#173a66] p-6 text-white relative overflow-hidden">
                         <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-white/5 blur-xl pointer-events-none" />
                         <div className="flex items-center gap-3.5 relative z-10">
-                          {leader.avatarUrl ? (
+                          {(leader.avatarUrl || leader.photoUrl) ? (
                             <img
-                              src={leader.avatarUrl}
+                              src={resolveDriveImageUrl(leader.avatarUrl || leader.photoUrl)}
                               alt={leader.name}
                               className="w-14 h-14 rounded-2xl object-cover border border-white/20 shadow-inner flex-shrink-0"
                             />
@@ -2110,7 +2120,7 @@ export default function SignInView() {
                     <div key={photo.id || pIdx} className="bg-white rounded-2xl overflow-hidden border border-[#E2E8F0] shadow-xs hover:shadow-md transition-all group">
                       <div className="aspect-[4/3] overflow-hidden bg-slate-100">
                         <img
-                          src={photo.imageUrl || photo.src || '/school_campus_banner.jpg'}
+                          src={resolveDriveImageUrl(photo.imageUrl || photo.src || '/school_campus_banner.jpg')}
                           alt={photo.title}
                           loading="lazy"
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -3030,20 +3040,72 @@ export default function SignInView() {
 
           </div>
 
-          {/* Local Area & SEO Coverage Strip */}
-          <div className="mt-8 pt-4 border-t border-[#1E3A60]/60 text-[11px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="font-bold text-[#F4B323]">{isHi ? 'प्रमुख क्षेत्र:' : 'Areas Served:'}</span>
-            <span>{isHi ? 'Mora (मोरा)' : 'Mora'}</span>
-            <span>&bull;</span>
-            <span>{isHi ? 'Mora Bazar (मोरा बाजार)' : 'Mora Bazar'}</span>
-            <span>&bull;</span>
-            <span>{isHi ? 'Mairi (मैरी)' : 'Mairi'}</span>
-            <span>&bull;</span>
-            <span>{isHi ? 'Ratauli (रतौली)' : 'Ratauli'}</span>
-            <span>&bull;</span>
-            <span>{isHi ? 'Siwan (सीवान, बिहार)' : 'Siwan (Bihar)'}</span>
-            <span className="hidden sm:inline">&bull;</span>
-            <span className="hidden sm:inline">{isHi ? 'संस्थापक: उदय शंकर पटेल (उदय सर) एवं विशाल पटेल (विशाल सर)' : 'Leadership: Chairman Uday Shankar Patel (Uday Sir) & Director Vishal Patel (Vishal Sir)'}</span>
+          {/* Comprehensive Google SEO & Local Campus Directory Strip */}
+          <div className="mt-8 pt-6 border-t border-[#1E3A60]/80 space-y-4">
+            {/* SEO Keyword Badges / Quick Search Queries */}
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="text-[11px] font-black text-[#F4B323] uppercase tracking-wider mr-1">
+                {isHi ? 'लोकप्रिय खोज (Popular Searches):' : 'Popular Searches:'}
+              </span>
+              {[
+                { en: 'Mission Navodaya Public School', hi: 'मिशन नवोदय पब्लिक स्कूल' },
+                { en: 'MNP School', hi: 'एमएनपी स्कूल' },
+                { en: 'MNPS Mora', hi: 'एमएनपीएस मोरा' },
+                { en: 'MNPSchool.in', hi: 'एमएनपी स्कूल डॉट इन' },
+                { en: 'Mora School Siwan', hi: 'मोरा स्कूल सीवान' },
+                { en: 'Mora Mairi School', hi: 'मोरा मैरी स्कूल' },
+                { en: 'Ratauli School', hi: 'रतौली स्कूल' },
+                { en: 'Vishal Sir School', hi: 'विशाल सर का स्कूल' },
+                { en: 'Uday Sir School', hi: 'उदय सर का स्कूल' },
+                { en: 'Admission 2026-27', hi: 'नामांकन सत्र 2026-27' },
+                { en: 'Exam Results 2026', hi: 'परीक्षा परिणाम 2026' },
+                { en: 'Leading English Medium School', hi: 'अग्रणी अंग्रेजी माध्यम विद्यालय' },
+                { en: 'Navodaya Entrance Coaching', hi: 'नवोदय प्रवेश परीक्षा तैयारी' },
+                { en: 'English Medium School Mora', hi: 'इंग्लिश मीडियम स्कूल मोरा' }
+              ].map((badge, bIdx) => (
+                <span
+                  key={bIdx}
+                  className="px-2.5 py-1 rounded-full bg-[#102747]/90 text-[10.5px] font-medium text-slate-300 border border-[#1E3A60] hover:text-[#F4B323] hover:border-[#F4B323]/40 transition-colors"
+                >
+                  {isHi ? badge.hi : badge.en}
+                </span>
+              ))}
+            </div>
+
+            {/* Local Area & Villages Covered */}
+            <div className="text-[11px] text-slate-300/90 leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="font-bold text-[#F4B323]">{isHi ? 'परिसर सेवा क्षेत्र (Areas & Villages Served):' : 'Areas & Villages Served:'}</span>
+              <span>Mora (मोरा)</span>
+              <span>&bull;</span>
+              <span>Mora Bazar (मोरा बाजार)</span>
+              <span>&bull;</span>
+              <span>Mairi (मैरी)</span>
+              <span>&bull;</span>
+              <span>Ratauli (रतौली)</span>
+              <span>&bull;</span>
+              <span>Patel Tola (पटेल टोला)</span>
+              <span>&bull;</span>
+              <span>Pipra (पिपरा)</span>
+              <span>&bull;</span>
+              <span>Barka Gaon (बड़का गांव)</span>
+              <span>&bull;</span>
+              <span>Mairwa (मैरवा)</span>
+              <span>&bull;</span>
+              <span>Darauli (दरौली)</span>
+              <span>&bull;</span>
+              <span>Guthani (गुठनी)</span>
+              <span>&bull;</span>
+              <span>Siwan (सीवान - 841226, Bihar)</span>
+            </div>
+
+            {/* Official Indexing Statement for Google Bot */}
+            <div className="p-3.5 rounded-xl bg-[#102747]/40 border border-[#1E3A60]/50 text-[11px] text-slate-300/80 leading-relaxed">
+              <p>
+                <strong>Mission Navodaya Public School (MNP School)</strong> — {isHi
+                  ? 'मोरा बाजार, मैरी-रतौली मार्ग, सीवान (बिहार - 841226) स्थित एक उत्कृष्ट अंग्रेजी व हिंदी माध्यम विद्यालय है। चेयरमैन उदय शंकर पटेल (उदय सर) एवं निदेशक विशाल पटेल (विशाल सर) के नेतृत्व में नर्सरी से 8वीं कक्षा तक स्मार्ट क्लास, कम्प्यूटर लैब, सुरक्षित वाहन सुविधा, नवोदय प्रवेश परीक्षा की विशेष तैयारी एवं डिजिटल पेरेंट पोर्टल व मोबाइल ऐप उपलब्ध कराता है।'
+                  : 'Official recognized co-educational institution situated at Mora Bazar, Mairi - Ratauli Road, District Siwan (Bihar 841226). Under the leadership of Chairman Uday Shankar Patel (Uday Sir) and Director Vishal Patel (Vishal Sir), providing quality education from Nursery to 8th standard with smart classes, science & computer lab, safe transport, Navodaya preparation, digital report cards, and 24/7 parent mobile app.'}
+              </p>
+            </div>
           </div>
 
           {/* Bottom Navy Footer Strip (Matching Image) */}
