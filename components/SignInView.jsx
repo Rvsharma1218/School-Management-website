@@ -2353,13 +2353,13 @@ export default function SignInView() {
                         className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-[#F4B323] hover:bg-amber-400 text-[#0c2340] font-black text-sm transition-all shadow-xl shadow-amber-500/20 flex items-center justify-center gap-3 cursor-pointer hover:scale-105 active:scale-95"
                       >
                         <Download className="w-5 h-5 text-[#0c2340]" />
-                        <span>{isHi ? 'Android ऐप सीधे डाउनलोड करें (v1.0.1)' : 'Direct Download Android App (v1.0.1)'}</span>
+                        <span>{isHi ? 'Android ऐप सीधे डाउनलोड करें (v1.0.3)' : 'Direct Download Android App (v1.0.3)'}</span>
                       </a>
 
                       {/* Fallback 32-bit APK for older phones */}
                       <a
-                        href="https://github.com/Rvsharma1218/MNP-School/releases/download/v1.0.1-build12/MNP_School_armeabi-v7a.apk"
-                        download="MNP_School_v1.0.1_v7a.apk"
+                        href="https://github.com/Rvsharma1218/MNP-School/releases/download/v1.0.3-build16/app-armeabi-v7a-release.apk"
+                        download="MNP_School_v1.0.3_v7a.apk"
                         className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs border border-white/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Smartphone className="w-4 h-4 text-slate-300" />
@@ -3103,6 +3103,10 @@ export default function SignInView() {
               <span>&bull;</span>
               <span>Sahsa (सहसा)</span>
               <span>&bull;</span>
+              <span>Balaha (बलहा)</span>
+              <span>&bull;</span>
+              <span>Sadiha (सदीहा)</span>
+              <span>&bull;</span>
               <span>{isHi ? 'एवं निकटवर्ती गाँव (And Nearby Villages)' : 'And Nearby Villages (एवं निकटवर्ती गाँव)'}</span>
               <span>&bull;</span>
               <span>Siwan (सीवान - 841507, Bihar)</span>
@@ -3112,8 +3116,8 @@ export default function SignInView() {
             <div className="p-3.5 rounded-xl bg-[#102747]/40 border border-[#1E3A60]/50 text-[11px] text-slate-300/80 leading-relaxed">
               <p>
                 <strong>Mission Navodaya Public School (MNP School)</strong> — {isHi
-                  ? 'मोरा बाजार, मोरा मैरी, रतौली, बड़का गाँव, बिथुना, सलेमपुर, सहसा एवं निकटवर्ती गाँव (सीवान, बिहार - 841507) स्थित एक उत्कृष्ट अंग्रेजी व हिंदी माध्यम विद्यालय है। चेयरमैन उदय शंकर पटेल (उदय सर) एवं निदेशक विशाल पटेल (विशाल सर) के नेतृत्व में नर्सरी से 8वीं कक्षा तक स्मार्ट क्लास, कम्प्यूटर लैब, सुरक्षित वाहन सुविधा, नवोदय प्रवेश परीक्षा की विशेष तैयारी एवं डिजिटल पेरेंट पोर्टल व मोबाइल ऐप उपलब्ध कराता है।'
-                  : 'Official recognized co-educational institution situated at Mora Bazar, Mora Mairi, Ratauli, Barka Gaon, Bithuna, Salempur, Sahsa and nearby villages, District Siwan (Bihar 841507). Under the leadership of Chairman Uday Shankar Patel (Uday Sir) and Director Vishal Patel (Vishal Sir), providing quality education from Nursery to 8th standard with smart classes, science & computer lab, safe transport, Navodaya preparation, digital report cards, and 24/7 parent mobile app.'}
+                  ? 'मोरा बाजार, मोरा मैरी, रतौली, बड़का गाँव, बिथुना, सलेमपुर, सहसा, बलहा, सदीहा एवं निकटवर्ती गाँव (सीवान, बिहार - 841507) स्थित एक उत्कृष्ट अंग्रेजी व हिंदी माध्यम विद्यालय है। चेयरमैन उदय शंकर पटेल (उदय सर) एवं निदेशक विशाल पटेल (विशाल सर) के नेतृत्व में नर्सरी से 8वीं कक्षा तक स्मार्ट क्लास, कम्प्यूटर लैब, सुरक्षित वाहन सुविधा, नवोदय प्रवेश परीक्षा की विशेष तैयारी एवं डिजिटल पेरेंट पोर्टल व मोबाइल ऐप उपलब्ध कराता है।'
+                  : 'Official recognized co-educational institution situated at Mora Bazar, Mora Mairi, Ratauli, Barka Gaon, Bithuna, Salempur, Sahsa, Balaha, Sadiha and nearby villages, District Siwan (Bihar 841507). Under the leadership of Chairman Uday Shankar Patel (Uday Sir) and Director Vishal Patel (Vishal Sir), providing quality education from Nursery to 8th standard with smart classes, science & computer lab, safe transport, Navodaya preparation, digital report cards, and 24/7 parent mobile app.'}
               </p>
             </div>
           </div>
