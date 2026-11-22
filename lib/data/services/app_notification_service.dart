@@ -171,6 +171,18 @@ class AppNotificationService {
 
       // Start listening based on active session
       startListening();
+
+      // Automatically re-bind listeners whenever session or schoolId changes
+      SessionService.instance.onSchoolUidChanged.listen((newUid) {
+        if (newUid != null && newUid.isNotEmpty) {
+          debugPrint('[NotificationService] ⚡ School ID updated to $newUid -> Re-attaching notification listeners');
+          startListening();
+        }
+      });
+      SessionService.instance.onSessionChanged.listen((_) {
+        debugPrint('[NotificationService] ⚡ Session updated -> Re-attaching notification listeners');
+        startListening();
+      });
     } catch (e) {
       debugPrint('[NotificationService] ⚠️ Init error: $e');
     }
@@ -422,7 +434,7 @@ class AppNotificationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final nowMs = DateTime.now().millisecondsSinceEpoch;
-      final schoolId = prefs.getString('session_school_id') ?? 'SCHOOL_001';
+      final schoolId = prefs.getString('session_school_id') ?? 'SCHOOL_007';
       final role = prefs.getString('session_role') ?? '';
       final parentStudentId = prefs.getString('session_parent_student_id');
 
